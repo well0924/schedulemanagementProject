@@ -33,6 +33,8 @@ public class SchedulesModel {
 
     public SchedulesModel(Long id,
                           String contents,
+                          int scheduleDays,
+                          int scheduleMonth,
                           LocalDateTime startTime,
                           LocalDateTime endTime,
                           Long userId,
@@ -46,6 +48,8 @@ public class SchedulesModel {
                           List<Long> attachIds) {
         this.id = id;
         this.contents = contents;
+        this.scheduleMonth = scheduleMonth;
+        this.scheduleDays = scheduleDays;
         this.startTime = startTime;
         this.endTime = endTime;
         this.userId = userId;

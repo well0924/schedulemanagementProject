@@ -43,6 +43,7 @@ include("domain:schedules:connector:out-connector")
 include("domain:schedules:connector:in-connector")
 include("domain:schedules:infrastructure")
 include("domain:schedules:infrastructure:rdb")
+include("domain:schedules:infrastructure:open-api")
 
 // Category 관련 모듈
 include("domain:category")

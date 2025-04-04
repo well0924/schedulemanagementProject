@@ -1,12 +1,14 @@
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+    implementation project(':domain:member:infrastructure:rdb')
     //open-feign
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
     // Resilience4j 서킷 브레이커 + Feign 연동
-    implementation 'io.github.resilience4j:resilience4j-spring-boot3'
+    implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
     implementation 'io.github.resilience4j:resilience4j-feign'
     implementation 'io.github.resilience4j:resilience4j-timelimiter'
     implementation 'io.github.resilience4j:resilience4j-circuitbreaker'
@@ -15,4 +17,9 @@ dependencies {
     // JSON 직렬화
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation project(':domain:schedules:infrastructure:rdb')
+    implementation project(':domain:schedules:core:enumerate')
+    implementation project(':domain:schedules:core:model')
+    implementation project(':common:jpa')
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
 }

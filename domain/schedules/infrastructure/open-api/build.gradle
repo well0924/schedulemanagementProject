@@ -1,0 +1,18 @@
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    //open-feign
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+    // Resilience4j 서킷 브레이커 + Feign 연동
+    implementation 'io.github.resilience4j:resilience4j-spring-boot3'
+    implementation 'io.github.resilience4j:resilience4j-feign'
+    implementation 'io.github.resilience4j:resilience4j-timelimiter'
+    implementation 'io.github.resilience4j:resilience4j-circuitbreaker'
+    // (선택) Micrometer 연동 (서킷 상태 모니터링용)
+    implementation 'io.github.resilience4j:resilience4j-micrometer'
+    // JSON 직렬화
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation project(':domain:schedules:infrastructure:rdb')
+}

@@ -100,6 +100,7 @@ public class ScheduleOutConnector {
                 .progress_status(String.valueOf(model.getProgressStatus()))
                 .repeatType(String.valueOf(model.getRepeatType()))
                 .repeatCount(model.getRepeatCount())
+                .repeatInterval(model.getRepeatInterval())
                 .build();
 
         return toModel(scheduleRepository.save(schedules));
@@ -133,6 +134,7 @@ public class ScheduleOutConnector {
                 .userId(model.getUserId())
                 .repeatType(String.valueOf(model.getRepeatType()))
                 .repeatCount(model.getRepeatCount())
+                .repeatInterval(model.getRepeatInterval())
                 .build();
 
         return toModel(scheduleRepository.save(updatedSchedules)); // 일정 저장 후 모델 변환
@@ -203,6 +205,7 @@ public class ScheduleOutConnector {
                 .userId(schedules.getUserId())
                 .repeatType(RepeatType.valueOf(schedules.getRepeatType()))//일정 반복 유형
                 .repeatCount(schedules.getRepeatCount())//반복횟수
+                .repeatInterval(schedules.getRepeatInterval())
                 .createdBy(schedules.getCreatedBy())
                 .createdTime(schedules.getCreatedTime())
                 .updatedBy(schedules.getUpdatedBy())

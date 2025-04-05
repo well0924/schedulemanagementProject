@@ -21,7 +21,8 @@ public class ScheduleApiModel {
             Long categoryId, // 카테고리 ID
             List<Long> attachIds, //첨부파일 번호(다중파일)
             RepeatType repeatType, //반복 유형
-            Integer repeatCount //일정 반복
+            Integer repeatCount, //일정 반복
+            Integer repeatInterval
     ) {
 
     }
@@ -38,7 +39,8 @@ public class ScheduleApiModel {
             Long categoryId, // 카테고리 변경 가능
             Long userId, // 회원 id
             RepeatType repeatType,//반복 유형
-            Integer repeatCount //반복 횟수
+            Integer repeatCount, //반복 횟수
+            Integer repeatInterval
     ) {
 
     }
@@ -57,6 +59,7 @@ public class ScheduleApiModel {
             boolean isDeletedScheduled, // 삭제 여부
             RepeatType repeatType, // 일정 반복 유형
             int repeatCount, // 일정 반복 횟수
+            int repeatInterval,
             String repeatGroupId, //일정 반복 groupId
             String createdBy, // 생성자
             LocalDateTime createdTime, // 생성 시간

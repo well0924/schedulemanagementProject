@@ -29,6 +29,7 @@ public class SchedulesModel {
     private List<Long> attachIds;//첨부파일 번호
     private RepeatType repeatType;//반복유형
     private Integer repeatCount;//반복횟수
+    private Integer repeatInterval;//반복주기.
     private String repeatGroupId;
     private String createdBy;
     private LocalDateTime createdTime;
@@ -44,6 +45,7 @@ public class SchedulesModel {
                           String progressStatus,
                           String repeatType,
                           Integer repeatCount,
+                          Integer repeatInterval,
                           String repeatGroupId,
                           String createdBy,
                           String updatedBy,
@@ -67,6 +69,7 @@ public class SchedulesModel {
         this.repeatType = repeatType != null ? RepeatType.valueOf(repeatType) : RepeatType.NONE;
         this.repeatCount = repeatCount;
         this.repeatGroupId = repeatGroupId;
+        this.repeatInterval = repeatInterval;
     }
 
     //진행상태 변경

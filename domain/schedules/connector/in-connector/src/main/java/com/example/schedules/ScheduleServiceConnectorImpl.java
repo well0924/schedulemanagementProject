@@ -108,6 +108,7 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .progressStatus(PROGRESS_STATUS.IN_COMPLETE) // 기본값 설정
                 .repeatType(request.repeatType())
                 .repeatCount(request.repeatCount())
+                .repeatInterval(request.repeatInterval())
                 .isDeletedScheduled(false) // 기본값 설정
                 .build();
     }
@@ -125,6 +126,7 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .progressStatus(PROGRESS_STATUS.IN_COMPLETE) // 기본값 설정
                 .repeatType(request.repeatType())
                 .repeatCount(request.repeatCount())
+                .repeatInterval(request.repeatInterval())
                 .build();
     }
 
@@ -153,6 +155,7 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .repeatType(model.getRepeatType())
                 .repeatCount(model.getRepeatCount())
                 .repeatGroupId(model.getRepeatGroupId())
+                .repeatInterval(model.getRepeatInterval())
                 .isDeletedScheduled(model.isDeletedScheduled())
                 .createdBy(model.getCreatedBy())
                 .createdTime(model.getCreatedTime())

@@ -2,6 +2,7 @@ package com.example.rdbrepository;
 
 import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.jpa.config.base.BaseEntity;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -43,7 +44,10 @@ public class Schedules extends BaseEntity {
     private Integer repeatCount;
     //일정 반복 그룹 아이디.(일정 반복 삭제에 사용할 id)
     private String repeatGroupId;
-    
+    // 일정 반복 간격 추가
+    @Nullable
+    private Integer repeatInterval;
+
     private LocalDateTime startTime;
 
     private LocalDateTime endTime;

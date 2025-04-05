@@ -43,6 +43,8 @@ public class QSchedules extends EntityPathBase<Schedules> {
 
     public final StringPath repeatGroupId = createString("repeatGroupId");
 
+    public final NumberPath<Integer> repeatInterval = createNumber("repeatInterval", Integer.class);
+
     public final StringPath repeatType = createString("repeatType");
 
     public final NumberPath<Integer> scheduleDay = createNumber("scheduleDay", Integer.class);

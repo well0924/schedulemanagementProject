@@ -7,8 +7,10 @@ import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
 import com.example.inconnector.attach.AttachInConnector;
 import com.example.model.schedules.SchedulesModel;
+import com.example.schedule.eventcommand.ScheduleEvents;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -32,6 +34,8 @@ public class ScheduleDomainService {
     private final ScheduleOutConnector scheduleOutConnector;
 
     private final AttachInConnector attachInConnector;
+
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional(readOnly = true)
     public List<SchedulesModel> getAllSchedules() {
@@ -79,7 +83,18 @@ public class ScheduleDomainService {
             savedSchedules.add(saved);
         }
         // 첫 번째 등록된 일정 반환
-        return savedSchedules.get(0);
+        SchedulesModel firstSchedule = savedSchedules.get(0);
+        // 이벤트 발행.
+        applicationEventPublisher.publishEvent(
+                new ScheduleEvents(
+                        firstSchedule.getId(),
+                        firstSchedule.getUserId(),
+                        "CREATE",
+                        firstSchedule.getContents(),
+                        LocalDateTime.now()
+                )
+        );
+        return firstSchedule;
     }
 
     //일정 수정
@@ -93,7 +108,20 @@ public class ScheduleDomainService {
 
         updateAttachmentsIfExists(files, scheduleId);
 
-        return scheduleOutConnector.updateSchedule(scheduleId, schedule);
+        SchedulesModel result = scheduleOutConnector.updateSchedule(scheduleId, schedule);
+
+        // 일정 수정 후 이벤트 발행
+        applicationEventPublisher.publishEvent(
+                new ScheduleEvents(
+                        result.getId(),
+                        result.getUserId(),
+                        "UPDATE",
+                        result.getContents(),
+                        LocalDateTime.now()
+                )
+        );
+
+        return result;
     }
 
     private SchedulesModel getValidatedUpdatableSchedule(Long scheduleId) {
@@ -131,6 +159,16 @@ public class ScheduleDomainService {
 
             case ALL_REPEAT -> scheduleOutConnector.markAsDeletedByRepeatGroupId(target.getRepeatGroupId());
         }
+        //삭제후 이벤트 발행.
+        applicationEventPublisher.publishEvent(
+                new ScheduleEvents(
+                        target.getId(),
+                        target.getUserId(),
+                        "UPDATE",
+                        target.getContents(),
+                        LocalDateTime.now()
+                )
+        );
     }
 
     //일괄삭제 기능 (자정마다 작동이 되게끔 하기)
@@ -180,6 +218,7 @@ public class ScheduleDomainService {
         RepeatType rule = baseModel.getRepeatType();
 
         int count = Optional.ofNullable(baseModel.getRepeatCount()).orElse(1);
+        int interval = Optional.ofNullable(baseModel.getRepeatInterval()).orElse(1);
 
         String groupId = UUID.randomUUID().toString();
 
@@ -187,10 +226,11 @@ public class ScheduleDomainService {
             if (rule == RepeatType.NONE && i > 0) continue;
 
             SchedulesModel repeated = baseModel
-                    .shiftScheduleBy(rule, i)
+                    .shiftScheduleBy(rule, i*interval)
                     .toBuilder()
                     .repeatType(baseModel.getRepeatType())   // 반복 일정은 반복 없음으로 저장
                     .repeatCount(baseModel.getRepeatCount())
+                    .repeatInterval(baseModel.getRepeatInterval()) //반복 간격.
                     .repeatGroupId(groupId) // 반복일정의 groupId
                     .build();
 

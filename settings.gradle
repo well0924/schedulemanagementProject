@@ -10,6 +10,7 @@ include("common:security")
 include("common:exception")
 include("common:logging")
 include("common:redis")
+include("common:events")
 
 // Member 관련 모듈
 include("domain:member")

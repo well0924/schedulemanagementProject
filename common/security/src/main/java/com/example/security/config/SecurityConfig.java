@@ -96,6 +96,15 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(new MDCFilter(), JwtAuthenticationFilter.class)
+                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry
+                        -> authorizationManagerRequestMatcherRegistry
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/api/auth/*").permitAll()
+                        .requestMatchers("/api/member/*").permitAll()
+                        .requestMatchers("/api/attach/*").permitAll()
+                        .requestMatchers("/api/schedule/*").permitAll()
+                        .anyRequest()
+                        .authenticated())
                 .exceptionHandling(httpSecurityExceptionHandlingConfigurer -> httpSecurityExceptionHandlingConfigurer
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         .accessDeniedHandler(jwtAccessDeniedHandler));

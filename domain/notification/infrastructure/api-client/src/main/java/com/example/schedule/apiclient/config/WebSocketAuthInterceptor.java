@@ -23,9 +23,9 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         }
 
         String jwtToken = extractJwtFromMessage(accessor);
-
+        //토큰이 없으면 그냥 통과한다.(ex:회원가입)
         if (jwtToken == null) {
-            throw new RuntimeException("Missing JWT Token in WebSocket Headers");
+            return message;
         }
 
         //JWT 검증 후 userId 추출

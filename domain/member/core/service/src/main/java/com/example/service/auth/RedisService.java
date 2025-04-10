@@ -14,12 +14,12 @@ import java.util.concurrent.TimeUnit;
 @AllArgsConstructor
 public class RedisService {
 
-    @Cacheable(value = MemberCacheKey.REFRESH_TOKEN, key = "#root.args[0]", unless = "#result == null")
+    @Cacheable(value = MemberCacheKey.REFRESH_TOKEN, key = "#p0", unless = "#result == null")
     public String findRefreshToken(String userId) {
         return null; // 캐시에 없으면 null 반환
     }
 
-    @CachePut(value = MemberCacheKey.REFRESH_TOKEN, key = "#root.args[0]")
+    @CachePut(value = MemberCacheKey.REFRESH_TOKEN, key = "#p0")
     public String saveRefreshToken(String userId, String refreshToken) {
         return refreshToken; // 캐시에 저장
     }

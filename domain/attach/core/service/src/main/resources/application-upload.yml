@@ -1,8 +1,0 @@
-server:
-  file:
-    upload: C:\\upload\\
-
-#presined url 전용 key
-upload:
-  key: adfdsafhv34nvjbk2itmvkjkwi3jk3nnccsdfhklgbn
-  expiration: 86400

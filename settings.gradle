@@ -27,7 +27,7 @@ include("domain:member:core:model")
 include("domain:member:core:exception")
 include("domain:member:infrastructure")
 include("domain:member:infrastructure:rdb")
-include("domain:member:infrastructure:api-client")
+include("domain:member:infrastructure:api-Client")
 
 // Schedule 관련 모듈
 include("domain:schedules")

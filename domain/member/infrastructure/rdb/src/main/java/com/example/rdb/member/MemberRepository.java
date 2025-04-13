@@ -11,4 +11,6 @@ public interface MemberRepository extends JpaRepository<Member,Long>, MemberRepo
 
     //시큐리티 인증
     Optional<Member> findByUserId(String userId);
+    //소셜로그인 인증
+    Optional<Member> findByUserEmail(String email);
 }

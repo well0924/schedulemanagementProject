@@ -1,10 +1,14 @@
 package com.example.security.config;
 
 import com.example.logging.MDC.MDCFilter;
+import com.example.outconnector.auth.AuthOutConnector;
+import com.example.outconnector.auth.CustomOAuth2OutConnector;
 import com.example.service.auth.jwt.JwtAccessDeniedHandler;
 import com.example.service.auth.jwt.JwtAuthenticationEntryPoint;
 import com.example.service.auth.jwt.JwtAuthenticationFilter;
 import com.example.service.auth.jwt.JwtTokenProvider;
+import com.example.service.auth.oauth2.OAuth2AuthenticationFailureHandler;
+import com.example.service.auth.oauth2.OAuth2AuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +17,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -39,6 +44,11 @@ public class SecurityConfig {
 
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
+    private final CustomOAuth2OutConnector customOAuth2OutConnector;
+
+    private final OAuth2AuthenticationFailureHandler auth2AuthenticationFailureHandler;
+
+    private final OAuth2AuthenticationSuccessHandler auth2AuthenticationSuccessHandler;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -84,27 +94,25 @@ public class SecurityConfig {
         http
                 .cors(httpSecurityCorsConfigurer
                         -> httpSecurityCorsConfigurer.configurationSource(corsConfigurationSource()))
-                .csrf(httpSecurityCsrfConfigurer -> httpSecurityCsrfConfigurer.disable())
-                .httpBasic(httpSecurityHttpBasicConfigurer -> httpSecurityHttpBasicConfigurer.disable())
-                .formLogin(httpSecurityFormLoginConfigurer -> httpSecurityFormLoginConfigurer.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(mvc(introspect, "/api/auth/**")).permitAll()
-                        .requestMatchers(mvc(introspect, "/api/member/**")).permitAll()
-                        .anyRequest().authenticated()
-                )
+                .csrf(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(httpSecuritySessionManagementConfigurer -> httpSecuritySessionManagementConfigurer
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(new MDCFilter(), JwtAuthenticationFilter.class)
                 .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry
                         -> authorizationManagerRequestMatcherRegistry
-                        .requestMatchers("/ws/**").permitAll()
-                        .requestMatchers("/api/auth/*").permitAll()
-                        .requestMatchers("/api/member/*").permitAll()
-                        .requestMatchers("/api/attach/*").permitAll()
-                        .requestMatchers("/api/schedule/*").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/member/**").permitAll()
+                        .requestMatchers("/api/category/**").permitAll()
+                        .requestMatchers("/api/attach/**").permitAll()
+                        .requestMatchers("/api/schedule/**").permitAll()
                         .anyRequest()
                         .authenticated())
+                .oauth2Login(oauth2-> oauth2.userInfoEndpoint(userInfo->userInfo.userService(customOAuth2OutConnector))
+                        .successHandler(auth2AuthenticationSuccessHandler)
+                        .failureHandler(auth2AuthenticationFailureHandler))
                 .exceptionHandling(httpSecurityExceptionHandlingConfigurer -> httpSecurityExceptionHandlingConfigurer
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         .accessDeniedHandler(jwtAccessDeniedHandler));
@@ -116,8 +124,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of("*"));
-        configuration.setAllowedMethods(Arrays.asList("*")); // 사용할 CRUD 메소드 등록
-        configuration.setAllowedHeaders(Arrays.asList("*")); // 사용할 Header 등록
+        configuration.setAllowedMethods(List.of("*")); // 사용할 CRUD 메소드 등록
+        configuration.setAllowedHeaders(List.of("*")); // 사용할 Header 등록
         configuration.setExposedHeaders(Arrays.asList("authorization", "refreshToken"));
         configuration.setAllowCredentials(true);
 

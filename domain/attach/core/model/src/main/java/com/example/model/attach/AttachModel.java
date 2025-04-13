@@ -36,7 +36,7 @@ public class AttachModel {
     private LocalDateTime updatedTime;
 
     //presigned url 생성
-    public String generatePreSignedUrl(String secretKey, long expirationTime) throws Exception {
+    /*public String generatePreSignedUrl(String secretKey, long expirationTime) throws Exception {
         long expirationTimestamp = System.currentTimeMillis() + expirationTime;
         String dataToSign = originFileName + ":" + expirationTimestamp;
 
@@ -47,10 +47,10 @@ public class AttachModel {
         return "/files/download?fileName=" + originFileName
                 + "&expiration=" + expirationTimestamp
                 + "&signature=" + signature;
-    }
+    }*/
     
     // presigned url 유효성 검사
-    public boolean validatePreSignedUrl(String secretKey, long expiration, String signature) throws Exception {
+    /*public boolean validatePreSignedUrl(String secretKey, long expiration, String signature) throws Exception {
         if (System.currentTimeMillis() > expiration) {
             return false;
         }
@@ -62,7 +62,7 @@ public class AttachModel {
 
         String expectedSignature = Base64.getEncoder().encodeToString(mac.doFinal(dataToSign.getBytes(StandardCharsets.UTF_8)));
         return expectedSignature.equals(signature);
-    }
+    }*/
 
     public static String createThumbnail(String originalFilePath, String uploadDir, String thumbnailName) {
         try {
@@ -100,7 +100,7 @@ public class AttachModel {
     }
 
     //파일 업로드
-    public static List<AttachModel> uploadMultipleFiles(List<MultipartFile> fileList, String uploadDir) throws IOException {
+    /*public static List<AttachModel> uploadMultipleFiles(List<MultipartFile> fileList, String uploadDir) throws IOException {
         List<AttachModel> uploadedFiles = new ArrayList<>();
 
         if (!CollectionUtils.isEmpty(fileList)) {
@@ -194,5 +194,5 @@ public class AttachModel {
                 thumbnailToDelete.delete();
             }
         }
-    }
+    }*/
 }

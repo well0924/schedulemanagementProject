@@ -2,6 +2,7 @@ package com.example.schedules;
 
 import com.example.apimodel.ScheduleApiModel;
 import com.example.apimodel.attach.AttachApiModel;
+import com.example.enumerate.schedules.DeleteType;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.inconnector.attach.AttachInConnector;
 import com.example.model.schedules.SchedulesModel;
@@ -76,7 +77,7 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
     @Override
     public ScheduleApiModel.responseSchedule saveSchedule(ScheduleApiModel.requestSchedule requestSchedule) throws IOException {
         SchedulesModel savedSchedule = scheduleDomainService.saveSchedule(toModel(requestSchedule));
-        return toApiModel(savedSchedule);
+        return toApiModelWithAttachments(savedSchedule);
     }
 
     @Override
@@ -85,8 +86,8 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
     }
 
     @Override
-    public void deleteSchedule(Long scheduleId) {
-        scheduleDomainService.deleteSchedule(scheduleId);
+    public void deleteSchedule(Long scheduleId, DeleteType deleteType) {
+        scheduleDomainService.deleteSchedule(scheduleId,deleteType);
     }
 
     @Override
@@ -105,6 +106,9 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .categoryId(request.categoryId())
                 .attachIds(request.attachIds())
                 .progressStatus(PROGRESS_STATUS.IN_COMPLETE) // 기본값 설정
+                .repeatType(request.repeatType())
+                .repeatCount(request.repeatCount())
+                .repeatInterval(request.repeatInterval())
                 .isDeletedScheduled(false) // 기본값 설정
                 .build();
     }
@@ -118,39 +122,21 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .startTime(request.startTime())
                 .endTime(request.endTime())
                 .categoryId(request.categoryId())
+                .userId(request.userId())
                 .progressStatus(PROGRESS_STATUS.IN_COMPLETE) // 기본값 설정
-                .isDeletedScheduled(false) // 기본값 설정
-                .build();
-    }
-
-    public ScheduleApiModel.responseSchedule toApiModel(SchedulesModel model) {
-
-        return ScheduleApiModel.responseSchedule.builder()
-                .id(model.getId())
-                .contents(model.getContents())
-                .scheduleDays(model.getScheduleDays())
-                .scheduleMonth(model.getScheduleMonth())
-                .startTime(model.getStartTime())
-                .endTime(model.getEndTime())
-                .userId(model.getUserId())
-                .categoryId(model.getCategoryId())
-                .progressStatus(model.getProgressStatus())
-                .isDeletedScheduled(model.isDeletedScheduled())
-                .createdBy(model.getCreatedBy())
-                .createdTime(model.getCreatedTime())
-                .updatedBy(model.getUpdatedBy())
-                .updatedTime(model.getUpdatedTime())
+                .repeatType(request.repeatType())
+                .repeatCount(request.repeatCount())
+                .repeatInterval(request.repeatInterval())
                 .build();
     }
 
     public ScheduleApiModel.responseSchedule toApiModelWithAttachments(SchedulesModel model) {
         List<AttachApiModel.AttachResponse> attachFiles;
         try {
-            System.out.println(model.getAttachIds());
             attachFiles = model.getAttachIds() != null && !model.getAttachIds().isEmpty()
                     ? attachInConnector.findByIds(model.getAttachIds())  // 첨부파일 정보 조회
                     : Collections.emptyList();
-            System.out.println("attachResult:::"+attachFiles);
+            log.debug("attachResult:::"+attachFiles);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -166,6 +152,10 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .userId(model.getUserId())
                 .categoryId(model.getCategoryId())
                 .progressStatus(model.getProgressStatus())
+                .repeatType(model.getRepeatType())
+                .repeatCount(model.getRepeatCount())
+                .repeatGroupId(model.getRepeatGroupId())
+                .repeatInterval(model.getRepeatInterval())
                 .isDeletedScheduled(model.isDeletedScheduled())
                 .createdBy(model.getCreatedBy())
                 .createdTime(model.getCreatedTime())

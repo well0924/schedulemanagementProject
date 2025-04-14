@@ -1,6 +1,7 @@
 package com.example.model.schedules;
 
 import com.example.enumerate.schedules.PROGRESS_STATUS;
+import com.example.enumerate.schedules.RepeatType;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
 import lombok.*;
@@ -9,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class SchedulesModel {
@@ -26,6 +27,10 @@ public class SchedulesModel {
     private boolean isDeletedScheduled;
     private List<String>attachThumbNailImagePath;//섬네일 이미지 경로
     private List<Long> attachIds;//첨부파일 번호
+    private RepeatType repeatType;//반복유형
+    private Integer repeatCount;//반복횟수
+    private Integer repeatInterval;//반복주기.
+    private String repeatGroupId;
     private String createdBy;
     private LocalDateTime createdTime;
     private String updatedBy;
@@ -38,6 +43,10 @@ public class SchedulesModel {
                           Long userId,
                           Long categoryId,
                           String progressStatus,
+                          String repeatType,
+                          Integer repeatCount,
+                          Integer repeatInterval,
+                          String repeatGroupId,
                           String createdBy,
                           String updatedBy,
                           LocalDateTime createdTime,
@@ -57,6 +66,10 @@ public class SchedulesModel {
         this.progressStatus = progressStatus != null ? PROGRESS_STATUS.valueOf(progressStatus) : PROGRESS_STATUS.IN_COMPLETE;;
         this.attachThumbNailImagePath = attachThumbNailImagePath;
         this.attachIds = attachIds;
+        this.repeatType = repeatType != null ? RepeatType.valueOf(repeatType) : RepeatType.NONE;
+        this.repeatCount = repeatCount;
+        this.repeatGroupId = repeatGroupId;
+        this.repeatInterval = repeatInterval;
     }
 
     //진행상태 변경
@@ -99,6 +112,36 @@ public class SchedulesModel {
 
         this.progressStatus = PROGRESS_STATUS.COMPLETE;
         this.endTime = LocalDateTime.now();
+    }
+
+    //일정 반복
+    public SchedulesModel shiftScheduleBy(RepeatType rule, int offset) {
+        LocalDateTime newStart = this.startTime;
+        LocalDateTime newEnd = this.endTime;
+
+        switch (rule) {
+            case DAILY -> {
+                newStart = newStart.plusDays(offset);
+                newEnd = newEnd.plusDays(offset);
+            }
+            case WEEKLY -> {
+                newStart = newStart.plusWeeks(offset);
+                newEnd = newEnd.plusWeeks(offset);
+            }
+            case MONTHLY -> {
+                newStart = newStart.plusMonths(offset);
+                newEnd = newEnd.plusMonths(offset);
+            }
+            default -> {
+                // NONE이거나 이상하면 자기 자신 그대로 반환
+                return this;
+            }
+        }
+
+        return this.toBuilder()
+                .startTime(newStart)
+                .endTime(newEnd)
+                .build();
     }
 
 }

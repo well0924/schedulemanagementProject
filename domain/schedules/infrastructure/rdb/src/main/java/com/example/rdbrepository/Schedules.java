@@ -2,6 +2,7 @@ package com.example.rdbrepository;
 
 import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.jpa.config.base.BaseEntity;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -26,9 +27,9 @@ public class Schedules extends BaseEntity {
 
     private String contents;
 
-    private int scheduleMonth;
+    private Integer scheduleMonth;
 
-    private int scheduleDay;
+    private Integer scheduleDay;
 
     private Boolean isDeletedScheduled = false;
     //회원의 번호
@@ -37,6 +38,15 @@ public class Schedules extends BaseEntity {
     private Long categoryId;
     //일정 상태
     private String progress_status;
+    //일정 반복 유형
+    private String repeatType;
+    //일정 반복 횟수
+    private Integer repeatCount;
+    //일정 반복 그룹 아이디.(일정 반복 삭제에 사용할 id)
+    private String repeatGroupId;
+    // 일정 반복 간격 추가
+    @Nullable
+    private Integer repeatInterval;
 
     private LocalDateTime startTime;
 

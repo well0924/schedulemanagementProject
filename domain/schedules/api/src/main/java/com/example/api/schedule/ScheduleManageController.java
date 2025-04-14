@@ -1,6 +1,7 @@
 package com.example.api.schedule;
 
 import com.example.apimodel.ScheduleApiModel;
+import com.example.enumerate.schedules.DeleteType;
 import com.example.schedules.ScheduleServiceConnectorImpl;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -65,8 +66,9 @@ public class ScheduleManageController {
     }
 
     @PostMapping("/{id}")
-    public String deleteSchedule(@PathVariable("id")Long scheduleId) {
-        scheduleServiceConnector.deleteSchedule(scheduleId);
+    public String deleteSchedule(@PathVariable("id")Long scheduleId,
+                                 @RequestParam(name = "type", defaultValue = "SINGLE") DeleteType deleteType) {
+        scheduleServiceConnector.deleteSchedule(scheduleId,deleteType);
         return "Delete Schedule.";
     }
 

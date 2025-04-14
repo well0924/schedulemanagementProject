@@ -1,6 +1,7 @@
 package com.example.schedules;
 
 import com.example.apimodel.ScheduleApiModel;
+import com.example.enumerate.schedules.DeleteType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,7 +29,7 @@ public interface ScheduleServiceConnector {
 
     ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId,updateSchedule updateSchedule, List<MultipartFile>files) throws IOException;
 
-    void deleteSchedule(Long scheduleId) throws IOException;
+    void deleteSchedule(Long scheduleId, DeleteType deleteType);
 
     void deleteOldSchedules();
 

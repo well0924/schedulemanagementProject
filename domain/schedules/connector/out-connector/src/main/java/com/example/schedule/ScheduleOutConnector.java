@@ -3,6 +3,7 @@ package com.example.schedule;
 import com.example.category.dto.CategoryErrorCode;
 import com.example.category.exception.CategoryCustomException;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
+import com.example.enumerate.schedules.RepeatType;
 import com.example.exception.dto.MemberErrorCode;
 import com.example.exception.exception.MemberCustomException;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
@@ -97,6 +98,9 @@ public class ScheduleOutConnector {
                 .categoryId(model.getCategoryId())
                 .isDeletedScheduled(false)
                 .progress_status(String.valueOf(model.getProgressStatus()))
+                .repeatType(String.valueOf(model.getRepeatType()))
+                .repeatCount(model.getRepeatCount())
+                .repeatInterval(model.getRepeatInterval())
                 .build();
 
         return toModel(scheduleRepository.save(schedules));
@@ -128,6 +132,9 @@ public class ScheduleOutConnector {
                 .endTime(model.getEndTime())
                 .categoryId(model.getCategoryId())
                 .userId(model.getUserId())
+                .repeatType(String.valueOf(model.getRepeatType()))
+                .repeatCount(model.getRepeatCount())
+                .repeatInterval(model.getRepeatInterval())
                 .build();
 
         return toModel(scheduleRepository.save(updatedSchedules)); // 일정 저장 후 모델 변환
@@ -141,8 +148,30 @@ public class ScheduleOutConnector {
     }
 
     //스케줄러를 사용을해서 일괄적으로 일정을 삭제.
-    public int deleteOldSchedules(LocalDateTime thresholdDate) {
-        return scheduleRepository.deleteOldSchedules(thresholdDate);
+    public void deleteOldSchedules(LocalDateTime thresholdDate) {
+        scheduleRepository.deleteOldSchedules(thresholdDate);
+    }
+
+    public void markAsDeletedByRepeatGroupId(String repeatGroupId) {
+        scheduleRepository.markAsDeletedByRepeatGroupId(repeatGroupId);
+    }
+
+    public void markAsDeletedAfter(String repeatGroupId, LocalDateTime startTime) {
+        scheduleRepository.markAsDeletedAfter(repeatGroupId,startTime);
+    }
+
+    //일정 충돌 확인
+    public void validateScheduleConflict(SchedulesModel model) {
+        Long conflictCount = scheduleRepository.countOverlappingSchedules(
+                model.getUserId(),
+                model.getStartTime(),
+                model.getEndTime(),
+                model.getId() // 수정이면 자기 자신 제외
+        );
+
+        if (conflictCount != null && conflictCount > 0) {
+            throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_TIME_CONFLICT);
+        }
     }
 
     private void validateScheduleData(SchedulesModel model) {
@@ -174,6 +203,9 @@ public class ScheduleOutConnector {
                 .endTime(schedules.getEndTime())
                 .categoryId(schedules.getCategoryId())
                 .userId(schedules.getUserId())
+                .repeatType(RepeatType.valueOf(schedules.getRepeatType()))//일정 반복 유형
+                .repeatCount(schedules.getRepeatCount())//반복횟수
+                .repeatInterval(schedules.getRepeatInterval())
                 .createdBy(schedules.getCreatedBy())
                 .createdTime(schedules.getCreatedTime())
                 .updatedBy(schedules.getUpdatedBy())

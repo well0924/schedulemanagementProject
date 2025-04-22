@@ -3,6 +3,6 @@ server:
   port: 8082
 spring:
   profiles:
-    include: local, upload
+    include: local, upload, openapi
 
 

@@ -68,6 +68,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                     return new SchedulesModel(
                             results.get(0).get(qSchedules.id),
                             results.get(0).get(qSchedules.contents),
+                            results.get(0).get(qSchedules.scheduleMonth),
+                            results.get(0).get(qSchedules.scheduleDay),
                             results.get(0).get(qSchedules.startTime),
                             results.get(0).get(qSchedules.endTime),
                             results.get(0).get(qSchedules.userId),
@@ -103,6 +105,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 .select(
                         qSchedules.id,
                         qSchedules.contents,
+                        qSchedules.scheduleMonth,
+                        qSchedules.scheduleDay,
                         qSchedules.startTime,
                         qSchedules.endTime,
                         qSchedules.progress_status,
@@ -129,6 +133,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
         SchedulesModel schedule = new SchedulesModel(
                 results.get(0).get(qSchedules.id),
                 results.get(0).get(qSchedules.contents),
+                results.get(0).get(qSchedules.scheduleMonth),
+                results.get(0).get(qSchedules.scheduleDay),
                 results.get(0).get(qSchedules.startTime),
                 results.get(0).get(qSchedules.endTime),
                 results.get(0).get(qSchedules.userId),
@@ -165,6 +171,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qSchedules.contents,
                         qSchedules.startTime,
                         qSchedules.endTime,
+                        qSchedules.scheduleMonth,
+                        qSchedules.scheduleDay,
                         qSchedules.userId,
                         qSchedules.categoryId,
                         qSchedules.progress_status,
@@ -202,6 +210,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 schedule = new SchedulesModel(
                         tuple.get(qSchedules.id),
                         tuple.get(qSchedules.contents),
+                        tuple.get(qSchedules.scheduleMonth),
+                        tuple.get(qSchedules.scheduleDay),
                         tuple.get(qSchedules.startTime),
                         tuple.get(qSchedules.endTime),
                         tuple.get(qSchedules.userId),
@@ -248,6 +258,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 .select(
                         qSchedules.id,
                         qSchedules.contents,
+                        qSchedules.scheduleMonth,
+                        qSchedules.scheduleDay,
                         qSchedules.startTime,
                         qSchedules.endTime,
                         qSchedules.userId,
@@ -289,6 +301,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 schedule = new SchedulesModel(
                         tuple.get(qSchedules.id),
                         tuple.get(qSchedules.contents),
+                        tuple.get(qSchedules.scheduleMonth),
+                        tuple.get(qSchedules.scheduleDay),
                         tuple.get(qSchedules.startTime),
                         tuple.get(qSchedules.endTime),
                         tuple.get(qSchedules.userId),
@@ -335,6 +349,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 .select(
                         qSchedules.id,
                         qSchedules.contents,
+                        qSchedules.scheduleMonth,
+                        qSchedules.scheduleDay,
                         qSchedules.startTime,
                         qSchedules.endTime,
                         qSchedules.userId,
@@ -371,6 +387,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                     return new SchedulesModel(
                             scheduleTuples.get(0).get(qSchedules.id),
                             scheduleTuples.get(0).get(qSchedules.contents),
+                            scheduleTuples.get(0).get(qSchedules.scheduleMonth),
+                            scheduleTuples.get(0).get(qSchedules.scheduleDay),
                             scheduleTuples.get(0).get(qSchedules.startTime),
                             scheduleTuples.get(0).get(qSchedules.endTime),
                             scheduleTuples.get(0).get(qSchedules.userId),

@@ -19,9 +19,11 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
+import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import java.util.Arrays;
 import java.util.List;
@@ -48,18 +50,36 @@ public class SecurityConfig {
         return authConfiguration.getAuthenticationManager();
     }
 
+    private MvcRequestMatcher mvc(HandlerMappingIntrospector introspect, String pattern) {
+        return new MvcRequestMatcher(introspect, pattern);
+    }
+
     @Bean
-    public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web
+    public WebSecurityCustomizer webSecurityCustomizer(HandlerMappingIntrospector introspect) {
+        return web -> web
                 .httpFirewall(defaultFireWell())
-                .ignoring().requestMatchers("/images/**", "/js/**","/font/**", "/webfonts/**","/istatic/**",
-                        "/main/**", "/webjars/**", "/dist/**", "/plugins/**", "/css/**","/favicon.ico","/h2-console/**","/css/**",
-                        "/vendor/**","/scss/**");
+                .ignoring()
+                .requestMatchers(
+                        mvc(introspect, "/images/**"),
+                        mvc(introspect, "/js/**"),
+                        mvc(introspect, "/font/**"),
+                        mvc(introspect, "/webfonts/**"),
+                        mvc(introspect, "/istatic/**"),
+                        mvc(introspect, "/main/**"),
+                        mvc(introspect, "/webjars/**"),
+                        mvc(introspect, "/dist/**"),
+                        mvc(introspect, "/plugins/**"),
+                        mvc(introspect, "/css/**"),
+                        mvc(introspect, "/favicon.ico"),
+                        mvc(introspect, "/h2-console/**"),
+                        mvc(introspect, "/vendor/**"),
+                        mvc(introspect, "/scss/**")
+                );
     }
 
     //chain filter
     @Bean
-    public SecurityFilterChain cofigure(HttpSecurity http)throws Exception{
+    public SecurityFilterChain configure(HttpSecurity http, HandlerMappingIntrospector introspect)throws Exception{
 
         http
                 .cors(httpSecurityCorsConfigurer
@@ -67,21 +87,18 @@ public class SecurityConfig {
                 .csrf(httpSecurityCsrfConfigurer -> httpSecurityCsrfConfigurer.disable())
                 .httpBasic(httpSecurityHttpBasicConfigurer -> httpSecurityHttpBasicConfigurer.disable())
                 .formLogin(httpSecurityFormLoginConfigurer -> httpSecurityFormLoginConfigurer.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(mvc(introspect, "/api/auth/**")).permitAll()
+                        .requestMatchers(mvc(introspect, "/api/member/**")).permitAll()
+                        .anyRequest().authenticated()
+                )
                 .sessionManagement(httpSecuritySessionManagementConfigurer -> httpSecuritySessionManagementConfigurer
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(new MDCFilter(), JwtAuthenticationFilter.class)
-                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry
-                        -> authorizationManagerRequestMatcherRegistry
-                        .requestMatchers("/api/auth/*").permitAll()
-                        .requestMatchers("/api/member/*").permitAll()
-                        .requestMatchers("/api/attach/*").permitAll()
-                        .requestMatchers("/api/schedule/*").permitAll()
-                        .anyRequest()
-                        .authenticated())
                 .exceptionHandling(httpSecurityExceptionHandlingConfigurer -> httpSecurityExceptionHandlingConfigurer
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
-                        .accessDeniedHandler(jwtAccessDeniedHandler));;
+                        .accessDeniedHandler(jwtAccessDeniedHandler));
 
         return http.build();
     }
@@ -104,4 +121,5 @@ public class SecurityConfig {
     public HttpFirewall defaultFireWell(){
         return new DefaultHttpFirewall();
     }
+
 }

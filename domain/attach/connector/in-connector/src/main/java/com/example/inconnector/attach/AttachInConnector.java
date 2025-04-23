@@ -6,7 +6,6 @@ import com.example.model.attach.AttachModel;
 import com.example.service.attach.AttachService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -20,43 +19,44 @@ public class AttachInConnector implements AttachInterfaces {
 
     @Override
     public List<AttachResponse> findAll() {
-        return attachService.findAll().stream().map(this::toApiModel).toList();
+        return attachService.findAll()
+                .stream()
+                .map(this::toApiModel)
+                .collect(Collectors.toList());
     }
 
     @Override
     public AttachResponse findById(Long attachId) {
-        AttachModel attachModel = attachService.findById(attachId);
-        return toApiModel(attachModel);
+        return toApiModel(attachService.findById(attachId));
     }
 
     @Override
     public AttachResponse findByOriginFileName(String originFileName) {
-        AttachModel attachModel = attachService.findByOriginFileName(originFileName);
-        return toApiModel(attachModel);
+        return toApiModel(attachService.findByOriginFileName(originFileName));
     }
 
     @Override
-    public List<AttachResponse> findByIds(List<Long> attachIds) throws IOException {
-        List<AttachModel> attachModel = attachService.findByIds(attachIds);
-        return attachModel
+    public List<AttachResponse> findByIds(List<Long> attachIds) {
+        return attachService.findByIds(attachIds)
                 .stream()
                 .map(this::toApiModel)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<AttachResponse> createdAttach(List<MultipartFile> fileList) throws IOException {
-        List<AttachModel>createResult = attachService.createAttach(fileList);
-        return createResult
-                .stream()
-                .map(this::toApiModel)
-                .collect(Collectors.toList());
+    public List<String> generatePreSignedUrls(List<String> fileNames) {
+        return attachService.generatePreSignedUrls(fileNames);
     }
 
     @Override
-    public List<AttachResponse> updateAttach(List<MultipartFile>uploadFiles,Long scheduleId) throws IOException {
-        List<AttachModel>updatedResult = attachService.updateAttach(scheduleId,uploadFiles);
-        return updatedResult
+    public String generateDownloadPreSignedUrl(String fileName) {
+        return attachService.generateDownloadPreSignedUrl(fileName);
+    }
+
+    //업로드 + 섬네일 생성
+    @Override
+    public List<AttachResponse> createdAttach(List<String> uploadedFileNames) throws IOException {
+        return attachService.createAttach(uploadedFileNames)
                 .stream()
                 .map(this::toApiModel)
                 .collect(Collectors.toList());
@@ -64,22 +64,12 @@ public class AttachInConnector implements AttachInterfaces {
 
     @Override
     public void deleteAttach(Long attachId) {
-        attachService.deleteAttach(attachId);
+        attachService.deleteAttachAndFile(attachId);
     }
 
     @Override
     public void updateScheduleId(List<Long> fileIds, Long scheduleId) {
         attachService.updateScheduleId(fileIds,scheduleId);
-    }
-
-    @Override
-    public String generatePreSignedUrl(Long attachId) throws Exception {
-        return attachService.generatePreSignedUrl(attachId);
-    }
-
-    @Override
-    public boolean validatePareSignedUrl(String fileName, long expiration, String signature) throws Exception {
-        return attachService.validatePreSignedUrl(fileName,expiration,signature);
     }
 
     //model <-> api model

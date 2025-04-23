@@ -1,6 +1,10 @@
 package com.example.schedule;
 
+<<<<<<< HEAD
 import com.example.enumerate.schedules.DeleteType;
+=======
+import com.example.apimodel.attach.AttachApiModel;
+>>>>>>> a4f2c18 (feat: S3 Presigned URL 업로드 및 Attach 등록 기능 구현)
 import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.enumerate.schedules.RepeatType;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
@@ -137,6 +141,39 @@ public class ScheduleDomainService {
 
     private void updateScheduleStatus(SchedulesModel schedule) {
         schedule.updateSchedule(schedule.getStartTime(), schedule.getEndTime());
+
+        // 2. 기존 첨부파일 삭제
+        if (schedule.getAttachIds() != null && !schedule.getAttachIds().isEmpty()) {
+            for (Long attachId : schedule.getAttachIds()) {
+                attachInConnector.deleteAttach(attachId); // S3 파일 + DB 삭제
+            }
+        }
+
+        // 3. 새 파일 업로드 처리
+        List<Long> newAttachIds = null;
+
+        if (files != null && !files.isEmpty()) {
+            List<String> fileNames = files.stream()
+                    .map(MultipartFile::getOriginalFilename)
+                    .toList();
+
+            // Presigned URL 발급 (-> 프론트에서 업로드해야 함) → 이미 업로드했다고 가정
+            List<String> uploadedFileNames = fileNames;
+
+            // 새 Attach 생성 (썸네일 비동기)
+            List<AttachApiModel.AttachResponse> createdFiles = attachInConnector.createdAttach(uploadedFileNames);
+
+            // 새 파일 ID 추출
+            newAttachIds = createdFiles.stream()
+                    .map(AttachApiModel.AttachResponse::id)
+                    .toList();
+        }
+
+        //일정 수정.
+        schedule.updateSchedule(model.getStartTime(), model.getEndTime());
+        //일정 상태 수정
+        updateProgressStatus(model.getId());
+        //특정 조건(현재 시간이 일정 종료 시간 이후)이 되면 완료로 처리하기.
         if (schedule.getProgressStatus() == PROGRESS_STATUS.COMPLETE) {
             schedule.markAsComplete();
         }
@@ -146,6 +183,11 @@ public class ScheduleDomainService {
         if (files != null && !files.isEmpty()) {
             attachInConnector.updateAttach(files, scheduleId);
         }
+        //첨부파일이 있는 경우 수정
+        if (newAttachIds != null && !newAttachIds.isEmpty()) {
+            attachInConnector.updateScheduleId(newAttachIds, scheduleId);
+        }
+        return scheduleOutConnector.updateSchedule(scheduleId, schedule);
     }
 
     //일정 삭제 (논리 삭제)

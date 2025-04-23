@@ -132,14 +132,12 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
 
     public ScheduleApiModel.responseSchedule toApiModelWithAttachments(SchedulesModel model) {
         List<AttachApiModel.AttachResponse> attachFiles;
-        try {
-            attachFiles = model.getAttachIds() != null && !model.getAttachIds().isEmpty()
-                    ? attachInConnector.findByIds(model.getAttachIds())  // 첨부파일 정보 조회
-                    : Collections.emptyList();
-            log.debug("attachResult:::"+attachFiles);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+
+        System.out.println(model.getAttachIds());
+        attachFiles = model.getAttachIds() != null && !model.getAttachIds().isEmpty()
+                ? attachInConnector.findByIds(model.getAttachIds())  // 첨부파일 정보 조회
+                : Collections.emptyList();
+        System.out.println("attachResult:::"+attachFiles);
 
         return ScheduleApiModel.responseSchedule
                 .builder()

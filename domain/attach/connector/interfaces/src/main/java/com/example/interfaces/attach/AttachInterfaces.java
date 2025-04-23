@@ -1,7 +1,5 @@
 package com.example.interfaces.attach;
 
-import org.springframework.web.multipart.MultipartFile;
-
 import static com.example.apimodel.attach.AttachApiModel.AttachResponse;
 
 import java.io.IOException;
@@ -11,11 +9,10 @@ public interface AttachInterfaces {
     List<AttachResponse> findAll();
     AttachResponse findById(Long attachId);
     AttachResponse findByOriginFileName(String originFileName);
-    List<AttachResponse> createdAttach(List<MultipartFile>uploadFiles) throws IOException;
-    List<AttachResponse> updateAttach(List<MultipartFile>uploadFiles,Long scheduleId) throws IOException;
-    List<AttachResponse> findByIds(List<Long>attachIds) throws IOException;
+    List<AttachResponse> createdAttach(List<String> uploadedFileNames) throws IOException;  // 수정됨
+    List<AttachResponse> findByIds(List<Long> attachIds);
     void deleteAttach(Long attachId);
     void updateScheduleId(List<Long> fileIds, Long scheduleId);
-    String generatePreSignedUrl(Long attachId) throws Exception;
-    boolean validatePareSignedUrl(String fileName,long expiration,String signature) throws Exception;
+    List<String> generatePreSignedUrls(List<String> fileNames);  // 업로드용 Presigned URL
+    String generateDownloadPreSignedUrl(String fileName);
 }

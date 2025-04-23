@@ -14,22 +14,22 @@ import java.util.concurrent.TimeUnit;
 @AllArgsConstructor
 public class RedisService {
 
-    @Cacheable(value = MemberCacheKey.REFRESH_TOKEN, key = "#p0", unless = "#result == null")
+    @Cacheable(value = MemberCacheKey.REFRESH_TOKEN, keyGenerator="customKeyGenerator", unless = "#result == null")
     public String findRefreshToken(String userId) {
         return null; // 캐시에 없으면 null 반환
     }
 
-    @CachePut(value = MemberCacheKey.REFRESH_TOKEN, key = "#p0")
+    @CachePut(value = MemberCacheKey.REFRESH_TOKEN, keyGenerator="customKeyGenerator")
     public String saveRefreshToken(String userId, String refreshToken) {
         return refreshToken; // 캐시에 저장
     }
 
-    @CacheEvict(value = MemberCacheKey.REFRESH_TOKEN, key = "#root.args[0]")
+    @CacheEvict(value = MemberCacheKey.REFRESH_TOKEN, keyGenerator="customKeyGenerator")
     public void deleteRefreshToken(String userId) {
         // 캐시에서 Refresh Token 삭제
     }
 
-    @CachePut(value = MemberCacheKey.BLACKLIST, key = "#root.args[0]")
+    @CachePut(value = MemberCacheKey.BLACKLIST, keyGenerator="customKeyGenerator")
     public String saveBlacklistToken(String accessToken, String status, long expiration) {
         return status; // 블랙리스트에 저장
     }

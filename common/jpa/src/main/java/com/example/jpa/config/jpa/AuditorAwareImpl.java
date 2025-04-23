@@ -20,28 +20,19 @@ public class AuditorAwareImpl implements AuditorAware<String> {
     public String getUserName() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication != null && authentication.isAuthenticated()) {
-            Object principal = authentication.getPrincipal();
-            log.debug("Principal: {}", principal);
-
-            CustomMemberDetails userDetails = (CustomMemberDetails) authentication.getPrincipal();
-            return userDetails.getUsername();
-        }
         if (authentication == null || !authentication.isAuthenticated()) {
-            log.debug("Authentication is null or not authenticated. Returning anonymousUser.");
-            return "anonymousUser"; // 인증 안 된 경우
+            return "anonymousUser"; // 인증 안된 경우 기본값 (혹은 null)
         }
 
         Object principal = authentication.getPrincipal();
         log.debug("Principal: {}", principal);
 
-        if (principal instanceof CustomMemberDetails customMemberDetails) {
-            return customMemberDetails.getUsername();
-        } else if (principal instanceof String str) {
-            return str; // 보통 anonymousUser
+        if (principal instanceof UserDetails) {
+            return ((UserDetails) principal).getUsername(); // UserDetails 기반이면 정상
+        } else if (principal instanceof String) {
+            return (String) principal; // 그냥 String (ex: "anonymousUser") 경우
         } else {
-            log.error("Unknown principal type: {}", principal.getClass());
-            return "";
+            return "unknown"; // 예상치 못한 타입
         }
     }
 }

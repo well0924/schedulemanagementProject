@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.cache.RedisCacheManagerBuilderCustomizer;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -84,5 +85,23 @@ public class CacheConfig {
         objectMapper.activateDefaultTyping(typeValidator, ObjectMapper.DefaultTyping.NON_FINAL);
 
         return new GenericJackson2JsonRedisSerializer(objectMapper);
+    }
+
+    @Bean("customKeyGenerator")
+    public KeyGenerator keyGenerator() {
+        return (target, method, params) -> {
+            String className = target.getClass().getSimpleName();
+            String methodName = method.getName();
+            String paramString = String.join(":", toStringArray(params));
+            return className + ":" + methodName + ":" + paramString;
+        };
+    }
+
+    private String[] toStringArray(Object... params) {
+        String[] result = new String[params.length];
+        for (int i = 0; i < params.length; i++) {
+            result[i] = String.valueOf(params[i]);
+        }
+        return result;
     }
 }

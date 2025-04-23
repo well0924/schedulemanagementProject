@@ -14,7 +14,7 @@ dependencies {
 	implementation project(':common:logging')
 	implementation project(':common:exception')
 	implementation project(':common:redis')
-
+	implementation project(':common:events')
 	implementation project(':domain:member:api')
 	implementation project(':domain:schedules:api')
 	implementation project(':domain:category:api')
@@ -24,6 +24,7 @@ dependencies {
 	implementation project(':domain:schedules:infrastructure:open-api')
 	implementation project(':domain:category:infrastructure:rdb')
 	implementation project(':domain:attach:infrastructure:rdb')
+	implementation project(':domain:notification:infrastructure:api-client')
 	implementation project(':domain:notification:infrastructure:rdb')
 
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

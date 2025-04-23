@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Optional;
 
@@ -27,9 +26,22 @@ public class AuditorAwareImpl implements AuditorAware<String> {
 
             CustomMemberDetails userDetails = (CustomMemberDetails) authentication.getPrincipal();
             return userDetails.getUsername();
+        }
+        if (authentication == null || !authentication.isAuthenticated()) {
+            log.debug("Authentication is null or not authenticated. Returning anonymousUser.");
+            return "anonymousUser"; // 인증 안 된 경우
+        }
+
+        Object principal = authentication.getPrincipal();
+        log.debug("Principal: {}", principal);
+
+        if (principal instanceof CustomMemberDetails customMemberDetails) {
+            return customMemberDetails.getUsername();
+        } else if (principal instanceof String str) {
+            return str; // 보통 anonymousUser
         } else {
-            CustomMemberDetails userDetails = (CustomMemberDetails) authentication.getPrincipal();
-            return userDetails.getUsername();
+            log.error("Unknown principal type: {}", principal.getClass());
+            return "";
         }
     }
 }

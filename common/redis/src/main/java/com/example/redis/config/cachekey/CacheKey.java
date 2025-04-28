@@ -17,8 +17,6 @@ public enum CacheKey {
         return key;
     }
 
-    public static final String REFRESH_TOKEN_KEY = "refreshToken";
-
     public static final String CATEGORY_KEY = "category";
 }
 

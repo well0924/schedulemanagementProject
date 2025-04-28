@@ -6,31 +6,50 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @Service
 @AllArgsConstructor
 public class RedisService {
 
-    @Cacheable(value = MemberCacheKey.REFRESH_TOKEN, keyGenerator="customKeyGenerator", unless = "#result == null")
+    private final StringRedisTemplate redisTemplate;
+    private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(7);
+
+    // Refresh Token 저장
+    public void saveRefreshToken(String userId, String refreshToken) {
+        String key = generateRefreshTokenKey(userId);
+        redisTemplate.opsForValue().set(key, refreshToken, REFRESH_TOKEN_TTL);
+    }
+
+    // Refresh Token 조회
     public String findRefreshToken(String userId) {
-        return null; // 캐시에 없으면 null 반환
+        String key = generateRefreshTokenKey(userId);
+        return redisTemplate.opsForValue().get(key);
     }
 
-    @CachePut(value = MemberCacheKey.REFRESH_TOKEN, keyGenerator="customKeyGenerator")
-    public String saveRefreshToken(String userId, String refreshToken) {
-        return refreshToken; // 캐시에 저장
-    }
-
-    @CacheEvict(value = MemberCacheKey.REFRESH_TOKEN, keyGenerator="customKeyGenerator")
+    // Refresh Token 삭제
     public void deleteRefreshToken(String userId) {
-        // 캐시에서 Refresh Token 삭제
+        String key = generateRefreshTokenKey(userId);
+        redisTemplate.delete(key);
     }
 
-    @CachePut(value = MemberCacheKey.BLACKLIST, keyGenerator="customKeyGenerator")
-    public String saveBlacklistToken(String accessToken, String status, long expiration) {
-        return status; // 블랙리스트에 저장
+    // AccessToken 블랙리스트 등록
+    public void saveBlacklistToken(String accessToken, String status, long expirationMillis) {
+        String key = generateBlacklistKey(accessToken);
+        redisTemplate.opsForValue().set(key, status, Duration.ofMillis(expirationMillis));
+    }
+
+    // 블랙리스트 키 생성
+    private String generateBlacklistKey(String accessToken) {
+        return "blacklist:" + accessToken;
+    }
+
+    // RefreshToken 키 생성
+    private String generateRefreshTokenKey(String userId) {
+        return "refreshToken:" + userId;
     }
 }

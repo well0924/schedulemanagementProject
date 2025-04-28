@@ -104,6 +104,7 @@ public class CategoryOutConnector {
                 .name(categoryModel.getName())
                 .parentId(categoryModel.getParentId())
                 .depth(depth)
+                .isDeletedCategory(false)
                 .build();
     }
 

@@ -1,9 +1,10 @@
 package com.example.notification.service;
 
 import com.example.events.NotificationChannel;
+import com.example.events.NotificationEvents;
 import com.example.events.ScheduleEvents;
 import com.example.notification.NotificationType;
-import com.example.notification.apimodel.NotificationEvents;
+
 import com.example.notification.interfaces.NotificationEventInterfaces;
 import com.example.notification.model.NotificationModel;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -29,49 +31,52 @@ public class NotificationEventEventListener implements NotificationEventInterfac
     public void handle(ScheduleEvents event) {
         log.info("일정 이벤트 수신: {}", event);
 
-        // null 체크 후 디폴트 채널 세팅
-        NotificationChannel channel = event.getNotificationChannel() != null
-                ? event.getNotificationChannel()
-                : NotificationChannel.WEB; // 기본값: 웹 알림
+        NotificationChannel channel = Optional.ofNullable(event.getNotificationChannel())
+                .orElse(NotificationChannel.WEB);
 
         // 채널에 따라 다르게 처리
         switch (channel) {
-            case WEB -> {
-                //알림 발송(일정)
-                try {
-                    NotificationEvents kafkaEvent = NotificationEvents.builder()
-                            .receiverId(event.getUserId())
-                            .message(buildMessage(event))
-                            .notificationType(mapActionToType(event.getActionType()).name()) // ENUM을 문자열로 변환
-                            .createdTime(LocalDateTime.now())
-                            .build();
-                    //알림 발송
-                    notificationEventProducer.sendNotification(kafkaEvent);
-
-                    NotificationModel notificationModel = NotificationModel
-                            .builder()
-                            .userId(event.getUserId())
-                            .scheduleId(event.getScheduleId())
-                            .scheduledAt(LocalDateTime.now())
-                            .message(buildMessage(event))
-                            .notificationType(mapActionToType(event.getActionType()))
-                            .isRead(false)
-                            .isSent(false)
-                            .build();
-
-                    //알림 저장
-                    notificationService.createNotification(notificationModel);
-
-                    log.info("Kafka 알림 이벤트 발송 성공: receiverId={}", event.getUserId());
-                } catch (Exception e) {
-                    log.error("Kafka 알림 이벤트 발송 실패: {}", e.getMessage());
-                }
-            }
-            //추후에 확장예정.
-            case PUSH -> {
-                log.info("푸시 알림 발송 준비 중: userId={}, scheduleId={}", event.getUserId(), event.getScheduleId());
-            }
+            case WEB -> handleWebNotification(event);
+            case PUSH -> handlePushNotification(event);
         }
+    }
+
+    private void handleWebNotification(ScheduleEvents event) {
+        try {
+            // Kafka 발송
+            notificationEventProducer.sendNotification(toNotificationEvent(event));
+            // DB 저장
+            notificationService.createNotification(toNotificationModel(event));
+            log.info("Kafka 알림 이벤트 발송 성공: receiverId={}", event.getUserId());
+        } catch (Exception e) {
+            log.error("Kafka 알림 이벤트 발송 실패: {}", e.getMessage());
+        }
+    }
+
+    private void handlePushNotification(ScheduleEvents event) {
+        log.info("푸시 알림 발송 준비 중: userId={}, scheduleId={}", event.getUserId(), event.getScheduleId());
+        // 추후 구현 예정
+    }
+
+    private NotificationEvents toNotificationEvent(ScheduleEvents event) {
+        return NotificationEvents.builder()
+                .receiverId(event.getUserId())
+                .message(buildMessage(event))
+                .notificationType(mapActionToType(event.getActionType()).name())
+                .createdTime(LocalDateTime.now())
+                .build();
+    }
+
+    private NotificationModel toNotificationModel(ScheduleEvents event) {
+        return NotificationModel.builder()
+                .userId(event.getUserId())
+                .scheduleId(event.getScheduleId())
+                .message(buildMessage(event))
+                .notificationType(mapActionToType(event.getActionType()))
+                .isRead(false)
+                .isSent(false)
+                .scheduledAt(LocalDateTime.now())
+                .build();
     }
 
     private String buildMessage(ScheduleEvents event) {

@@ -45,21 +45,4 @@ public class EmailService {
         // 여기서 실패한 이메일을 DB 저장하거나 슬랙 알림 보낼 수도 있음
     }
 
-    public void sendSimpleEmail(String to, String subject, String text) {
-        try {
-            log.info("텍스트 이메일 발송 시도: 수신자={}, 제목={}", to, subject);
-
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(text);
-
-            mailSender.send(message);
-
-            log.info("텍스트 이메일 발송 성공: 수신자={}", to);
-        } catch (Exception e) {
-            log.error("텍스트 이메일 발송 실패: 수신자={}", to, e);
-        }
-    }
-
 }

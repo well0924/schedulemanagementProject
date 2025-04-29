@@ -1,8 +1,6 @@
 package com.example.notification.inconnector;
 
-import com.example.notification.apimodel.NotificationEvents;
-import com.example.notification.model.NotificationModel;
-import com.example.notification.service.NotificationService;
+import com.example.events.NotificationEvents;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +18,8 @@ public class NotificationEventConsumer {
 
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(topics = "notification-events", groupId = "notification-group")
+    @KafkaListener(topics = "notification-events", groupId = "notification-group",
+            containerFactory = "kafkaListenerContainerFactory")
     public void consume(NotificationEvents event) {
         try {
             log.info("Kafka 알림 수신: {}", event);

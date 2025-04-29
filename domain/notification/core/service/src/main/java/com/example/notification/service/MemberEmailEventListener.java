@@ -1,20 +1,16 @@
 package com.example.notification.service;
 
 import com.example.events.MemberSignUpEvent;
+import com.example.events.NotificationEvents;
 import com.example.notification.NotificationType;
-import com.example.notification.apimodel.NotificationEvents;
 import com.example.notification.email.EmailService;
 import com.example.notification.interfaces.NotificationEventInterfaces;
 import com.example.notification.model.NotificationModel;
-import com.example.notification.outconnector.NotificationOutConnector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
-
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -35,7 +31,7 @@ public class MemberEmailEventListener implements NotificationEventInterfaces<Mem
     public void handle(MemberSignUpEvent handle) {
         log.debug("event!::"+handle.getUsername());
         //이메일 전송
-        //sendWelcomeEmail(handle);
+        sendWelcomeEmail(handle);
         log.debug("notice::");
         //디비 저장
         saveNotificationToDatabase(handle);

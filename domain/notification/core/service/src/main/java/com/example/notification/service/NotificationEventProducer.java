@@ -1,6 +1,6 @@
 package com.example.notification.service;
 
-import com.example.notification.apimodel.NotificationEvents;
+import com.example.events.NotificationEvents;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;

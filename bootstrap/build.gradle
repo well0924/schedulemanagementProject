@@ -15,6 +15,7 @@ dependencies {
 	implementation project(':common:exception')
 	implementation project(':common:redis')
 	implementation project(':common:events')
+	implementation project(':common:s3')
 	implementation project(':domain:member:api')
 	implementation project(':domain:schedules:api')
 	implementation project(':domain:category:api')

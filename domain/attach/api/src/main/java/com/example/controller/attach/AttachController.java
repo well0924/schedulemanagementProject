@@ -38,11 +38,11 @@ public class AttachController {
     }
 
     @GetMapping("/{id}/presigned-download-url")
-    public ResponseEntity<String> getPresignedDownloadUrl(@PathVariable("id") Long attachId) {
+    public ResponseEntity<String> getPreSignedDownloadUrl(@PathVariable("id") Long attachId) {
         try {
             AttachResponse attach = attachInConnector.findById(attachId);
-            String presignedUrl = attachInConnector.generateDownloadPreSignedUrl(attach.originFileName());
-            return ResponseEntity.ok(presignedUrl);
+            String preSignedUrl = attachInConnector.generateDownloadPreSignedUrl(attach.originFileName());
+            return ResponseEntity.ok(preSignedUrl);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Presigned Download URL 생성 실패");
         }

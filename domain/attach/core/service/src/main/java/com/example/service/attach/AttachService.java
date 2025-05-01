@@ -5,6 +5,8 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
+import com.example.attach.dto.AttachErrorCode;
+import com.example.attach.exception.AttachCustomExceptionHandler;
 import com.example.model.attach.AttachModel;
 import com.example.outconnector.attach.AttachOutConnector;
 import lombok.RequiredArgsConstructor;
@@ -18,9 +20,10 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -71,7 +74,7 @@ public class AttachService {
         List<String> urls = new ArrayList<>();
         for (String fileName : fileNames) {
             Date expiration = new Date();
-            expiration.setTime(expiration.getTime() + 1000 * 60 * 15); // 15분
+            expiration.setTime(expiration.getTime() + 1000 * 60 * 20); // 20분
 
             GeneratePresignedUrlRequest generatePresignedUrlRequest =
                     new GeneratePresignedUrlRequest(bucketName, fileName)
@@ -87,29 +90,36 @@ public class AttachService {
     @Transactional(readOnly = true)
     public String generateDownloadPreSignedUrl(String fileName) {
         Date expiration = new Date();
-        expiration.setTime(expiration.getTime() + 1000 * 60 * 10); // 10분 유효
+        expiration.setTime(expiration.getTime() + 1000 * 60 * 30); // 30분 유효
+
+        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
+        String contentDisposition = "attachment; filename*=UTF-8''" + encodedFileName;
 
         GeneratePresignedUrlRequest generatePresignedUrlRequest =
                 new GeneratePresignedUrlRequest(bucketName, fileName)
                         .withMethod(HttpMethod.GET)  // 다운로드용은 GET
                         .withExpiration(expiration);
-
+        //첨부파일 다운로드
+        generatePresignedUrlRequest.addRequestParameter("response-content-disposition", contentDisposition);
         URL url = amazonS3.generatePresignedUrl(generatePresignedUrlRequest);
         return url.toString();
     }
 
     //업로드 완료 후 Attach 등록 + 썸네일 생성
-    public List<AttachModel> createAttach(List<String> uploadedFileNames) throws IOException {
+    public List<AttachModel> createAttach(List<String> uploadedFileNames) {
 
         List<AttachModel> savedAttachModels = new ArrayList<>();
 
         for (String storedFileName : uploadedFileNames) {
             String fileUrl = amazonS3.getUrl(bucketName, storedFileName).toString();
+            ObjectMetadata metadata = amazonS3.getObjectMetadata(bucketName, storedFileName);
+            long fileSize = metadata.getContentLength();
 
             AttachModel attachModel = AttachModel.builder()
                     .originFileName(storedFileName)
                     .storedFileName(storedFileName)
                     .filePath(fileUrl)
+                    .fileSize(fileSize)
                     .build();
 
             AttachModel savedAttach = attachOutConnector.createAttach(attachModel);
@@ -127,14 +137,24 @@ public class AttachService {
     @Async
     public CompletableFuture<Void> createAndUploadThumbnail(AttachModel attachModel) {
         try {
+            String fileName = attachModel.getStoredFileName().toLowerCase();
+            // 1. 이미지 파일 여부 체크
+            if (!fileName.endsWith(".jpg") && !fileName.endsWith(".jpeg")
+                    && !fileName.endsWith(".png") && !fileName.endsWith(".bmp")
+                    && !fileName.endsWith(".gif") && !fileName.endsWith(".webp")) {
+                log.info("[섬네일 건너뜀] 이미지 파일 아님: {}", fileName);
+                return CompletableFuture.completedFuture(null);
+            }
+
             log.info("[썸네일 생성 시작] {}", attachModel.getStoredFileName());
+
 
             S3Object s3Object = amazonS3.getObject(bucketName, attachModel.getStoredFileName());
             InputStream inputStream = s3Object.getObjectContent();
 
             BufferedImage originalImage = ImageIO.read(inputStream);
             if (originalImage == null) {
-                throw new IllegalArgumentException("Invalid image file: " + attachModel.getStoredFileName());
+                throw new IllegalArgumentException("썸네일 생성 실패: 유효하지 않은 이미지: " + attachModel.getStoredFileName());
             }
 
             ByteArrayOutputStream thumbnailOutputStream = new ByteArrayOutputStream();
@@ -155,7 +175,7 @@ public class AttachService {
 
             String thumbnailUrl = amazonS3.getUrl(bucketName, thumbnailFileName).toString();
             attachModel.setThumbnailFilePath(thumbnailUrl);
-
+            attachOutConnector.updateAttach(attachModel.getId(), attachModel);
             log.info("[썸네일 업로드 완료] {}", thumbnailUrl);
 
             CompletableFuture<Void> done = new CompletableFuture<>();
@@ -164,7 +184,7 @@ public class AttachService {
 
         } catch (Exception e) {
             log.error("[썸네일 생성 실패]", e);
-            throw new RuntimeException("썸네일 생성 실패", e);
+            throw new AttachCustomExceptionHandler(AttachErrorCode.THUMBNAIL_CREATE_FAIL);
         }
     }
 
@@ -214,12 +234,7 @@ public class AttachService {
         log.info("updatedInfo::"+savedAttachModels);
         return savedAttachModels;
     }
-
-    public void deleteAttach(Long attachId) {
-        AttachModel attachModel = attachOutConnector.findById(attachId);
-        attachModel.deleteFile(attachModel.getFilePath());
-        attachOutConnector.deleteAttach(attachId);
-    }*/
+    */
 
     public void updateScheduleId(List<Long> fileIds, Long scheduleId) {
         attachOutConnector.updateScheduleId(fileIds, scheduleId);

@@ -219,23 +219,6 @@ public class AttachService {
         log.info("[Attach 삭제 완료] attachId = {}", attachId);
     }
 
-
-   /* public List<AttachModel> updateAttach(Long scheduleId, List<MultipartFile> newFiles) throws IOException {
-
-        List<AttachModel> existFile = attachOutConnector.findAllByScheduleId(scheduleId);
-        log.info("attachment:"+existFile);
-        List<AttachModel> updatedFiles = AttachModel.updateMultipleFiles(existFile, newFiles, fileUploadPath);
-
-        List<AttachModel> savedAttachModels = new ArrayList<>();
-
-        for (AttachModel updatedFile : updatedFiles) {
-            savedAttachModels.add(attachOutConnector.updateAttach(updatedFile.getId(), updatedFile));
-        }
-        log.info("updatedInfo::"+savedAttachModels);
-        return savedAttachModels;
-    }
-    */
-
     public void updateScheduleId(List<Long> fileIds, Long scheduleId) {
         attachOutConnector.updateScheduleId(fileIds, scheduleId);
     }

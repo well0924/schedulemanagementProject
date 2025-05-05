@@ -4,7 +4,6 @@ import com.example.apimodel.ScheduleApiModel;
 import com.example.enumerate.schedules.DeleteType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.multipart.MultipartFile;
 
 import static com.example.apimodel.ScheduleApiModel.responseSchedule;
 import static com.example.apimodel.ScheduleApiModel.requestSchedule;
@@ -27,11 +26,13 @@ public interface ScheduleServiceConnector {
 
     ScheduleApiModel.responseSchedule saveSchedule(requestSchedule requestSchedule) throws IOException;
 
-    ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId,updateSchedule updateSchedule, List<MultipartFile>files) throws IOException;
+    ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId,updateSchedule updateSchedule) throws IOException;
 
     void deleteSchedule(Long scheduleId, DeleteType deleteType);
 
     void deleteOldSchedules();
+
+    void deleteSchedules(List<Long> ids);
 
     Page<responseSchedule> getSchedulesByStatus(String status, String userId,Pageable pageable) throws IOException;
 }

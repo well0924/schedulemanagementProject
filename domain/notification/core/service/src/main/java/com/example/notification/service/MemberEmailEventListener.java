@@ -24,12 +24,16 @@ public class MemberEmailEventListener implements NotificationEventInterfaces<Mem
 
     private final NotificationService notificationService;
 
-
     @Async
     @EventListener
+    public void handleSchedule(MemberSignUpEvent event) {
+        // 내부에서 추상화된 메서드 호출
+        handle(event);
+    }
+
     @Override
     public void handle(MemberSignUpEvent handle) {
-        log.debug("event!::"+handle.getUsername());
+        log.debug("event!::"+ handle.getUsername());
         //이메일 전송
         sendWelcomeEmail(handle);
         log.debug("notice::");

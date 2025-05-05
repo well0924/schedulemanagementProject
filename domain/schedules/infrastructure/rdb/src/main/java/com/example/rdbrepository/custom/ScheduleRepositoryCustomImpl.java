@@ -2,8 +2,8 @@ package com.example.rdbrepository.custom;
 
 import com.example.model.schedules.SchedulesModel;
 import com.example.rdb.member.QMember;
-import com.example.rdbrepository.QAttach;
-import com.example.rdbrepository.QCategory;
+import com.example.rdb.QAttach;
+import com.example.rdb.QCategory;
 import com.example.rdbrepository.QSchedules;
 import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;

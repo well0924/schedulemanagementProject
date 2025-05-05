@@ -61,8 +61,8 @@ public class ScheduleManageController {
     }
 
     @PatchMapping("/{id}")
-    public ScheduleApiModel.responseSchedule updateSchedule(@PathVariable("id")Long scheduleId,@Validated @RequestBody ScheduleApiModel.updateSchedule updateSchedule,List<MultipartFile> files) throws IOException {
-        return scheduleServiceConnector.updateSchedule(scheduleId,updateSchedule,files);
+    public ScheduleApiModel.responseSchedule updateSchedule(@PathVariable("id")Long scheduleId,@Validated @RequestBody ScheduleApiModel.updateSchedule updateSchedule) throws IOException {
+        return scheduleServiceConnector.updateSchedule(scheduleId,updateSchedule);
     }
 
     @PostMapping("/{id}")
@@ -70,6 +70,12 @@ public class ScheduleManageController {
                                  @RequestParam(name = "type", defaultValue = "SINGLE") DeleteType deleteType) {
         scheduleServiceConnector.deleteSchedule(scheduleId,deleteType);
         return "Delete Schedule.";
+    }
+
+    @PostMapping("/bulk-delete")
+    public String deleteMultipleSchedules(@RequestBody List<Long> scheduleIds) {
+        scheduleServiceConnector.deleteSchedules(scheduleIds);
+        return "Bulk delete completed.";
     }
 
     @DeleteMapping("/old-schedules")

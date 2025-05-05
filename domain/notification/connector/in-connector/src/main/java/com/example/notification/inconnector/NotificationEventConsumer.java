@@ -32,7 +32,6 @@ public class NotificationEventConsumer {
                     "/topic/notifications/" + event.getReceiverId(),
                     message
             );
-            log.debug("회원번호.::"+event.getReceiverId());
 
         } catch (JsonProcessingException e) {
             log.error("Kafka 메시지 직렬화 오류: {}", e.getMessage());

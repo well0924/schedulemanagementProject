@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -27,26 +29,31 @@ public class NotificationEventEventListener implements NotificationEventInterfac
 
     @Async
     @EventListener
+    public void handleSchedule(ScheduleEvents event) {
+        log.info("event?");
+        // 내부에서 추상화된 메서드 호출
+        handle(event);
+    }
+
     @Override
-    public void handle(ScheduleEvents event) {
-        log.info("일정 이벤트 수신: {}", event);
-
-        NotificationChannel channel = Optional.ofNullable(event.getNotificationChannel())
+    public void handle(ScheduleEvents handle) {
+        log.info("type:"+handle);
+        NotificationChannel channel = Optional.ofNullable(handle.getNotificationChannel())
                 .orElse(NotificationChannel.WEB);
-
+        log.info("일정 이벤트 수신: {}", handle);
         // 채널에 따라 다르게 처리
         switch (channel) {
-            case WEB -> handleWebNotification(event);
-            case PUSH -> handlePushNotification(event);
+            case WEB -> handleWebNotification(handle);
+            case PUSH -> handlePushNotification(handle);
         }
     }
 
     private void handleWebNotification(ScheduleEvents event) {
         try {
-            // Kafka 발송
-            notificationEventProducer.sendNotification(toNotificationEvent(event));
             // DB 저장
             notificationService.createNotification(toNotificationModel(event));
+            // Kafka 발송
+            notificationEventProducer.sendNotification(toNotificationEvent(event));
             log.info("Kafka 알림 이벤트 발송 성공: receiverId={}", event.getUserId());
         } catch (Exception e) {
             log.error("Kafka 알림 이벤트 발송 실패: {}", e.getMessage());

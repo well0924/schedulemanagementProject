@@ -9,12 +9,14 @@ import com.example.exception.exception.MemberCustomException;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
 import com.example.model.schedules.SchedulesModel;
+import com.example.rdb.CategoryRepository;
 import com.example.rdb.member.MemberRepository;
 import com.example.rdbrepository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,6 +24,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
+@Transactional
 @RequiredArgsConstructor
 public class ScheduleOutConnector {
 
@@ -145,6 +148,11 @@ public class ScheduleOutConnector {
         Schedules schedules = getScheduleById(scheduleId);
         schedules.isDeletedScheduled();
         scheduleRepository.save(schedules);
+    }
+
+    //일정 삭제(벌크처리)
+    public void markAsDeletedByIds(List<Long> ids) {
+        scheduleRepository.markAsDeletedByIds(ids);
     }
 
     //스케줄러를 사용을해서 일괄적으로 일정을 삭제.

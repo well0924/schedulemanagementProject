@@ -3,10 +3,7 @@ package com.example.rdbrepository;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.jpa.config.base.BaseEntity;
 import jakarta.annotation.Nullable;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,6 +14,12 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Builder(toBuilder = true)
+@Table(
+        name = "schedules",
+        indexes = {
+                @Index(name = "idx_schedules_user_time", columnList = "userId, startTime, endTime")
+        }
+)
 @NoArgsConstructor
 @AllArgsConstructor
 public class Schedules extends BaseEntity {

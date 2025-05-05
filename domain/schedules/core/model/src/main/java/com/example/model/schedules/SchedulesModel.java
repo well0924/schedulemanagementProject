@@ -97,9 +97,6 @@ public class SchedulesModel {
     //진행상태 수정
     public void updateSchedule(LocalDateTime newStartTime, LocalDateTime newEndTime) {
 
-        if (this.progressStatus == PROGRESS_STATUS.COMPLETE) {
-            throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_COMPLETED);
-        }
         if (newStartTime != null && newEndTime != null && newStartTime.isAfter(newEndTime)) {
             throw new ScheduleCustomException(ScheduleErrorCode.START_TIME_AFTER_END_TIME_EXCEPTION);
         }

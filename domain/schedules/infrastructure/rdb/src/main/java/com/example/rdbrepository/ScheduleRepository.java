@@ -44,4 +44,9 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
         AND s.startTime >= :startTime
     """)
     void markAsDeletedAfter(@Param("repeatGroupId") String repeatGroupId, @Param("startTime") LocalDateTime startTime);
+
+    //일정 벌크 삭제
+    @Modifying
+    @Query("UPDATE Schedules s SET s.isDeletedScheduled = true WHERE s.id IN :ids")
+    void markAsDeletedByIds(@Param("ids") List<Long> ids);
 }

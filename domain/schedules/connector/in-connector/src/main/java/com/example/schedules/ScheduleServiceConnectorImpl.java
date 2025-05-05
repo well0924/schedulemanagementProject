@@ -4,7 +4,7 @@ import com.example.apimodel.ScheduleApiModel;
 import com.example.apimodel.attach.AttachApiModel;
 import com.example.enumerate.schedules.DeleteType;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
-import com.example.inconnector.attach.AttachInConnector;
+import com.example.attach.inbound.AttachInConnector;
 import com.example.model.schedules.SchedulesModel;
 import com.example.schedule.ScheduleDomainService;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -81,8 +80,8 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
     }
 
     @Override
-    public ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId,ScheduleApiModel.updateSchedule updateSchedule, List<MultipartFile> files) throws IOException {
-        return toApiModelWithAttachments(scheduleDomainService.updateSchedule(scheduleId,toModel(updateSchedule),files));
+    public ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId,ScheduleApiModel.updateSchedule updateSchedule) throws IOException {
+        return toApiModelWithAttachments(scheduleDomainService.updateSchedule(scheduleId,toModel(updateSchedule)));
     }
 
     @Override
@@ -93,6 +92,11 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
     @Override
     public void deleteOldSchedules() {
         scheduleDomainService.deleteOldSchedules();
+    }
+
+    @Override
+    public void deleteSchedules(List<Long> ids) {
+        scheduleDomainService.deleteSchedules(ids);
     }
 
     public SchedulesModel toModel(ScheduleApiModel.requestSchedule request) {

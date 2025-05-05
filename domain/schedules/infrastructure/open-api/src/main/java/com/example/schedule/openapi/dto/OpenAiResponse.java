@@ -1,13 +1,12 @@
 package com.example.schedule.openapi.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.*;
 
 import java.util.List;
 
-@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
+@Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -15,10 +14,11 @@ public class OpenAiResponse {
 
     private List<Choice> choices;
 
-    @Data
+    @Getter
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Choice {
         private int index;
         private OpenAiRequest.Message message;

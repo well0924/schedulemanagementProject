@@ -8,6 +8,7 @@ import com.example.schedule.openapi.client.OpenAiClient;
 import com.example.schedule.openapi.dto.OpenAiRequest;
 import com.example.schedule.openapi.dto.OpenAiResponse;
 import com.example.schedule.openapi.dto.ScheduleRecommendationDto;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import com.example.rdbrepository.ScheduleRepository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,26 +36,35 @@ public class ScheduleRecommendService {
 
     private final OpenAiClient aiClient;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+
+    private static final Pattern pattern = Pattern.compile("```json\\s*(\\[.*?\\])\\s*```", Pattern.DOTALL);
 
     @CircuitBreaker(name = "openAiClient", fallbackMethod = "fallbackRecommendSchedules")
     public List<Schedules> recommendSchedules(String userId, Pageable pageable) throws Exception {
-        Long memberId = memberRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."))
-                .getId();
+        try{
+            Long memberId = memberRepository.findByUserId(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."))
+                    .getId();
 
-        List<SchedulesModel> schedulesModels = schedulesRepository.findAllByUserId(userId, pageable).getContent();
-        List<Schedules> schedules = mapToSchedules(schedulesModels);
+            List<SchedulesModel> schedulesModels = schedulesRepository.findAllByUserId(userId, pageable).getContent();
+            List<Schedules> schedules = mapToSchedules(schedulesModels);
 
-        String prompt = buildPromptFromSchedules(schedules);
-        OpenAiRequest request = buildOpenAiRequest(prompt);
+            String prompt = buildPromptFromSchedules(schedules);
+            OpenAiRequest request = buildOpenAiRequest(prompt);
 
-        OpenAiResponse response = aiClient.getChatCompletion(request);
-        String rawContent = response.getChoices().get(0).getMessage().getContent();
-        String extractedJson = extractJsonFromContent(rawContent);
+            OpenAiResponse response = aiClient.getChatCompletion(request);
+            String rawContent = response.getChoices().get(0).getMessage().getContent();
+            String extractedJson = extractJsonFromContent(rawContent);
 
-        List<ScheduleRecommendationDto> recommendedList = objectMapper.readValue(extractedJson, new TypeReference<>() {});
-        return mapToRecommendedSchedules(recommendedList, memberId);
+            List<ScheduleRecommendationDto> recommendedList = objectMapper.readValue(extractedJson, new TypeReference<>() {});
+
+            return mapToRecommendedSchedules(recommendedList, memberId);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("AI 응답 파싱 중 오류 발생: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("일정 추천 중 알 수 없는 오류 발생: " + e.getMessage(), e);
+        }
     }
 
     public List<Schedules> fallbackRecommendSchedules(String userId, Pageable pageable, Throwable t) {
@@ -91,18 +102,15 @@ public class ScheduleRecommendService {
 
     private List<Schedules> mapToRecommendedSchedules(List<ScheduleRecommendationDto> dtoList, Long memberId) {
         List<Schedules> recommendedSchedules = new ArrayList<>();
-        int year = LocalDateTime.now().getYear();
 
         for (ScheduleRecommendationDto dto : dtoList) {
-            LocalDateTime start = mergeDateAndTime(year, dto.getScheduleMonth(), dto.getScheduleDay(), dto.getStartTime());
-            LocalDateTime end = mergeDateAndTime(year, dto.getScheduleMonth(), dto.getScheduleDay(), dto.getEndTime());
 
             recommendedSchedules.add(Schedules.builder()
                     .contents(dto.getContents())
                     .scheduleMonth(dto.getScheduleMonth())
                     .scheduleDay(dto.getScheduleDay())
-                    .startTime(start)
-                    .endTime(end)
+                    .startTime(dto.getStartTime())
+                    .endTime(dto.getEndTime())
                     .progress_status(PROGRESS_STATUS.IN_COMPLETE.getValue())
                     .userId(memberId)
                     .build());
@@ -115,31 +123,44 @@ public class ScheduleRecommendService {
         StringBuilder prompt = new StringBuilder();
 
         if (schedules.isEmpty()) {
+            LocalDate now = LocalDate.now();
+            String today = now.toString(); // 예: 2025-05-05
+
             prompt.append("사용자의 일정이 없습니다.\n")
+                    .append("오늘 날짜는 ").append(today).append("입니다.\n")
                     .append("아침, 점심, 저녁 시간대를 고려하여 하루 추천 일정을 2~3개 생성해주세요.\n")
+                    .append("모든 시간은 반드시 'yyyy-MM-ddTHH:mm' 형식으로 작성해주세요.\n")
                     .append("JSON 형식만 출력해주세요. 설명 없이.\n")
                     .append("```json\n")
                     .append("[\n")
-                    .append("  {\"contents\":\"운동\", \"scheduleMonth\":4, \"scheduleDay\":4, \"startTime\":\"07:00\", \"endTime\":\"08:00\"},\n")
-                    .append("  {\"contents\":\"스터디\", \"scheduleMonth\":4, \"scheduleDay\":4, \"startTime\":\"10:00\", \"endTime\":\"12:00\"}\n")
+                    .append("  {\"contents\":\"운동\", \"startTime\":\"").append(today).append("T07:00\", \"endTime\":\"").append(today).append("T08:00\"},\n")
+                    .append("  {\"contents\":\"스터디\", \"startTime\":\"").append(today).append("T10:00\", \"endTime\":\"").append(today).append("T12:00\"}\n")
                     .append("]\n")
                     .append("```");
         } else {
-            prompt.append("아래는 사용자의 일정 목록입니다.\n")
-                    .append("빈 시간에 추천 일정을 생성해주세요.\n\n");
+            // 사용자의 첫 일정 기준으로 날짜를 추출 (모든 일정이 동일 날짜라는 전제)
+            Schedules first = schedules.get(0);
+            LocalDate baseDate = LocalDate.of(2025, first.getScheduleMonth(), first.getScheduleDay());
+
+            prompt.append("아래는 사용자의 일정 목록입니다. 날짜는 ").append(baseDate).append("입니다.\n")
+                    .append("해당 일자의 빈 시간에 추천 일정을 생성해주세요.\n")
+                    .append("모든 시간은 반드시 'yyyy-MM-ddTHH:mm' 형식으로 작성해주세요.\n\n");
 
             for (Schedules schedule : schedules) {
+                LocalDate date = LocalDate.of(2025, schedule.getScheduleMonth(), schedule.getScheduleDay());
                 prompt.append("- ")
-                        .append(schedule.getScheduleMonth()).append("월 ")
-                        .append(schedule.getScheduleDay()).append("일 ")
+                        .append(date).append(" ")
                         .append(schedule.getStartTime().toLocalTime()).append("~")
                         .append(schedule.getEndTime().toLocalTime()).append(" : ")
                         .append(schedule.getContents()).append("\n");
             }
 
-            prompt.append("\n반드시 JSON 형식만 출력해주세요. 설명 절대 금지.\n")
+            // 예시에서도 baseDate 사용
+            prompt.append("\nJSON 형식만 출력해주세요. 설명 절대 금지.\n")
                     .append("```json\n")
-                    .append("[{\"contents\":\"운동\", \"scheduleMonth\":4, \"scheduleDay\":4, \"startTime\":\"14:00\", \"endTime\":\"15:00\"}]\n")
+                    .append("[\n")
+                    .append("  {\"contents\":\"운동\", \"startTime\":\"").append(baseDate).append("T14:00\", \"endTime\":\"").append(baseDate).append("T15:00\"}\n")
+                    .append("]\n")
                     .append("```");
         }
 
@@ -157,17 +178,12 @@ public class ScheduleRecommendService {
     }
 
     private String extractJsonFromContent(String content) {
-        Pattern pattern = Pattern.compile("```json\\s*(\\[.*?\\])\\s*```", Pattern.DOTALL);
+
         Matcher matcher = pattern.matcher(content);
 
         if (matcher.find()) {
             return matcher.group(1);  // JSON 덩어리만 추출
         }
         return content;  // 최악의 경우 전체 반환 (예외처리 필요)
-    }
-
-
-    private LocalDateTime mergeDateAndTime(int year, int month, int day, String timeStr) {
-        return LocalDateTime.parse(String.format("%04d-%02d-%02dT%s", year, month, day, timeStr));
     }
 }

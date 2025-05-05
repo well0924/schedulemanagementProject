@@ -1,5 +1,6 @@
 package com.example.schedule.openapi.client;
 
+import com.example.schedule.openapi.config.OpenAiErrorDecoder;
 import com.example.schedule.openapi.config.OpenApiConfig;
 import com.example.schedule.openapi.dto.OpenAiRequest;
 import com.example.schedule.openapi.dto.OpenAiResponse;
@@ -12,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient(
         name = "OpenAi",
         url = "https://api.openai.com/v1",
-        configuration = OpenApiConfig.class,
+        configuration = {OpenApiConfig.class, OpenAiErrorDecoder.class},
         fallback = OpenAiFallback.class)
 public interface OpenAiClient {
 

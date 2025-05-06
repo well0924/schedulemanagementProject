@@ -1,7 +1,7 @@
 package com.example.notification.service;
 
 import com.example.notification.model.NotificationModel;
-import com.example.notification.outconnector.NotificationOutConnector;
+import com.example.outbound.notification.NotificationOutConnector;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;

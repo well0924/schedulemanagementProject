@@ -1,6 +1,6 @@
 package com.example.interfaces.category;
 
-import com.example.apimodel.cateogry.CategoryApiModel;
+import com.example.category.apimodel.CategoryApiModel;
 
 import java.util.List;
 

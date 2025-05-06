@@ -5,15 +5,14 @@ import com.example.events.NotificationEvents;
 import com.example.events.ScheduleEvents;
 import com.example.notification.NotificationType;
 
-import com.example.notification.interfaces.NotificationEventInterfaces;
+import com.example.interfaces.notification.NotificationEventInterfaces;
 import com.example.notification.model.NotificationModel;
+import com.example.outbound.producer.NotificationEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDateTime;
 import java.util.Optional;

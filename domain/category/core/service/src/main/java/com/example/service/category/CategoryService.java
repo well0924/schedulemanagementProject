@@ -1,6 +1,6 @@
 package com.example.service.category;
 
-import com.example.outconnector.category.CategoryOutConnector;
+import com.example.outbound.category.CategoryOutConnector;
 import com.example.model.category.CategoryModel;
 import com.example.redis.config.cachekey.CacheKey;
 import lombok.AllArgsConstructor;

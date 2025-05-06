@@ -28,6 +28,11 @@ subprojects {
         plugin 'io.spring.dependency-management'
     }
 
+    tasks.withType(JavaCompile).configureEach {
+        println(" -parameters 설정됨 in project: ${project.name}")
+        options.compilerArgs += ["-parameters"]
+    }
+
     tasks.bootJar {
         enabled = false
     }

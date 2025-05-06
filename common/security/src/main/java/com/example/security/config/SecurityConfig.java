@@ -1,8 +1,7 @@
 package com.example.security.config;
 
 import com.example.logging.MDC.MDCFilter;
-import com.example.outconnector.auth.AuthOutConnector;
-import com.example.outconnector.auth.CustomOAuth2OutConnector;
+import com.example.outbound.auth.CustomOAuth2OutConnector;
 import com.example.service.auth.jwt.JwtAccessDeniedHandler;
 import com.example.service.auth.jwt.JwtAuthenticationEntryPoint;
 import com.example.service.auth.jwt.JwtAuthenticationFilter;

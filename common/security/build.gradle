@@ -1,7 +1,7 @@
 dependencies {
     implementation project(':common:logging')
     implementation project(':domain:member:core:service')
-    implementation project(':domain:member:connector:out-connector')
+    implementation project(':domain:member:connector:out-bound')
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'

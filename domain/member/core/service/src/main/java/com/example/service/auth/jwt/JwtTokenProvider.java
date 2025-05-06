@@ -1,6 +1,6 @@
 package com.example.service.auth.jwt;
 
-import com.example.outconnector.auth.AuthOutConnector;
+import com.example.outbound.auth.AuthOutConnector;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;

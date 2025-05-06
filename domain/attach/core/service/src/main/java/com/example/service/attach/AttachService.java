@@ -8,7 +8,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.example.attach.dto.AttachErrorCode;
 import com.example.attach.exception.AttachCustomExceptionHandler;
 import com.example.model.attach.AttachModel;
-import com.example.outconnector.attach.AttachOutConnector;
+import com.example.outbound.attach.AttachOutConnector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;

@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':domain:category:connector:in-bound')
+    implementation project(':domain:category:api:api-model')
+    implementation project(':domain:category:connector:interface')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}

@@ -1,0 +1,17 @@
+dependencies {
+    implementation project(':common:events')
+    implementation project(':domain:member:core:service')
+    implementation project(':domain:member:core:model')
+    implementation project(':domain:notification:core:model')
+    implementation project(':domain:notification:core:enumerate')
+    implementation project(':domain:notification:api:api-model')
+    implementation project(':domain:notification:connector:interfaces')
+    implementation project(':domain:notification:connector:out-bound')
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation "org.springframework.kafka:spring-kafka:3.2.0"
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}

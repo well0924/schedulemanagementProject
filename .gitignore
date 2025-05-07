@@ -1,11 +1,22 @@
-.gradle/**
-build/
-gradle
+# Gradle 설정 디렉토리
+.gradle/
+gradle/
 !gradle/wrapper/gradle-wrapper.jar
+
+# Gradle 빌드 결과물
+build/
 !**/src/main/**/build/
 !**/src/test/**/build/
+
+# Gradle 스크립트 파일 (전체 무시 대신 예외 허용)
+*.gradle
+!**/build.gradle
+
+# YML 설정파일
 *.yml
-### STS ###
+**.yml
+
+# STS 관련
 .apt_generated
 .classpath
 .factorypath
@@ -13,33 +24,27 @@ gradle
 .settings
 .springBeans
 .sts4-cache
+
 bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
-bootstrap/**
-**.yml
-### IntelliJ IDEA ###
-.idea/**
+
+# VSCode
+.vscode/
+
+# IntelliJ 관련
+.idea/
 *.iws
 *.iml
 *.ipr
 *.xml
-*.gradle
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-### NetBeans ###
+
+# NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
-/.nb-gradle/
+/.nb-gradle
 
-### VS Code ###
-.vscode/
-
-# Ignore Gradle project-specific cache directory
-.gradle
-
-# Ignore Gradle build output directory
-build
+# bootstrap 모듈 빌드 제외 시도했었음 (필요 시 유지)
+# bootstrap/**

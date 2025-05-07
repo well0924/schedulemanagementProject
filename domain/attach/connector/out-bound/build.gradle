@@ -1,0 +1,13 @@
+dependencies {
+    implementation project(':common:jpa')
+    implementation project(':common:exception')
+    implementation project(':domain:schedules:core:model')
+    implementation project(':domain:schedules:infrastructure:rdb')
+    implementation project(':domain:attach:core:exception')
+    implementation project(':domain:attach:core:model')
+    implementation project(':domain:attach:infrastructure:rdb')
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}

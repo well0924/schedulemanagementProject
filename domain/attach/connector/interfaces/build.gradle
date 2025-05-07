@@ -1,0 +1,5 @@
+dependencies {
+    implementation project(':domain:attach:api:api-model')
+    implementation project(':domain:attach:core:enumerate')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+}

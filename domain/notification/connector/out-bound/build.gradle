@@ -1,0 +1,23 @@
+dependencies {
+    implementation project(':common:jpa')
+    implementation project(':common:events')
+    implementation project(':domain:schedules:core:service')
+    implementation project(":domain:notification:infrastructure:rdb")
+    implementation project(":domain:notification:core:model")
+    implementation project(":domain:notification:core:enumerate")
+    implementation project(":domain:notification:connector:interfaces")
+    implementation project(":domain:notification:api:api-model")
+    implementation project(':domain:member:core:service')
+    //jwt
+    implementation('io.jsonwebtoken:jjwt-root:0.11.5')
+    implementation('io.jsonwebtoken:jjwt-impl:0.11.5')
+    implementation('io.jsonwebtoken:jjwt-jackson:0.11.5')
+    //jwt 라이브러리
+    implementation group: 'com.auth0', name: 'java-jwt', version: '3.10.2'
+    implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+}

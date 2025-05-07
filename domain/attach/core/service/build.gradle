@@ -1,0 +1,15 @@
+dependencies {
+    implementation project(':common:redis')
+    implementation project(':domain:attach:connector:out-bound')
+    implementation project(':domain:attach:core:model')
+    implementation project(':domain:attach:core:exception')
+    implementation project(':common:s3')
+    //thumbnail
+    implementation group: 'net.coobird', name: 'thumbnailator', version: '0.4.20'
+    implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}

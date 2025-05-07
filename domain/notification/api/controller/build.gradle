@@ -1,0 +1,7 @@
+dependencies {
+    implementation project(':domain:notification:connector:in-bound')
+    implementation project(':domain:notification:api:api-model')
+    implementation project(':domain:notification:connector:interfaces')
+    implementation project(':domain:notification:core:enumerate')
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+}

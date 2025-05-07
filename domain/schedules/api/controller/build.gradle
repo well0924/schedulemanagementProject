@@ -1,0 +1,7 @@
+dependencies {
+    implementation project(':domain:schedules:connector:in-bound')
+    implementation project(':domain:schedules:api:api-model')
+    implementation project(':domain:schedules:connector:interface')
+    implementation project(':domain:schedules:core:enumerate')
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+}

@@ -1,0 +1,25 @@
+dependencies {
+    implementation project(':common:jpa')
+    implementation project(':common:events')
+    implementation project(':domain:schedules:core:model')
+    implementation project(':domain:schedules:core:enumerate')
+    implementation project(':domain:schedules:core:exception')
+    implementation project(':domain:schedules:connector:out-bound')
+    implementation project(':domain:schedules:connector:out-bound:open-ai')
+    implementation project(':domain:schedules:infrastructure:rdb')
+    implementation project(':domain:attach:api:api-model')
+    implementation project(':domain:attach:connector:in-bound')
+    implementation project(':domain:attach:connector:interfaces')
+    implementation project(':domain:attach:connector:out-bound')
+    implementation project(':domain:attach:core:service')
+    implementation project(':domain:attach:core:model')
+    implementation project(':domain:attach:infrastructure:rdb')
+    implementation project(':domain:member:infrastructure:rdb')
+    implementation project(':domain:category:infrastructure:rdb')
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}

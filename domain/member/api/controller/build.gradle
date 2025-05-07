@@ -1,0 +1,13 @@
+dependencies {
+    implementation project(':domain:member:connector:in-bound')
+    implementation project(':domain:member:api:api-model')
+    implementation project(':domain:member:connector:interfaces')
+    implementation project(':domain:member:core:enumerate')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}
+
+

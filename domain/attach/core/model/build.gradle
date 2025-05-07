@@ -1,0 +1,15 @@
+dependencies {
+    implementation project(':common:jpa')
+    implementation project(':domain:attach:infrastructure:rdb')
+    //fileupload
+    implementation 'commons-io:commons-io:2.6'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-web-services'
+    //thumbnail
+    implementation group: 'net.coobird', name: 'thumbnailator', version: '0.4.20'
+    //jackson
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.12.4'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.4'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.12.4'
+
+}

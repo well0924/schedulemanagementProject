@@ -1,0 +1,11 @@
+dependencies {
+    implementation project(':common:events')
+    implementation project(':domain:notification:connector:interfaces')
+    implementation project(':domain:notification:api:api-model')
+    implementation project(':domain:notification:connector:out-bound')
+    implementation project(':domain:notification:core:service')
+    implementation project(':domain:notification:core:model')
+    implementation project(':domain:notification:core:enumerate')
+    implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+}

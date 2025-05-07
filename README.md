@@ -1,173 +1,80 @@
 # 일정 관리 프로젝트 
 
-ERD 구조 
+
+## 📌 프로젝트 개요
+
+사용자가 일정 등록/수정/삭제 및 반복 설정을 할 수 있고,  
+AI 기반 일정 추천, 실시간 알림, 채팅 기능을 제공하는 웹 캘린더 서비스입니다.
+
+- 기간: 2025.01 ~ 2025.05
+- 주요 기술: Spring Boot, Next.js, MySQL, Kafka, WebSocket, OpenFeign, Redis, S3
+- 주요 기능:
+    - 일정 CRUD 및 반복 일정 등록
+    - 실시간 일정 알림 (WebSocket + Kafka)
+    - 일정 충돌 방지 및 추천 일정 생성 (OpenAI API)
+    - Presigned URL 기반 파일 첨부
+
+## 🛠 사용 기술 스택
+
+### Backend
+- Java 17, Spring Boot 3
+- JPA + QueryDSL
+- Kafka (이벤트 기반 알림)
+- Redis (캐시 관리)
+- Amazon S3 (파일 업로드/다운로드)
+- OpenFeign (AI 일정 추천 API 호출)
+
+### Frontend
+- Next.js 14 + TypeScript
+- Tailwind CSS
+- FullCalendar
+
+### Infra / DevOps
+- AWS Lightsail, RDS, S3
+- GitHub Actions (CI/CD)
+- Docker, Docker Compose
+- Prometheus + Grafana (모니터링 예정)
+
+## ✨ 주요 기능
+
+- **일정 등록**
+    - 반복 설정 (매일/매월/매년), 첨부파일 포함
+- **일정 추천**
+    - 사용자의 비어 있는 시간대 기반 추천 (OpenAI 사용)
+- **알림 기능**
+    - Kafka 이벤트 발행 → WebSocket 실시간 수신
+- **파일 첨부**
+    - S3 Presigned URL 기반 업로드 / 다운로드
+
+## 🧱 아키텍처
+
+
+
+![Image](https://github.com/user-attachments/assets/1fa64eeb-dfe8-4166-82b6-aceac0af3f76)
+
+- 도메인 분리 기반 멀티모듈
+- 각 도메인은 api / core / connector / infra로 계층 분리
+- 이벤트 기반 후처리 (Kafka + Async + EventPublisher)
+
+
+### 실행 방법 (로컬)
+```
+bash
+git clone https://github.com/well0924/schedulemanagementProject.git
+./gradlew bootRun
+
+git clone https://github.com/well0924/schedulemanagement-front.git
+cd my-app
+npm install
+npm run dev
+
+```
+
+## 🗂 ERD 및 모델 구조
+ 
 ![일정관리 (1)](https://github.com/user-attachments/assets/19cb4ace-786d-414c-a971-238dd38195fb)
 
 
+### 7. 🔹 기술적 고민 + 트러블슈팅 + 개선 방향
 
-테이블의 설명
-
-
-회원(Member) 테이블
-
-
-id: 기본 키
-
-user_id: 고유 사용자 ID
-
-user_name: 사용자 이름
-
-password: 사용자 비밀번호
-
-user_email: 사용자 이메일
-
-role: 역할 (예: ADMIN, USER)
-
-created_time: 생성 시간
-
-updated_time: 수정 시간
-
-created_by: 가입자(회원 아이디)
-
-updated_by: 수정자(회원 아이디)
-
-다른 테이블과의 관계:
-알림(Notification) 테이블에서 user_id를 참조
-통계(Statistics) 테이블에서 user_id를 참조
-
-
-스케줄(Schedule) 테이블
-
-id: 기본 키
-
-contents: 일정 내용
-
-start_time: 시작 시간
-
-end_time: 종료 시간
-
-progress_status: 진행 상태 (예: COMPLETE, PROGRESS, INCOMPLETE)
-
-user_id: **회원(Member)** 의 id를 참조하는 외래 키
-
-category_id: **카테고리(Category)** 의 id를 참조하는 외래 키
-
-parent_schedule_id: 자기 자신을 참조하는 외래 키 (하위 일정)
-
-schedule_month: 특정일정의 월
-
-schedule_day: 특정일정의 일
-
-created_time: 생성 시간
-
-updated_time: 수정 시간
-
-created_by: 가입자(회원 아이디)
-
-updated_by: 수정자(회원 아이디)
-
-다른 테이블과의 관계:
-**회원(Member)** 과 관계: user_id
-**카테고리(Category)** 와 관계: category_id
-**태그(Tag)** 와 관계: 중간 테이블(Schedule_Tag)을 통해 연결
-**첨부파일(Attachment)** 과 관계: schedule_id
-
-
-카테고리(Category) 테이블
-
-id: 기본 키
-
-name: 카테고리 이름
-
-parent_id: 상위 카테고리 (기본값은 null)
-
-depth: 카테고리의 계층 (기본값은 0)
-
-created_time: 생성 시간
-
-updated_time: 수정 시간
-
-created_by: 작성자(회원 아이디)
-
-updated_by: 수정자(회원 아이디)
-
-다른 테이블과의 관계:
-**스케줄(Schedule)** 과 관계: category_id (스케줄 테이블에서 참조)
-
-태그(Tag) 테이블
-
-id: 기본 키
-
-name: 태그 이름
-
-created_time: 생성 시간
-
-updated_time: 수정 시간
-
-created_by: 태그 생성자
-
-updated_by: 태그 수정자
-
-다른 테이블과의 관계:
-**스케줄(Schedule)** 과 관계: 중간 테이블(Schedule_Tag)을 통해 다대다 관계 설정
-중간 테이블에 태그의 순서를 보장을 하기 위해서 position 컬럼을 추가.
-
-
-첨부파일(Attachment) 테이블
-
-id: 기본 키
-
-schedule_id: **스케줄(Schedule)** 의 id를 참조하는 외래 키
-
-file_name: 파일 이름
-
-file_size: 파일 크기(최대 20MB)
-
-origin_file_name: 원본 파일명
-
-stored_file_name: 저장된 파일명(클라우드에 저장될 파일명)
-
-created_time: 생성 시간
-
-updated_time: 수정 시간
-
-created_by: 업로드한 사람(회원 아이디)
-
-updated_by: 수정자(회원 아이디)
-
-다른 테이블과의 관계:
-**스케줄(Schedule)** 과 관계: schedule_id
-
-알림(Notification) 테이블
-
-id: 기본 키
-
-user_id: **회원(Member)** 의 id를 참조하는 외래 키
-
-message: 알림 메시지
-
-is_read: 읽음 여부
-
-notice_type: 알림 종류
-
-created_time: 생성 시간
-
-다른 테이블과의 관계:
-
-**회원(Member)** 과 관계: user_id
-
-통계(Statistics) 테이블
-
-id: 기본 키
-
-user_id: **회원(Member)** 의 id를 참조하는 외래 키
-
-schedule_count: 일정 개수
-
-tag_count: 태그 개수
-
-last_updated: 마지막 업데이트 시간
-
-다른 테이블과의 관계
-
-**회원(Member)** 과 관계: user_id
+### 🧠 기술적 고민 & 해결 과정

@@ -67,6 +67,13 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
     }
 
     @Override
+    public List<ScheduleApiModel.responseSchedule> findByTodaySchedule(Long userId) {
+        return scheduleDomainService.findByTodaySchedule(userId).stream()
+                .map(this::toApiModelWithAttachments)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public ScheduleApiModel.responseSchedule findById(Long scheduleId) {
         SchedulesModel result = scheduleDomainService.findById(scheduleId);
         log.info("result"+result);

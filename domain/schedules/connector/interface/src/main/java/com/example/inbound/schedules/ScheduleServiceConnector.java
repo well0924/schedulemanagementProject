@@ -22,6 +22,8 @@ public interface ScheduleServiceConnector {
 
     Page<responseSchedule> getSchedulesByCategoryName(String categoryId,Pageable pageable) throws IOException;
 
+    List<responseSchedule> findByTodaySchedule(Long userId);
+
     ScheduleApiModel.responseSchedule findById(Long scheduleId) throws IOException;
 
     ScheduleApiModel.responseSchedule saveSchedule(requestSchedule requestSchedule) throws IOException;

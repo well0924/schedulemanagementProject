@@ -56,6 +56,11 @@ public class ScheduleDomainService {
         return scheduleOutConnector.findAllByPROGRESS_STATUS(userId,status,pageable);
     }
 
+    //오늘의 일정 조회
+    public List<SchedulesModel> findByTodaySchedule(Long userId){
+        return scheduleOutConnector.findByTodaySchedule(userId);
+    }
+
     //일정 단일 조회
     public SchedulesModel findById(Long scheduleId) {
         return scheduleOutConnector.findById(scheduleId);

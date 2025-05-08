@@ -49,4 +49,8 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     @Modifying
     @Query("UPDATE Schedules s SET s.isDeletedScheduled = true WHERE s.id IN :ids")
     void markAsDeletedByIds(@Param("ids") List<Long> ids);
+
+    //오늘의 일정만 보여주기.
+    @Query("SELECT s FROM Schedules s WHERE s.userId = :userId AND s.isDeletedScheduled = false AND DATE(s.startTime) = CURRENT_DATE")
+    List<Schedules> findTodaySchedules(@Param("userId") Long userId);
 }

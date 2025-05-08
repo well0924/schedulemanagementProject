@@ -48,6 +48,11 @@ public class ScheduleManageController {
         return scheduleServiceConnector.getSchedulesByStatus(progressStatus,userId,pageable);
     }
 
+    @GetMapping("/today/{id}")
+    public List<ScheduleApiModel.responseSchedule> findByTodaySchedules(@PathVariable("id")Long userId) {
+        return scheduleServiceConnector.findByTodaySchedule(userId);
+    }
+
     @GetMapping("/{id}")
     public ScheduleApiModel.responseSchedule findById(@PathVariable("id")Long scheduleId) {
         System.out.println(scheduleId);

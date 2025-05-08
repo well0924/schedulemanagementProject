@@ -86,6 +86,14 @@ public class ScheduleOutConnector {
                 .orElseThrow(()-> new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_NOT_FOUND));
     }
 
+    //오늘일정 목록 보여주기.
+    public List<SchedulesModel> findByTodaySchedule(Long userId){
+        return scheduleRepository.findTodaySchedules(userId)
+                .stream()
+                .map(this::toModel)
+                .collect(Collectors.toList());
+    }
+
     //일정저장
     public SchedulesModel saveSchedule(SchedulesModel model) {
         validateScheduleData(model);

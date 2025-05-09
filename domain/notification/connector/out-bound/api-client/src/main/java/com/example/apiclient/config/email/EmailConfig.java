@@ -46,6 +46,7 @@ public class EmailConfig {
         Properties properties = new Properties();
         properties.put("mail.smtp.auth", auth);
         properties.put("mail.smtp.starttls.enable", starttlsEnable);
+        properties.put("mail.smtp.ssl.trust", host);
         return properties;
     }
 }

@@ -20,7 +20,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
     private final JwtTokenProvider jwtTokenProvider;
     private static final String URI = "/auth/success";
-
+    private static final String REDIRECT_URI = "http://localhost:3000/auth/callback";
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -35,8 +35,9 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7일
         response.addCookie(refreshTokenCookie);
 
-        String redirectUrl = UriComponentsBuilder.fromUriString(URI)
+        String redirectUrl = UriComponentsBuilder.fromUriString(REDIRECT_URI)
                 .queryParam("accessToken", accessToken)
+                .queryParam("refreshToken", refreshToken)
                 .build().toUriString();
 
         response.sendRedirect(redirectUrl);

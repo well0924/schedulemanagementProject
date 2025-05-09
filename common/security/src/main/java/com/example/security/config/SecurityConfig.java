@@ -104,6 +104,7 @@ public class SecurityConfig {
                         -> authorizationManagerRequestMatcherRegistry
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/member/**").permitAll()
+                        .requestMatchers("/api/notice/**").permitAll()
                         .requestMatchers("/api/category/**").permitAll()
                         .requestMatchers("/api/attach/**").permitAll()
                         .requestMatchers("/api/schedule/**").permitAll()

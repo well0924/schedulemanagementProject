@@ -1,5 +1,7 @@
 package com.example.service.auth;
 
+import com.example.model.auth.CustomMemberDetails;
+import com.example.outbound.auth.AuthOutConnector;
 import com.example.service.auth.jwt.JwtTokenProvider;
 import com.example.service.auth.jwt.TokenDto;
 import io.jsonwebtoken.Claims;
@@ -17,6 +19,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final RedisService redisService;
+    private final AuthOutConnector auth;
 
     //로그인
     public TokenDto login(String userId, String password) {
@@ -66,5 +69,11 @@ public class AuthService {
         // 5. Redis에 새로운 Refresh Token 저장
         redisService.saveRefreshToken(authentication.getName(),refreshToken);
         return newToken;
+    }
+
+    public Long currentUserId(String accessToken){
+        String userId = jwtTokenProvider.getAuthentication(accessToken).getName();
+        CustomMemberDetails customMemberDetails = (CustomMemberDetails) auth.loadUserByUsername(userId);
+        return customMemberDetails.getMemberModel().getId();
     }
 }

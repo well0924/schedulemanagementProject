@@ -34,4 +34,11 @@ public class AuthController {
         TokenResponse reissueResult = authInConnector.tokenReissue(refreshTokenDto);
         return ResponseEntity.status(HttpStatus.OK).body(reissueResult);
     }
+
+    //현재회원의 번호
+    @GetMapping("/user-id")
+    public ResponseEntity<Long> currentUserMember(@RequestHeader("Authorization") String accessToken){
+        Long userId = authInConnector.currentUserId(accessToken);
+        return ResponseEntity.status(HttpStatus.OK).body(userId);
+    }
 }

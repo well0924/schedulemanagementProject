@@ -32,6 +32,11 @@ public class AuthInConnector implements AuthInterface {
         return tokenResponse(reissueResult);
     }
 
+    @Override
+    public Long currentUserId(String username) {
+        return authService.currentUserId(username);
+    }
+
     //TokenDto -> TokenResponse
     private TokenResponse tokenResponse(TokenDto dto) {
         return TokenResponse

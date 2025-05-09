@@ -20,27 +20,18 @@ public class NotificationOutConnector {
     //리마인드 알림
     public List<NotificationModel> findByScheduledAtBeforeAndIsSentFalse(LocalDateTime now) {
         List<Notification> list = notificationRepository.findByScheduledAtBeforeAndIsSentFalse(now);
-        if(list.isEmpty()) {
-            throw new RuntimeException("알림 목록이 없습니다.");
-        }
         return list.stream().map(this::toModel).collect(Collectors.toList());
     }
 
     //특정 사용자(userId) 알림 조회 (최신순)
     public List<NotificationModel> findByUserIdOrderByCreatedAtDesc(Long userId) {
         List<Notification> list = notificationRepository.findByUserIdOrderByCreatedTimeDesc(userId);
-        if(list.isEmpty()) {
-            throw new RuntimeException("알림 목록이 없습니다.");
-        }
         return list.stream().map(this::toModel).collect(Collectors.toList());
     }
 
     //특정 사용자(userId)의 안 읽은 알림 조회
     public List<NotificationModel> findByUserIdAndIsReadFalseOrderByCreatedAtDesc(Long userId) {
         List<Notification> list = notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedTimeDesc(userId);
-        if(list.isEmpty()) {
-            throw new RuntimeException("알림 목록이 없습니다.");
-        }
         return list.stream().map(this::toModel).collect(Collectors.toList());
     }
 
@@ -49,6 +40,7 @@ public class NotificationOutConnector {
 
         Notification notification = Notification
                 .builder()
+                .id(notificationModel.getId())
                 .isRead(false)
                 .isSent(false)
                 .message(notificationModel.getMessage())
@@ -68,6 +60,7 @@ public class NotificationOutConnector {
     private NotificationModel toModel(Notification notification) {
         return NotificationModel
                 .builder()
+                .id(notification.getId())
                 .message(notification.getMessage())
                 .scheduleId(notification.getScheduleId())
                 .userId(notification.getUserId())

@@ -108,6 +108,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/category/**").permitAll()
                         .requestMatchers("/api/attach/**").permitAll()
                         .requestMatchers("/api/schedule/**").permitAll()
+                        .requestMatchers("/ws/**", "/topic/**").permitAll()
                         .anyRequest()
                         .authenticated())
                 .oauth2Login(oauth2-> oauth2.userInfoEndpoint(userInfo->userInfo.userService(customOAuth2OutConnector))

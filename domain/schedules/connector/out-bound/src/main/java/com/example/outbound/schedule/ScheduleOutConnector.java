@@ -18,7 +18,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -88,7 +90,11 @@ public class ScheduleOutConnector {
 
     //오늘일정 목록 보여주기.
     public List<SchedulesModel> findByTodaySchedule(Long userId){
-        return scheduleRepository.findTodaySchedules(userId)
+        LocalDateTime today = LocalDate.now(ZoneId.of("Asia/Seoul")).atStartOfDay();
+
+        List<String> statusList = List.of("IN_COMPLETE", "PROGRESS");
+
+        return scheduleRepository.findTodayActiveSchedules(userId,today,statusList)
                 .stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());

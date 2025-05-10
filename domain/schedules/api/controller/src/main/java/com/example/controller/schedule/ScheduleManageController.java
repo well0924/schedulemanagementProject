@@ -1,4 +1,4 @@
-package com.exampl.controller.schedule;
+package com.example.controller.schedule;
 
 import com.example.apimodel.schedule.ScheduleApiModel;
 import com.example.enumerate.schedules.DeleteType;

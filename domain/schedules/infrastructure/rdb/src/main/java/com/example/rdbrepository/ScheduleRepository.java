@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,15 +21,31 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     int deleteOldSchedules(@Param("thresholdDate") LocalDateTime thresholdDate);
 
     //일정 충돌 확인
-    @Query("SELECT COUNT(s) FROM Schedules s " +
-            "WHERE s.userId = :userId " +
-            "AND s.startTime < :endTime " +
-            "AND s.endTime > :startTime " +
-            "AND (:excludeId IS NULL OR s.id != :excludeId)")
+    @Query("""
+        SELECT 
+            COUNT(s) 
+        FROM 
+            Schedules s
+        WHERE 
+            s.userId = :userId
+        AND s.scheduleType = 'SINGLE_DAY'
+        AND (:startTime < s.endTime AND :endTime > s.startTime)
+        AND (:excludeId IS NULL OR s.id != :excludeId)
+    """)
     Long countOverlappingSchedules(@Param("userId") Long userId,
                                    @Param("startTime") LocalDateTime startTime,
                                    @Param("endTime") LocalDateTime endTime,
                                    @Param("excludeId") Long excludeId);
+
+    //당일인지 하루종일인지 확인하는 쿼리.
+    @Query("""
+    SELECT COUNT(s) FROM Schedules s
+    WHERE s.userId = :userId
+      AND s.isAllDay = true
+      AND DATE(s.startTime) = :date
+      AND s.isDeletedScheduled = false
+    """)
+    Long countAllDayOnDate(@Param("userId") Long userId, @Param("date") LocalDate date);
 
     //일정 삭제 관련
     @Modifying
@@ -51,11 +68,17 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     void markAsDeletedByIds(@Param("ids") List<Long> ids);
 
     //현재 남아있는 일정 보여주기
-    @Query("SELECT s FROM Schedules s " +
-            "WHERE s.userId = :userId " +
-            "AND s.isDeletedScheduled = false " +
-            "AND s.progress_status IN :statusList " +
-            "AND :today BETWEEN s.startTime and s.endTime")
+    @Query("""
+    SELECT 
+        s 
+    FROM 
+        Schedules s
+    WHERE s.userId = :userId
+      AND s.isDeletedScheduled = false
+      AND s.progress_status IN :statusList
+      AND s.startTime <= :today
+      AND s.endTime >= :today
+    """)
     List<Schedules> findTodayActiveSchedules(
             @Param("userId") Long userId,
             @Param("today") LocalDateTime today,

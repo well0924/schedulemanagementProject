@@ -2,6 +2,7 @@ package com.example.service.schedule;
 
 import com.example.enumerate.schedules.DeleteType;
 import com.example.enumerate.schedules.RepeatType;
+import com.example.enumerate.schedules.ScheduleType;
 import com.example.events.NotificationChannel;
 import com.example.events.ScheduleEvents;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
@@ -16,6 +17,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -118,6 +121,10 @@ public class ScheduleDomainService {
         SchedulesModel existing = getValidatedUpdatableSchedule(scheduleId);
         // 변경될 모델 구성
         SchedulesModel updated = buildUpdatedSchedule(existing,model);
+
+        // scheduleType 재분류
+        ScheduleType type = classifySchedule(updated);
+        updated = updated.toBuilder().scheduleType(type).build();
 
         try {
             List<Long> existingAttachIds = Optional.ofNullable(existing.getAttachIds()).orElse(new ArrayList<>());
@@ -241,7 +248,12 @@ public class ScheduleDomainService {
     }
 
     private SchedulesModel saveSingleSchedule(SchedulesModel schedule, SchedulesModel originalModel, boolean isFirst) {
+
+        ScheduleType type = classifySchedule(schedule);
+        schedule = schedule.toBuilder().scheduleType(type).build();
+        log.info(type.name());
         scheduleOutConnector.validateScheduleConflict(schedule);
+
         SchedulesModel saved = scheduleOutConnector.saveSchedule(schedule);
 
         if (saved == null || saved.getId() == null) {
@@ -297,4 +309,16 @@ public class ScheduleDomainService {
         }
     }
 
+    //일정 유형을 나누기.
+    private ScheduleType classifySchedule(SchedulesModel model) {
+        LocalDate start = model.getStartTime().toLocalDate();
+        LocalDate end = model.getEndTime().toLocalDate();
+
+        if (start.equals(end)) {
+            log.info("단일과 하루종일");
+            return model.isAllDay() ? ScheduleType.ALL_DAY : ScheduleType.SINGLE_DAY;
+        } else {
+            return ScheduleType.MULTI_DAY;
+        }
+    }
 }

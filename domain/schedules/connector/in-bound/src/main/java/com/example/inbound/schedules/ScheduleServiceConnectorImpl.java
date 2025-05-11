@@ -121,6 +121,8 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .repeatCount(request.repeatCount())
                 .repeatInterval(request.repeatInterval())
                 .isDeletedScheduled(false) // 기본값 설정
+                .isAllDay(request.isAllDay())
+                .scheduleType(request.scheduleType())
                 .build();
     }
 
@@ -138,6 +140,8 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .repeatType(request.repeatType())
                 .repeatCount(request.repeatCount())
                 .repeatInterval(request.repeatInterval())
+                .isAllDay(request.isAllDay())
+                .scheduleType(request.scheduleType())
                 .build();
     }
 
@@ -166,6 +170,8 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .repeatGroupId(model.getRepeatGroupId())
                 .repeatInterval(model.getRepeatInterval())
                 .isDeletedScheduled(model.isDeletedScheduled())
+                .isAllDay(model.isAllDay())
+                .scheduleType(model.getScheduleType())
                 .createdBy(model.getCreatedBy())
                 .createdTime(model.getCreatedTime())
                 .updatedBy(model.getUpdatedBy())

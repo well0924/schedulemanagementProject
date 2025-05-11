@@ -62,34 +62,39 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
 
         return  results.stream()
                 .collect(Collectors.groupingBy(tuple -> tuple.get(qSchedules.id)))
-                .entrySet()
+                .values()
                 .stream()
-                .map(entry -> {
+                .map(groupedTuples -> {
+                    // 이 ID에 해당하는 모든 튜플
+
+                    Tuple first = groupedTuples.get(0); // 일정 공통 정보는 첫 번째에서 뽑음
+
                     return new SchedulesModel(
-                            results.get(0).get(qSchedules.id),
-                            results.get(0).get(qSchedules.contents),
-                            results.get(0).get(qSchedules.scheduleMonth),
-                            results.get(0).get(qSchedules.scheduleDay),
-                            results.get(0).get(qSchedules.startTime),
-                            results.get(0).get(qSchedules.endTime),
-                            results.get(0).get(qSchedules.userId),
-                            results.get(0).get(qSchedules.categoryId),
-                            results.get(0).get(qSchedules.progress_status),
-                            results.get(0).get(qSchedules.repeatType),
-                            results.get(0).get(qSchedules.repeatCount),
-                            results.get(0).get(qSchedules.repeatInterval),
-                            results.get(0).get(qSchedules.repeatGroupId),
-                            results.get(0).get(qSchedules.createdBy),
-                            results.get(0).get(qSchedules.updatedBy),
-                            results.get(0).get(qSchedules.createdTime),
-                            results.get(0).get(qSchedules.updatedTime),
-                            results.stream()
-                                    .map(tuple -> tuple.get(qAttach.storedFileName))
+                            first.get(qSchedules.id),
+                            first.get(qSchedules.contents),
+                            first.get(qSchedules.scheduleMonth),
+                            first.get(qSchedules.scheduleDay),
+                            first.get(qSchedules.startTime),
+                            first.get(qSchedules.endTime),
+                            first.get(qSchedules.userId),
+                            first.get(qSchedules.categoryId),
+                            first.get(qSchedules.progress_status),
+                            first.get(qSchedules.repeatType),
+                            first.get(qSchedules.repeatCount),
+                            first.get(qSchedules.repeatInterval),
+                            first.get(qSchedules.repeatGroupId),
+                            first.get(qSchedules.scheduleType),
+                            first.get(qSchedules.createdBy),
+                            first.get(qSchedules.updatedBy),
+                            first.get(qSchedules.createdTime),
+                            first.get(qSchedules.updatedTime),
+                            groupedTuples.stream()
+                                    .map(t -> t.get(qAttach.storedFileName))
                                     .filter(Objects::nonNull)
                                     .distinct()
                                     .collect(Collectors.toList()),
-                            results.stream()
-                                    .map(tuple -> tuple.get(qAttach.id))
+                            groupedTuples.stream()
+                                    .map(t -> t.get(qAttach.id))
                                     .filter(Objects::nonNull)
                                     .distinct()
                                     .collect(Collectors.toList())
@@ -120,10 +125,10 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qAttach.storedFileName
                 )
                 .from(qSchedules)
-                .leftJoin(qAttach).on(qSchedules.id.eq(qAttach.scheduledId))
-                .where(qSchedules.id.eq(scheduleId)
-                        .and(qSchedules.isDeletedScheduled.eq(false))
+                .leftJoin(qAttach).on(
+                        qSchedules.id.eq(qAttach.scheduledId)
                         .and(qAttach.isDeletedAttach.eq(false)))
+                .where(qSchedules.id.eq(scheduleId))
                 .fetch();
 
         if (results.isEmpty()) {
@@ -144,6 +149,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 results.get(0).get(qSchedules.repeatCount),
                 results.get(0).get(qSchedules.repeatInterval),
                 results.get(0).get(qSchedules.repeatGroupId),
+                results.get(0).get(qSchedules.scheduleType),
                 results.get(0).get(qSchedules.createdBy),
                 results.get(0).get(qSchedules.updatedBy),
                 results.get(0).get(qSchedules.createdTime),
@@ -221,6 +227,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         tuple.get(qSchedules.repeatCount),
                         tuple.get(qSchedules.repeatInterval),
                         tuple.get(qSchedules.repeatGroupId),
+                        tuple.get(qSchedules.scheduleType),
                         tuple.get(qSchedules.createdBy),
                         tuple.get(qSchedules.updatedBy),
                         tuple.get(qSchedules.createdTime),
@@ -312,6 +319,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         tuple.get(qSchedules.repeatCount),
                         tuple.get(qSchedules.repeatInterval),
                         tuple.get(qSchedules.repeatGroupId),
+                        tuple.get(qSchedules.scheduleType),
                         tuple.get(qSchedules.createdBy),
                         tuple.get(qSchedules.updatedBy),
                         tuple.get(qSchedules.createdTime),
@@ -398,6 +406,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                             scheduleTuples.get(0).get(qSchedules.repeatCount),
                             scheduleTuples.get(0).get(qSchedules.repeatInterval),
                             scheduleTuples.get(0).get(qSchedules.repeatGroupId),
+                            scheduleTuples.get(0).get(qSchedules.scheduleType),
                             scheduleTuples.get(0).get(qSchedules.createdBy),
                             scheduleTuples.get(0).get(qSchedules.updatedBy),
                             scheduleTuples.get(0).get(qSchedules.createdTime),

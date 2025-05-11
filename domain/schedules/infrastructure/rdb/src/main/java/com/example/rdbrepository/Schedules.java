@@ -1,6 +1,5 @@
 package com.example.rdbrepository;
 
-import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.jpa.config.base.BaseEntity;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
@@ -54,18 +53,12 @@ public class Schedules extends BaseEntity {
     private LocalDateTime startTime;
 
     private LocalDateTime endTime;
+    //일정 타입(기본값은 false,하루종일이면 true)
+    private Boolean isAllDay;
+    //일정 타입(단일, 하루종일, 장기)
+    private String scheduleType;
 
     public void isDeletedScheduled() {
         this.isDeletedScheduled = true;
-    }
-
-    // Enum을 반환하는 Getter 추가
-    public PROGRESS_STATUS getProgressStatusEnum() {
-        return PROGRESS_STATUS.fromString(this.progress_status);
-    }
-
-    // Enum을 받아 String으로 저장하는 Setter 추가
-    public void setProgressStatusEnum(PROGRESS_STATUS progressStatus) {
-        this.progress_status = progressStatus.getValue();
     }
 }

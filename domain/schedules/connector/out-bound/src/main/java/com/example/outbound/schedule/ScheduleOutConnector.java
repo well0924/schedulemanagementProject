@@ -4,6 +4,7 @@ import com.example.category.dto.CategoryErrorCode;
 import com.example.category.exception.CategoryCustomException;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.enumerate.schedules.RepeatType;
+import com.example.enumerate.schedules.ScheduleType;
 import com.example.exception.dto.MemberErrorCode;
 import com.example.exception.exception.MemberCustomException;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
@@ -90,7 +91,7 @@ public class ScheduleOutConnector {
 
     //오늘일정 목록 보여주기.
     public List<SchedulesModel> findByTodaySchedule(Long userId){
-        LocalDateTime today = LocalDate.now(ZoneId.of("Asia/Seoul")).atStartOfDay();
+        LocalDateTime today = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
 
         List<String> statusList = List.of("IN_COMPLETE", "PROGRESS");
 
@@ -118,6 +119,8 @@ public class ScheduleOutConnector {
                 .repeatType(String.valueOf(model.getRepeatType()))
                 .repeatCount(model.getRepeatCount())
                 .repeatInterval(model.getRepeatInterval())
+                .isAllDay(model.isAllDay())
+                .scheduleType(String.valueOf(model.getScheduleType()))
                 .build();
 
         return toModel(scheduleRepository.save(schedules));
@@ -152,6 +155,8 @@ public class ScheduleOutConnector {
                 .repeatType(String.valueOf(model.getRepeatType()))
                 .repeatCount(model.getRepeatCount())
                 .repeatInterval(model.getRepeatInterval())
+                .scheduleType(String.valueOf(model.getScheduleType()))
+                .isAllDay(model.isAllDay())
                 .build();
 
         return toModel(scheduleRepository.save(updatedSchedules)); // 일정 저장 후 모델 변환
@@ -184,14 +189,37 @@ public class ScheduleOutConnector {
 
     //일정 충돌 확인
     public void validateScheduleConflict(SchedulesModel model) {
-        Long conflictCount = scheduleRepository.countOverlappingSchedules(
-                model.getUserId(),
-                model.getStartTime(),
-                model.getEndTime(),
-                model.getId() // 수정이면 자기 자신 제외
-        );
+        // 1. 시작시간 < 종료시간 확인
+        if (!model.getStartTime().isBefore(model.getEndTime())) {
+            throw new ScheduleCustomException(ScheduleErrorCode.INVALID_TIME_RANGE);
+        }
 
-        if (conflictCount != null && conflictCount > 0) {
+        // 2. 하루 종일 일정이면 날짜 단위 충돌만 검사하고 종료
+        if (Boolean.TRUE.equals(model.isAllDay())) {
+            validateAllDayScheduleConflict(model);
+            return; // 시간대 검사 안하게 바로 종료
+        }
+
+        // 3. 시간대 충돌 검사
+        if (model.getScheduleType() == ScheduleType.SINGLE_DAY) {
+            Long conflictCount = scheduleRepository.countOverlappingSchedules(
+                    model.getUserId(),
+                    model.getStartTime(),
+                    model.getEndTime(),
+                    model.getId() // 수정이면 자기 자신 제외
+            );
+
+            if (conflictCount != null && conflictCount > 0) {
+                throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_TIME_CONFLICT);
+            }
+        }
+    }
+
+    public void validateAllDayScheduleConflict(SchedulesModel model) {
+        LocalDate date = model.getStartTime().toLocalDate();
+        Long count = scheduleRepository.countAllDayOnDate(model.getUserId(), date);
+
+        if (count != null && count > 0) {
             throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_TIME_CONFLICT);
         }
     }
@@ -228,6 +256,8 @@ public class ScheduleOutConnector {
                 .repeatType(RepeatType.valueOf(schedules.getRepeatType()))//일정 반복 유형
                 .repeatCount(schedules.getRepeatCount())//반복횟수
                 .repeatInterval(schedules.getRepeatInterval())
+                .isAllDay(schedules.getIsAllDay())
+                .scheduleType(ScheduleType.valueOf(schedules.getScheduleType()))
                 .createdBy(schedules.getCreatedBy())
                 .createdTime(schedules.getCreatedTime())
                 .updatedBy(schedules.getUpdatedBy())

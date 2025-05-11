@@ -2,6 +2,7 @@ package com.example.model.schedules;
 
 import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.enumerate.schedules.RepeatType;
+import com.example.enumerate.schedules.ScheduleType;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
 import lombok.*;
@@ -31,6 +32,8 @@ public class SchedulesModel {
     private Integer repeatCount;//반복횟수
     private Integer repeatInterval;//반복주기.
     private String repeatGroupId;
+    private boolean isAllDay;
+    private ScheduleType scheduleType;
     private String createdBy;
     private LocalDateTime createdTime;
     private String updatedBy;
@@ -49,6 +52,7 @@ public class SchedulesModel {
                           Integer repeatCount,
                           Integer repeatInterval,
                           String repeatGroupId,
+                          String scheduleType,
                           String createdBy,
                           String updatedBy,
                           LocalDateTime createdTime,
@@ -74,6 +78,7 @@ public class SchedulesModel {
         this.repeatCount = repeatCount;
         this.repeatGroupId = repeatGroupId;
         this.repeatInterval = repeatInterval;
+        this.scheduleType = scheduleType != null ? ScheduleType.valueOf(scheduleType) : ScheduleType.SINGLE_DAY;
     }
 
     //진행상태 변경

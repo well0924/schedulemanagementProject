@@ -3,6 +3,7 @@ package com.example.apimodel.schedule;
 import com.example.apimodel.attach.AttachApiModel;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.enumerate.schedules.RepeatType;
+import com.example.enumerate.schedules.ScheduleType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -47,13 +48,18 @@ public class ScheduleApiModel {
 
             // 반복 옵션은 선택적
             RepeatType repeatType,
-
+            //일정 유형
+            ScheduleType  scheduleType,
+            
             // 반복 횟수는 0 이상만 허용 (기본 0)
             @Min(value = 0, message = "반복 횟수는 0 이상이어야 합니다.")
             Integer repeatCount,
 
             @Min(value = 0, message = "반복 간격은 0 이상이어야 합니다.")
-            Integer repeatInterval
+            Integer repeatInterval,
+
+            @NotNull(message = "일정 유형은 필수입니다.")
+            Boolean isAllDay
     ) {
 
     }
@@ -87,11 +93,15 @@ public class ScheduleApiModel {
 
             RepeatType repeatType,
 
+            ScheduleType scheduleType,
+
             @Min(value = 0, message = "반복 횟수는 0 이상이어야 합니다.")
             Integer repeatCount,
 
             @Min(value = 0, message = "반복 간격은 0 이상이어야 합니다.")
             Integer repeatInterval,
+
+            Boolean isAllDay,
             // 첨부파일은 옵션. 검증 안 걸고 서비스단에서 null/empty 체크
             @JsonProperty("attachIds")
             List<Long> attachIds
@@ -114,6 +124,8 @@ public class ScheduleApiModel {
             RepeatType repeatType, // 일정 반복 유형
             int repeatCount, // 일정 반복 횟수
             int repeatInterval,
+            boolean isAllDay,
+            ScheduleType scheduleType,
             String repeatGroupId, //일정 반복 groupId
             String createdBy, // 생성자
             LocalDateTime createdTime, // 생성 시간

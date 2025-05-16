@@ -161,7 +161,13 @@ public class ScheduleOutConnector {
 
         return toModel(scheduleRepository.save(updatedSchedules)); // 일정 저장 후 모델 변환
     }
-
+    
+    //일정상태 변경
+    public void updateStatusOnly(Long scheduleId, PROGRESS_STATUS status) {
+        // enum → 문자열로 변환하여 전달
+        scheduleRepository.updateProgressStatus(scheduleId, status.name());
+    }
+    
     //일정 삭제(논리삭제)
     public void deleteSchedule(Long scheduleId) {
         Schedules schedules = getScheduleById(scheduleId);

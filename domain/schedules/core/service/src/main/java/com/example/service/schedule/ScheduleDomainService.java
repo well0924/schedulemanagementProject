@@ -1,6 +1,7 @@
 package com.example.service.schedule;
 
 import com.example.enumerate.schedules.DeleteType;
+import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.enumerate.schedules.RepeatType;
 import com.example.enumerate.schedules.ScheduleType;
 import com.example.events.NotificationChannel;
@@ -166,6 +167,11 @@ public class ScheduleDomainService {
         return result;
     }
 
+    public PROGRESS_STATUS updateProgressStatus(Long scheduleId, PROGRESS_STATUS newStatus) {
+        scheduleOutConnector.updateStatusOnly(scheduleId, newStatus);
+        return newStatus;
+    }
+
     private SchedulesModel getValidatedUpdatableSchedule(Long scheduleId) {
         SchedulesModel schedule = scheduleOutConnector.findById(scheduleId);
 
@@ -235,15 +241,20 @@ public class ScheduleDomainService {
 
     private SchedulesModel buildUpdatedSchedule(SchedulesModel existing, SchedulesModel updates) {
         return existing.toBuilder()
-                .contents(updates.getContents())
-                .scheduleDays(updates.getScheduleDays())
-                .scheduleMonth(updates.getScheduleMonth())
-                .startTime(updates.getStartTime())
-                .endTime(updates.getEndTime())
-                .categoryId(updates.getCategoryId())
-                .userId(updates.getUserId())
-                .repeatType(updates.getRepeatType())
-                .repeatCount(updates.getRepeatCount())
+                .contents(updates.getContents() != null ? updates.getContents() : existing.getContents())
+                .scheduleDays(updates.getScheduleDays() != null ? updates.getScheduleDays() : existing.getScheduleDays())
+                .scheduleMonth(updates.getScheduleMonth() != null ? updates.getScheduleMonth() : existing.getScheduleMonth())
+                .startTime(updates.getStartTime() != null ? updates.getStartTime() : existing.getStartTime())
+                .endTime(updates.getEndTime() != null ? updates.getEndTime() : existing.getEndTime())
+                .categoryId(updates.getCategoryId() != null ? updates.getCategoryId() : existing.getCategoryId())
+                .userId(updates.getUserId() != null ? updates.getUserId() : existing.getUserId())
+                .repeatType(updates.getRepeatType() != null ? updates.getRepeatType() : existing.getRepeatType())
+                .repeatCount(updates.getRepeatCount() != null ? updates.getRepeatCount() : existing.getRepeatCount())
+                .repeatInterval(updates.getRepeatInterval() != null ? updates.getRepeatInterval() : existing.getRepeatInterval())
+                .isAllDay(updates.isAllDay())
+                .scheduleType(updates.getScheduleType() != null ? updates.getScheduleType() : existing.getScheduleType())
+                .progressStatus(updates.getProgressStatus() != null ? updates.getProgressStatus() : existing.getProgressStatus())
+                .attachIds(updates.getAttachIds() != null ? updates.getAttachIds() : existing.getAttachIds())
                 .build();
     }
 

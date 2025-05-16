@@ -18,12 +18,12 @@ public class SchedulesModel {
 
     private Long id;
     private String contents;
-    private int scheduleDays;
-    private int scheduleMonth;
+    private Integer scheduleDays;
+    private Integer scheduleMonth;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private long userId; //회원 번호
-    private long categoryId; // 카테고리 번호
+    private Long userId; //회원 번호
+    private Long categoryId; // 카테고리 번호
     private PROGRESS_STATUS progressStatus;
     private boolean isDeletedScheduled;
     private List<String>attachThumbNailImagePath;//섬네일 이미지 경로
@@ -41,8 +41,8 @@ public class SchedulesModel {
 
     public SchedulesModel(Long id,
                           String contents,
-                          int scheduleDays,
-                          int scheduleMonth,
+                          Integer scheduleDays,
+                          Integer scheduleMonth,
                           LocalDateTime startTime,
                           LocalDateTime endTime,
                           Long userId,

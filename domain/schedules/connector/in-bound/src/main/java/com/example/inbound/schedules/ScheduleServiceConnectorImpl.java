@@ -92,6 +92,12 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
     }
 
     @Override
+    public ScheduleApiModel.responseScheduleStatus updateScheduleStatus(Long scheduleId, PROGRESS_STATUS progressStatus) {
+        PROGRESS_STATUS updated = scheduleDomainService.updateProgressStatus(scheduleId,progressStatus);
+        return toApiScheduleProgressStatus(scheduleId, PROGRESS_STATUS.valueOf(updated.getValue()));
+    }
+
+    @Override
     public void deleteSchedule(Long scheduleId, DeleteType deleteType) {
         scheduleDomainService.deleteSchedule(scheduleId,deleteType);
     }
@@ -180,4 +186,11 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .build();
     }
 
+    private ScheduleApiModel.responseScheduleStatus toApiScheduleProgressStatus(Long scheduleId,PROGRESS_STATUS status) {
+        return ScheduleApiModel.responseScheduleStatus
+                .builder()
+                .id(scheduleId)
+                .progressStatus(status.getValue())
+                .build();
+    }
 }

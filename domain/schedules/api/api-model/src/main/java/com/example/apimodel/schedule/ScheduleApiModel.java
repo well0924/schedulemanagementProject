@@ -87,8 +87,10 @@ public class ScheduleApiModel {
             // 진행 상태 (null 허용 → 그대로 두면 유지)
             PROGRESS_STATUS progressStatus,
 
+            @NotNull(message = "카테고리 ID는 필수입니다.")
             Long categoryId,
 
+            @NotNull(message = "회원 ID는 필수입니다.")
             Long userId,
 
             RepeatType repeatType,
@@ -132,5 +134,11 @@ public class ScheduleApiModel {
             String updatedBy, // 수정자
             LocalDateTime updatedTime, // 수정 시간
             List<AttachApiModel.AttachResponse> attachFiles //첨부파일
+    ){}
+
+    @Builder
+    public record responseScheduleStatus(
+            long id,
+            String progressStatus
     ){}
 }

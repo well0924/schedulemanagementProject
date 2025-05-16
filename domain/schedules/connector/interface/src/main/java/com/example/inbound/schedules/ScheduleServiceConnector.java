@@ -2,6 +2,7 @@ package com.example.inbound.schedules;
 
 import com.example.apimodel.schedule.ScheduleApiModel;
 import com.example.enumerate.schedules.DeleteType;
+import com.example.enumerate.schedules.PROGRESS_STATUS;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -29,6 +30,8 @@ public interface ScheduleServiceConnector {
     ScheduleApiModel.responseSchedule saveSchedule(requestSchedule requestSchedule) throws IOException;
 
     ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId,updateSchedule updateSchedule) throws IOException;
+
+    ScheduleApiModel.responseScheduleStatus updateScheduleStatus(Long scheduleId, PROGRESS_STATUS progressStatus);
 
     void deleteSchedule(Long scheduleId, DeleteType deleteType);
 

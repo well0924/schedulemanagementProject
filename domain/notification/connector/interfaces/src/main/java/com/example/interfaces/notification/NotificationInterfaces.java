@@ -12,4 +12,5 @@ public interface NotificationInterfaces {
 
     List<NotificationApiModel.NotificationResponse> getScheduledNotificationsToSend();
 
+    void markedRead(Long id);
 }

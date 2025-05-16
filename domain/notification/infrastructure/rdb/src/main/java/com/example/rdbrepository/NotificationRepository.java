@@ -15,5 +15,6 @@ public interface NotificationRepository extends JpaRepository<Notification,Long>
     // 3. 특정 사용자(userId)의 안 읽은 알림 조회
     List<Notification> findByUserIdAndIsReadFalseOrderByCreatedTimeDesc(Long userId);
 
+    // 4. 중복 알림 방지나 기존 알림 상태 조회용
     Notification findByMessageAndUserId(String message,Long userId);
 }

@@ -36,14 +36,21 @@ public class NotificationInConnector implements NotificationInterfaces{
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public void markedRead(Long id) {
+        notificationService.markAsRead(id);
+    }
+
     private NotificationApiModel.NotificationResponse toApiModelResponse(NotificationModel notificationModel) {
         return NotificationApiModel.NotificationResponse
                 .builder()
                 .id(notificationModel.getId())
                 .message(notificationModel.getMessage())
                 .scheduleId(notificationModel.getScheduleId())
-                .userId(notificationModel.getUserId())
                 .scheduledAt(notificationModel.getScheduledAt())
+                .userId(notificationModel.getUserId())
+                .isRead(notificationModel.isRead())
+                .isSent(notificationModel.isSent())
                 .build();
     }
 }

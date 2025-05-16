@@ -5,9 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Getter
 @Builder
 @NoArgsConstructor
@@ -30,6 +32,7 @@ public class NotificationModel {
     // 알림 읽음 처리
     public void markAsRead() {
         this.isRead = true;
+        log.info("읽음처리 여부:");
     }
 
     // 알림 발송 완료 처리

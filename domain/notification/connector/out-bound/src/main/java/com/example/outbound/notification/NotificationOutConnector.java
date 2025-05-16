@@ -1,5 +1,7 @@
 package com.example.outbound.notification;
 
+import com.example.exception.notification.dto.NotificationErrorCode;
+import com.example.exception.notification.exception.NotificationCustomException;
 import com.example.notification.NotificationType;
 import com.example.notification.model.NotificationModel;
 import com.example.rdbrepository.Notification;
@@ -35,6 +37,13 @@ public class NotificationOutConnector {
         return list.stream().map(this::toModel).collect(Collectors.toList());
     }
 
+    //알림 조회
+    public NotificationModel findById(Long id){
+        return toModel(notificationRepository
+                .findById(id)
+                .orElseThrow(()->new NotificationCustomException(NotificationErrorCode.INVALID_NOTIFICATION)));
+    }
+
     //알림 저장
     public NotificationModel saveNotification(NotificationModel notificationModel) {
 
@@ -55,6 +64,13 @@ public class NotificationOutConnector {
 
     public NotificationModel findByMessageAndUserId(String message,Long userId) {
         return toModel(notificationRepository.findByMessageAndUserId(message,userId));
+    }
+
+    public void markAsRead(Long id) {
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new NotificationCustomException(NotificationErrorCode.NOTIFICATION_EMPTY));
+        notification.markAsRead();
+        notificationRepository.save(notification);
     }
 
     private NotificationModel toModel(Notification notification) {

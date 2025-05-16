@@ -47,9 +47,8 @@ public class NotificationService {
         return notificationOutConnector.findByScheduledAtBeforeAndIsSentFalse(LocalDateTime.now());
     }
 
-    public void markAsRead(NotificationModel notificationModel) {
-        notificationModel.markAsRead();
-        notificationOutConnector.saveNotification(notificationModel); // 다시 저장 (업데이트)
+    public void markAsRead(Long id) {
+        notificationOutConnector.markAsRead(id); // 다시 저장 (업데이트)
     }
 
     public void markAsSent(NotificationModel notificationModel) {

@@ -34,4 +34,9 @@ public class Notification extends BaseEntity {
     private Long userId;
     private String notificationType;
     private LocalDateTime scheduledAt; // 예약 발송 시간 (추후에 테이블을 분리할 필요가 있음)
+
+    //읽음여부로 변경
+    public void markAsRead() {
+        this.isRead = true;
+    }
 }

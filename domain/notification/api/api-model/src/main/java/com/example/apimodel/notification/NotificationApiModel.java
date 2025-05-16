@@ -12,9 +12,11 @@ public class NotificationApiModel {
 
     @Builder
     public record NotificationResponse(
-            Long id,
+            long id,
             String message,
-            Long userId,
-            Long scheduleId,
+            long userId,
+            long scheduleId,
+            boolean isRead,
+            boolean isSent,
             LocalDateTime scheduledAt) {}
 }

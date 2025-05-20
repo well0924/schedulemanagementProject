@@ -1,4 +1,4 @@
-package com.example.events;
+package com.example.events.enums;
 
 public enum NotificationChannel {
     WEB,       // 웹 알림 (WebSocket)

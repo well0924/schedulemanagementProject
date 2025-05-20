@@ -1,7 +1,7 @@
 package com.example.service.member;
 
 import com.example.enumerate.member.SearchType;
-import com.example.events.MemberSignUpEvent;
+import com.example.events.spring.MemberSignUpEvent;
 import com.example.model.member.MemberModel;
 import com.example.outbound.member.MemberOutConnector;
 import lombok.AllArgsConstructor;

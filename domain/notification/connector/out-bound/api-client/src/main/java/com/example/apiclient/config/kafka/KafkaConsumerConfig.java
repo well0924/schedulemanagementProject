@@ -1,14 +1,21 @@
 package com.example.apiclient.config.kafka;
 
-import com.example.events.NotificationEvents;
+import com.example.events.kafka.MemberSignUpKafkaEvent;
+import com.example.events.kafka.NotificationEvents;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,22 +23,78 @@ import java.util.Map;
 @Configuration
 public class KafkaConsumerConfig {
 
-    @Bean
-    public ConsumerFactory<String, NotificationEvents> consumerFactory() {
+    private Map<String, Object> consumerFactory(Class<?> targetClass) {
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         config.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-group");
-        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        // DLQ 작동을 위한 역직렬화 설정
+        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class.getName());
+        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class.getName());
+        // 내부에서 실제로 사용할 디시리얼라이저 지정
+        config.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class.getName());
+        config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class.getName());
+        //기타 설정.
+        config.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, targetClass.getName());
+        config.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        config.put(JsonDeserializer.TRUSTED_PACKAGES, "*");  // 또는 com.example.notification.apimodel 로 좁히기
-        return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(), new JsonDeserializer<>(NotificationEvents.class));
+        return config;
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, NotificationEvents> kafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, NotificationEvents> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory());
+    public ConsumerFactory<String, NotificationEvents> notificationConsumerFactory() {
+        return new DefaultKafkaConsumerFactory<>(consumerFactory(NotificationEvents.class),
+                new StringDeserializer(),
+                new ErrorHandlingDeserializer<>(new JsonDeserializer<>(NotificationEvents.class, false)));
+    }
+
+    @Bean
+    public ConsumerFactory<String, MemberSignUpKafkaEvent> memberSignUpConsumerFactory() {
+        return new DefaultKafkaConsumerFactory<>(consumerFactory(MemberSignUpKafkaEvent.class),
+                new StringDeserializer(),
+                new ErrorHandlingDeserializer<>(new JsonDeserializer<>(MemberSignUpKafkaEvent.class, false)));
+    }
+
+    // dlq 설정
+    @Bean(name = "notificationKafkaListenerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, NotificationEvents> notificationKafkaListenerFactory(
+            KafkaTemplate<String, NotificationEvents> kafkaTemplate
+    ) {
+        ConcurrentKafkaListenerContainerFactory<String, NotificationEvents> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(notificationConsumerFactory());
+
+        factory.setCommonErrorHandler(new DefaultErrorHandler(
+                new DeadLetterPublishingRecoverer(
+                        kafkaTemplate,
+                        (record, ex) -> new TopicPartition(record.topic() + ".DLQ", record.partition())
+                ),
+                new FixedBackOff(0L, 3)
+        ));
+
+        factory.setMissingTopicsFatal(false);
+        return factory;
+    }
+
+    @Bean(name = "memberKafkaListenerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, MemberSignUpKafkaEvent> memberKafkaListenerFactory(
+            KafkaTemplate<String, MemberSignUpKafkaEvent> kafkaTemplate
+    ) {
+        ConcurrentKafkaListenerContainerFactory<String, MemberSignUpKafkaEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(memberSignUpConsumerFactory());
+
+        factory.setCommonErrorHandler(new DefaultErrorHandler(
+                new DeadLetterPublishingRecoverer(
+                        kafkaTemplate,
+                        (record, ex) -> new TopicPartition(record.topic() + ".DLQ", record.partition())
+                ),
+                new FixedBackOff(0L, 3)
+        ));
+
+        factory.setMissingTopicsFatal(false);
         return factory;
     }
 }

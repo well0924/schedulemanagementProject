@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class NotificationEvents {
     private Long receiverId;
     private String message;
-    private String notificationType;
+    private ScheduleActionType notificationType;
+    private NotificationChannel notificationChannel;
     private LocalDateTime createdTime;
 }

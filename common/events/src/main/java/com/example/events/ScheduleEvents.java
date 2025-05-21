@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 public class ScheduleEvents {
     private Long scheduleId;
     private Long userId;
-    private String actionType; // 일정행위 (생성,수정,삭제)
     private String contents;
+    private ScheduleActionType notificationType; // 일정행위 (생성,수정,삭제)
+    private NotificationChannel notificationChannel;
     private LocalDateTime createdTime;
-    private NotificationChannel notificationChannel; 
 }

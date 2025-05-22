@@ -1,29 +1,39 @@
-# 일정 관리 프로젝트 
+# 📅 일정 관리 프로젝트
 
+> **개발 기간**: 2025.01 ~ 2025.05  
+> **주요 기술**: Spring Boot, Kafka, Redis, S3, OpenFeign, WebSocket, Next.js  
+> **배포 환경**: AWS Lightsail + GitHub Actions
+
+---
 
 ## 📌 프로젝트 개요
 
-사용자가 웹에서 개인 일정을 등록/관리할 수 있는 캘린더 기반 서비스입니다.
-반복 일정, 일정 충돌 방지, AI 기반 추천 일정, 실시간 알림, 파일 첨부 기능을 포함하고 있습니다.
-특히 Kafka 기반 이벤트 처리, WebSocket 알림, Presigned URL 기반 S3 파일 처리 등 운영을 고려한 기능을 중심으로 설계하였습니다.
+사용자가 웹에서 개인 일정을 등록/관리할 수 있는 캘린더 기반 서비스입니다.  
+**반복 일정, 일정 충돌 방지, AI 기반 추천 일정, 실시간 알림, 파일 첨부 기능**을 포함하고 있으며, 운영 환경을 고려한 **Kafka 기반 이벤트 아키텍처**, **WebSocket 실시간 알림**, **Presigned URL 기반 S3 파일 업로드** 등을 설계했습니다.
 
-- 기간: 2025.01 ~ 2025.05
-- 주요 기술: Spring Boot, Next.js, MySQL, Kafka, WebSocket, OpenFeign, Redis, S3
-- 주요 기능:
-    - 일정 CRUD 및 반복 일정 등록
-    - 실시간 일정 알림 (WebSocket + Kafka)
-    - 일정 충돌 방지 및 추천 일정 생성 (OpenAI API)
-    - Presigned URL 기반 파일 첨부
+---
+
+## ✨ 주요 기능
+
+| 기능 | 설명 |
+|------|------|
+| ✅ **일정 CRUD** | 일정 등록/수정/삭제 + 반복 일정(매일, 매주, 매월, 매년) |
+| ⚠️ **일정 충돌 방지** | 일정 등록 시 서버 단에서 중복 일정 자동 필터링 |
+| 🤖 **일정 추천** | OpenAI API + OpenFeign 사용. 비어 있는 시간대 기반 추천 |
+| 📢 **실시간 알림** | Kafka 이벤트 발행 → WebSocket 실시간 수신 알림 |
+| 📎 **파일 첨부** | Presigned URL로 직접 업로드 → 썸네일 생성 (`@Async`) |
+
+---
 
 ## 🛠 사용 기술 스택
 
 ### Backend
 - Java 17, Spring Boot 3
-- JPA + QueryDSL
-- Kafka (이벤트 기반 알림)
-- Redis (캐시 관리)
-- Amazon S3 (파일 업로드/다운로드)
-- OpenFeign (AI 일정 추천 API 호출)
+- JPA, QueryDSL
+- Kafka (이벤트 전파 및 DLQ 처리)
+- Redis (세션/캐시, 일정 중복 처리)
+- OpenFeign (AI 일정 추천 연동)
+- AWS S3 (Presigned URL 기반 파일 업로드/다운로드)
 
 ### Frontend
 - Next.js 14 + TypeScript
@@ -32,24 +42,13 @@
 
 ### Infra / DevOps
 - AWS Lightsail, RDS, S3
-- GitHub Actions (CI/CD)
+- GitHub Actions (CI/CD 파이프라인)
 - Docker, Docker Compose
-- Prometheus + Grafana (모니터링 예정)
+- Prometheus + Grafana (모니터링 구성 중)
 
-## ✨ 주요 기능
-
-- **일정 등록**
-    - 반복 설정 (매일/매월/매년), 첨부파일 포함
-- **일정 추천**
-    - 사용자의 비어 있는 시간대 기반 추천 (OpenAI 사용)
-- **알림 기능**
-    - Kafka 이벤트 발행 → WebSocket 실시간 수신
-- **파일 첨부**
-    - S3 Presigned URL 기반 업로드 / 다운로드
+---
 
 ## 🧱 아키텍처
-
-
 
 ![Image](https://github.com/user-attachments/assets/1fa64eeb-dfe8-4166-82b6-aceac0af3f76)
 
@@ -72,10 +71,17 @@ npm run dev
 ```
 
 ## 🗂 ERD 및 모델 구조
- 
-![일정관리 (1)](https://github.com/user-attachments/assets/19cb4ace-786d-414c-a971-238dd38195fb)
+
+![Image](https://github.com/user-attachments/assets/cac93df5-f180-47d6-bbbf-cff620bffc0a)
 
 
-### 7. 🔹 기술적 고민 + 트러블슈팅 + 개선 방향
+## 🧠 기술적 고민 및 해결 사례
 
-### 🧠 기술적 고민 & 해결 과정
+| 주제 | 설명 |
+|------|------|
+| 🖼️ [Presigned URL 리사이징 비동기 처리](https://codingweb.tistory.com/257) | 대용량 이미지 업로드 시 썸네일 자동 생성 + 서버 부하 분산 |
+| 🧠 [OpenAI API Fallback 처리](https://codingweb.tistory.com/259) | AI 일정 추천 실패 시 CircuitBreaker + Fallback 적용 |
+| 🗓️ [Schedule 충돌 검사 로직](https://codingweb.tistory.com/267) | ScheduleType 분기 + Redis 기반 탐색 처리 |
+| 🔁 [Kafka DLQ 재처리](https://codingweb.tistory.com/268) | Kafka 소비 실패 메시지를 DLQ → DB 저장 및 재처리 스케줄러 구성 |
+
+---

@@ -1,9 +1,6 @@
-package com.example.events;
+package com.example.events.kafka;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -11,8 +8,10 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class NotificationEvents {
+public class MemberSignUpKafkaEvent {
     private Long receiverId;
+    private String username;
+    private String email;
     private String message;
     private String notificationType;
     private LocalDateTime createdTime;

@@ -5,7 +5,10 @@ import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.enumerate.schedules.RepeatType;
 import com.example.enumerate.schedules.ScheduleType;
 import com.example.events.NotificationChannel;
+import com.example.events.NotificationEvents;
+import com.example.events.ScheduleActionType;
 import com.example.events.ScheduleEvents;
+import com.example.events.outbox.OutboxEventService;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
 import com.example.inbound.attach.AttachInConnector;
@@ -13,7 +16,6 @@ import com.example.model.schedules.SchedulesModel;
 import com.example.outbound.schedule.ScheduleOutConnector;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -35,7 +37,7 @@ public class ScheduleDomainService {
 
     private final AttachInConnector attachInConnector;
 
-    private final ApplicationEventPublisher applicationEventPublisher;
+    private final OutboxEventService outboxEventService;
 
     public List<SchedulesModel> getAllSchedules() {
         return scheduleOutConnector.findAllSchedules();
@@ -104,15 +106,19 @@ public class ScheduleDomainService {
         }
         log.info("일정 저장 완료, 이벤트 발행 시도");
         // 이벤트 발행.
-        ScheduleEvents scheduleEvents = new ScheduleEvents(
-                firstSchedule.getId(),
-                firstSchedule.getUserId(),
-                "CREATE",
-                firstSchedule.getContents(),
-                LocalDateTime.now(),
-                NotificationChannel.WEB
-        );
-        applicationEventPublisher.publishEvent(scheduleEvents);
+        NotificationEvents notificationEvents = NotificationEvents
+                .builder()
+                .receiverId(firstSchedule.getUserId())
+                .message("📅 일정이 생성되었습니다: " + firstSchedule.getContents())
+                .notificationType(ScheduleActionType.SCHEDULE_CREATED)
+                .notificationChannel(NotificationChannel.WEB)
+                .createdTime(LocalDateTime.now())
+                .build();
+
+        outboxEventService.saveEvent(notificationEvents,
+                "SCHEDULE",
+                String.valueOf(notificationEvents.getReceiverId()),
+                ScheduleActionType.SCHEDULE_CREATED.name());
         return firstSchedule;
     }
 
@@ -157,13 +163,11 @@ public class ScheduleDomainService {
         ScheduleEvents scheduleEvents = new ScheduleEvents(
                 result.getId(),
                 result.getUserId(),
-                "UPDATE",
                 result.getContents(),
-                LocalDateTime.now(),
-                NotificationChannel.WEB
+                ScheduleActionType.SCHEDULE_UPDATED,
+                NotificationChannel.WEB,
+                LocalDateTime.now()
         );
-        applicationEventPublisher.publishEvent(scheduleEvents);
-
         return result;
     }
 
@@ -205,12 +209,12 @@ public class ScheduleDomainService {
         ScheduleEvents scheduleEvents = new ScheduleEvents(
                 target.getId(),
                 target.getUserId(),
-                "DELETE",
                 target.getContents(),
-                LocalDateTime.now(),
-                NotificationChannel.WEB
+                ScheduleActionType.SCHEDULE_DELETED,
+                NotificationChannel.WEB,
+                LocalDateTime.now()
         );
-        applicationEventPublisher.publishEvent(scheduleEvents);
+        //applicationEventPublisher.publishEvent(scheduleEvents);
     }
 
     //선택 삭제
@@ -223,12 +227,12 @@ public class ScheduleDomainService {
             ScheduleEvents scheduleEvents = new ScheduleEvents(
                     model.getId(),
                     model.getUserId(),
-                    "DELETE",
                     model.getContents(),
-                    LocalDateTime.now(),
-                    NotificationChannel.WEB
+                    ScheduleActionType.SCHEDULE_DELETED,
+                    NotificationChannel.WEB,
+                    LocalDateTime.now()
             );
-            applicationEventPublisher.publishEvent(scheduleEvents);
+
         }
     }
 

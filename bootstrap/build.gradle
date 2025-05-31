@@ -1,5 +1,15 @@
 plugins{
 	id 'org.springframework.boot' version '3.2.2'
+	id 'java'
+	id 'com.google.cloud.tools.jib' version '3.4.0'
+}
+
+group = 'com.example'
+version = '1.0.0'
+sourceCompatibility = '17'
+
+repositories {
+	mavenCentral()
 }
 
 dependencies {
@@ -41,4 +51,21 @@ dependencies {
 
 springBoot {
 	mainClass = 'com.example.BootStrapApplication'
+}
+
+jib {
+	from {
+		image = 'eclipse-temurin:17-jdk-alpine'
+	}
+	to {
+		image = 'well4149/schedule-management'
+		auth {
+			username = findProperty("dockerHubUsername") ?: ""
+			password = findProperty("dockerHubPassword") ?: ""
+		}
+	}
+	container {
+		ports = ['8080']
+		jvmFlags = ['-Dspring.profiles.active=prod']
+	}
 }

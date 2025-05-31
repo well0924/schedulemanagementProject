@@ -284,6 +284,7 @@ public class ScheduleDomainService {
 
     //일정 반복기능
     private List<SchedulesModel> generateRepeatedSchedules(SchedulesModel baseModel) {
+        log.info("반복일정 수행");
         List<SchedulesModel> result = new ArrayList<>();
 
         RepeatType rule = baseModel.getRepeatType();
@@ -292,7 +293,7 @@ public class ScheduleDomainService {
         int interval = Optional.ofNullable(baseModel.getRepeatInterval()).orElse(1);
 
         String groupId = UUID.randomUUID().toString();
-
+        log.info(groupId);
         for (int i = 0; i < count; i++) {
             if (rule == RepeatType.NONE && i > 0) continue;
 
@@ -305,8 +306,8 @@ public class ScheduleDomainService {
                     .repeatGroupId(groupId) // 반복일정의 groupId
                     .build();
 
-            log.debug("groupId::"+groupId);
-            log.debug("repeated::"+repeated);
+            log.info("groupId::"+groupId);
+            log.info("repeated::"+repeated);
             result.add(repeated);
         }
 

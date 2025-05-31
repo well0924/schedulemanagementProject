@@ -1,4 +1,4 @@
-package com.example.events;
+package com.example.events.spring;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

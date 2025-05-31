@@ -1,6 +1,8 @@
 package com.example.apiclient.config.kafka;
 
-import com.example.events.NotificationEvents;
+import com.example.events.kafka.MemberSignUpKafkaEvent;
+import com.example.events.spring.MemberSignUpEvent;
+import com.example.events.kafka.NotificationEvents;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,7 +32,12 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, NotificationEvents> kafkaTemplate() {
-        return new KafkaTemplate<>(producerFactory());
+    public KafkaTemplate<String, NotificationEvents> notificationKafkaTemplate() {
+        return new KafkaTemplate<>(genericProducerFactory(NotificationEvents.class));
+    }
+
+    @Bean
+    public KafkaTemplate<String, MemberSignUpKafkaEvent> memberKafkaTemplate() {
+        return new KafkaTemplate<>(genericProducerFactory(MemberSignUpKafkaEvent.class));
     }
 }

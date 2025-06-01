@@ -6,6 +6,7 @@ import com.example.notification.service.FailedMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -21,14 +22,18 @@ public class NotificationDlqRetryScheduler {
     private final KafkaTemplate<String, NotificationEvents> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private static final int MAX_RETRY_COUNT = 5;
+    public static int EXECUTION_COUNT = 0;
 
-
-    @Scheduled(fixedDelay = 5 * 60 * 1000)
+    @Scheduled(fixedDelay = 10 * 60 * 1000)
+    @SchedulerLock(name = "retryNotificationDlq", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
     public void retryNotifications() {
+        EXECUTION_COUNT++;
+        log.info("실행됨: " + EXECUTION_COUNT);
         log.info("💡 DLQ 재처리 스케줄러 실행");
         List<FailMessageModel> failMessageModels = failedMessageService
                 .findByResolvedFalse()
                 .stream()
+                .filter(e -> "NOTIFICATION".equals(e.getMessageType()))
                 .toList();
         log.info("List::"+failMessageModels);
         log.info("size:::"+failMessageModels.size());

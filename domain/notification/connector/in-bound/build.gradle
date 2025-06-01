@@ -1,4 +1,5 @@
 dependencies {
+    implementation project(':common:redis')
     implementation project(':common:events')
     implementation project(':domain:notification:connector:interfaces')
     implementation project(':domain:notification:api:api-model')
@@ -6,6 +7,8 @@ dependencies {
     implementation project(':domain:notification:core:service')
     implementation project(':domain:notification:core:model')
     implementation project(':domain:notification:core:enumerate')
+    implementation 'net.javacrumbs.shedlock:shedlock-spring:5.9.0'
+    implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.9.0'
     implementation 'org.springframework.kafka:spring-kafka'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'jakarta.mail:jakarta.mail-api:2.1.2'

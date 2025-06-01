@@ -48,10 +48,13 @@ dependencies {
 	implementation project(':domain:schedules:connector:out-bound:open-ai')
 	implementation project(':domain:schedules:core:service')
 	implementation project(':domain:schedules:core:model')
-
+	
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'net.javacrumbs.shedlock:shedlock-spring:5.9.0'
+	implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.9.0'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.testcontainers:testcontainers:1.19.3'
 	// Testcontainers - Kafka

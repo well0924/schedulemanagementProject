@@ -23,7 +23,7 @@ public class FailedMessage {
 
     private String messageType;
 
-    @Lob
+    @Column(unique = true, length = 2000)
     private String payload;
 
     private int retryCount;
@@ -32,6 +32,7 @@ public class FailedMessage {
 
     private boolean dead; // retryCount 초과 시 마킹
 
+    @Column(length = 2000)
     private String exceptionMessage;
 
     private LocalDateTime lastTriedAt;

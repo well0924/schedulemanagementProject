@@ -28,19 +28,33 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    @Bean
-    public ConsumerFactory<String, NotificationEvents> consumerFactory() {
+//    @Bean
+//    public ConsumerFactory<String, NotificationEvents> consumerFactory(Class<T> targetClass) {
+//
+//        Map<String, Object> config = new HashMap<>();
+//        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+//        config.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-group");
+//        // DLQ 작동을 위한 역직렬화 설정
+//        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class.getName());
+//        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class.getName());
+//        // 내부에서 실제로 사용할 디시리얼라이저 지정
+//        config.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class.getName());
+//        config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class.getName());
+//        //기타 설정.
+//        config.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+//        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, targetClass.getName());
+//        config.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
+//        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+//        return config;
+//    }
 
+    private <T> Map<String, Object> consumerConfigs(Class<T> targetClass) {
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        config.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-group");
-        // DLQ 작동을 위한 역직렬화 설정
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class.getName());
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class.getName());
-        // 내부에서 실제로 사용할 디시리얼라이저 지정
         config.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class.getName());
         config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class.getName());
-        //기타 설정.
         config.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
         config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, targetClass.getName());
         config.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
@@ -50,14 +64,14 @@ public class KafkaConsumerConfig {
 
     @Bean
     public ConsumerFactory<String, NotificationEvents> notificationConsumerFactory() {
-        return new DefaultKafkaConsumerFactory<>(consumerFactory(NotificationEvents.class),
+        return new DefaultKafkaConsumerFactory<>(consumerConfigs(NotificationEvents.class),
                 new StringDeserializer(),
                 new ErrorHandlingDeserializer<>(new JsonDeserializer<>(NotificationEvents.class, false)));
     }
 
     @Bean
     public ConsumerFactory<String, MemberSignUpKafkaEvent> memberSignUpConsumerFactory() {
-        return new DefaultKafkaConsumerFactory<>(consumerFactory(MemberSignUpKafkaEvent.class),
+        return new DefaultKafkaConsumerFactory<>(consumerConfigs(MemberSignUpKafkaEvent.class),
                 new StringDeserializer(),
                 new ErrorHandlingDeserializer<>(new JsonDeserializer<>(MemberSignUpKafkaEvent.class, false)));
     }

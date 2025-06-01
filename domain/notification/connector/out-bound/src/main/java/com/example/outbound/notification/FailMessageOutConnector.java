@@ -46,11 +46,11 @@ public class FailMessageOutConnector {
                 .orElseThrow(() -> new IllegalArgumentException("FailMessage not found: id=" + model.getId()));
 
         FailedMessage updated = FailedMessage.builder()
-                .id(existing.getId())
-                .topic(existing.getTopic())
-                .messageType(existing.getMessageType())
-                .payload(existing.getPayload())
-                .createdAt(existing.getCreatedAt())
+                .id(model.getId())
+                .topic(model.getTopic())
+                .messageType(model.getMessageType())
+                .payload(model.getPayload())
+                .createdAt(model.getCreatedAt())
                 .resolved(model.isResolved())
                 .retryCount(model.getRetryCount())
                 .lastTriedAt(model.getLastTriedAt())

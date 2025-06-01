@@ -6,6 +6,7 @@ import com.example.notification.service.FailedMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -21,10 +22,14 @@ public class MemberSignUpDlqRetryScheduler {
     private final KafkaTemplate<String, MemberSignUpKafkaEvent> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private static final int MAX_RETRY_COUNT = 5;
+    public static int EXECUTION_COUNT = 0;
 
 
     @Scheduled(fixedDelay = 10 * 60 * 1000)
+    @SchedulerLock(name = "retryMemberSignUpDlq", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
     public void retryMemberSignUps() {
+        EXECUTION_COUNT++;
+        log.info("실행됨: " + EXECUTION_COUNT);
         List<FailMessageModel> list = failedService
                 .findByResolvedFalse()
                 .stream()
@@ -53,7 +58,7 @@ public class MemberSignUpDlqRetryScheduler {
                 entity.setExceptionMessage(ex.getMessage());
                 log.warn(" DLQ 재처리 실패 - member signup: id={}, reason={}", entity.getId(), ex.getMessage());
             }
-            failedService.createFailMessage(entity);
+            failedService.updateFailMessage(entity);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.example;
 
+import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -10,6 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableFeignClients
 @EnableScheduling
+@EnableSchedulerLock(defaultLockAtMostFor = "PT10M")
 @EntityScan(basePackages = "com.example")
 @EnableJpaRepositories(basePackages = "com.example")
 @SpringBootApplication(scanBasePackages = "com.example")

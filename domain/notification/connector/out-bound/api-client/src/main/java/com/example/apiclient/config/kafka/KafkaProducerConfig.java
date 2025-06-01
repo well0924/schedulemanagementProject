@@ -1,7 +1,6 @@
 package com.example.apiclient.config.kafka;
 
 import com.example.events.kafka.MemberSignUpKafkaEvent;
-import com.example.events.spring.MemberSignUpEvent;
 import com.example.events.kafka.NotificationEvents;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -39,5 +38,13 @@ public class KafkaProducerConfig {
     @Bean
     public KafkaTemplate<String, MemberSignUpKafkaEvent> memberKafkaTemplate() {
         return new KafkaTemplate<>(genericProducerFactory(MemberSignUpKafkaEvent.class));
+    }
+
+    private <T> ProducerFactory<String, T> genericProducerFactory(Class<T> clazz) {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        return new DefaultKafkaProducerFactory<>(config);
     }
 }

@@ -35,6 +35,9 @@ public class OutboxEventEntity {
     private Boolean sent = false; // Kafka 발행 여부
 
     @Column(nullable = false)
+    private Integer retryCount = 0;
+
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     private LocalDateTime sentAt;
@@ -42,5 +45,17 @@ public class OutboxEventEntity {
     public void markSent() {
         this.sent = true;
         this.sentAt = LocalDateTime.now();
+    }
+
+    public void increaseRetryCount() {
+        this.retryCount++;
+    }
+
+    public String resolveTopic() {
+        return switch (this.aggregateType) {
+            case "MEMBER" -> "member-signup-events";
+            case "SCHEDULE" -> "schedule-events";
+            default -> throw new IllegalArgumentException("알 수 없는 aggregateType: " + this.aggregateType);
+        };
     }
 }

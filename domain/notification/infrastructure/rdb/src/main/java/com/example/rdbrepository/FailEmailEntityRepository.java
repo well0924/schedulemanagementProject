@@ -7,5 +7,4 @@ import java.util.List;
 public interface FailEmailEntityRepository extends JpaRepository<FailEmailEntity,Long> {
 
     List<FailEmailEntity> findByResolvedFalse();
-    void saveAll(List<FailEmailEntity> failEmails);
 }

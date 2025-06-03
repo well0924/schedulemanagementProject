@@ -1,5 +1,7 @@
-package com.example.events;
+package com.example.events.kafka;
 
+import com.example.events.enums.NotificationChannel;
+import com.example.events.enums.ScheduleActionType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

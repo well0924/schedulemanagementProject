@@ -119,6 +119,7 @@ public class ScheduleOutConnector {
                 .repeatType(String.valueOf(model.getRepeatType()))
                 .repeatCount(model.getRepeatCount())
                 .repeatInterval(model.getRepeatInterval())
+                .repeatGroupId(model.getRepeatGroupId())
                 .isAllDay(model.isAllDay())
                 .scheduleType(String.valueOf(model.getScheduleType()))
                 .build();
@@ -262,6 +263,7 @@ public class ScheduleOutConnector {
                 .repeatType(RepeatType.valueOf(schedules.getRepeatType()))//일정 반복 유형
                 .repeatCount(schedules.getRepeatCount())//반복횟수
                 .repeatInterval(schedules.getRepeatInterval())
+                .repeatGroupId(schedules.getRepeatGroupId())
                 .isAllDay(schedules.getIsAllDay())
                 .scheduleType(ScheduleType.valueOf(schedules.getScheduleType()))
                 .createdBy(schedules.getCreatedBy())

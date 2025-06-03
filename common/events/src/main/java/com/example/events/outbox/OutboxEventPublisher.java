@@ -16,7 +16,6 @@ public class OutboxEventPublisher {
 
     private final OutboxEventRepository repository;
 
-    @Qualifier("stringKafkaTemplate")
     private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Scheduled(fixedDelay = 3000) //3초마다 실행

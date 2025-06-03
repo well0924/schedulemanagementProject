@@ -1,5 +1,15 @@
 plugins{
 	id 'org.springframework.boot' version '3.2.2'
+	id 'java'
+	id 'com.google.cloud.tools.jib' version '3.4.0'
+}
+
+group = 'com.example'
+version = '1.0.0'
+sourceCompatibility = '17'
+
+repositories {
+	mavenCentral()
 }
 
 dependencies {
@@ -17,6 +27,10 @@ dependencies {
 	implementation project(':common:events')
 	implementation project(':common:s3')
 	implementation project(':domain:member:api:controller')
+	implementation project(':domain:member:connector:out-bound')
+	implementation project(':domain:member:core:model')
+	implementation project(':domain:member:core:service')
+	implementation project(':domain:member:core:enumerate')
 	implementation project(':domain:schedules:api:controller')
 	implementation project(':domain:category:api:controller')
 	implementation project(':domain:attach:api:controller')
@@ -24,21 +38,59 @@ dependencies {
 	implementation project(':domain:schedules:infrastructure:rdb')
 	implementation project(':domain:category:infrastructure:rdb')
 	implementation project(':domain:attach:infrastructure:rdb')
+	implementation project(':domain:notification:connector:in-bound')
 	implementation project(':domain:notification:connector:out-bound')
 	implementation project(':domain:notification:connector:out-bound:api-client')
+	implementation project(':domain:notification:core:service')
+	implementation project(':domain:notification:core:model')
 	implementation project(':domain:notification:infrastructure:rdb')
 	implementation project(':domain:schedules:connector:out-bound')
 	implementation project(':domain:schedules:connector:out-bound:open-ai')
-
+	implementation project(':domain:schedules:core:service')
+	implementation project(':domain:schedules:core:model')
+	
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'net.javacrumbs.shedlock:shedlock-spring:5.9.0'
+	implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.9.0'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.testcontainers:testcontainers:1.19.3'
+	// Testcontainers - Kafka
+	testImplementation 'org.testcontainers:kafka:1.19.3'
+	// Testcontainers - JUnit 연동
+	testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
+	// Awaitility (비동기)
+	testImplementation 'org.awaitility:awaitility:4.2.0'
+	// DB 테스트컨테이너 MySQL
+	testImplementation 'org.testcontainers:mysql:1.19.3'
+	// Redis
+	testImplementation 'com.redis:testcontainers-redis:2.2.2'
 	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.3'
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.3'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
 	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 }
 
 springBoot {
 	mainClass = 'com.example.BootStrapApplication'
+}
+
+jib {
+	from {
+		image = 'eclipse-temurin:17-jdk-alpine'
+	}
+	to {
+		image = 'well4149/schedule-management'
+		auth {
+			username = findProperty("dockerHubUsername") ?: ""
+			password = findProperty("dockerHubPassword") ?: ""
+		}
+	}
+	container {
+		ports = ['8080']
+		jvmFlags = ['-Dspring.profiles.active=prod']
+	}
 }

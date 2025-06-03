@@ -1,4 +1,4 @@
-package com.example.events;
+package com.example.events.enums;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -7,6 +7,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public enum ScheduleActionType {
     SCHEDULE_CREATED,
-    SCHEDULE_UPDATED,
-    SCHEDULE_DELETED
+    SCHEDULE_UPDATE,
+    SCHEDULE_DELETE
 }

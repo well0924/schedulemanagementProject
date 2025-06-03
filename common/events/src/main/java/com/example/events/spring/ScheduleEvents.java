@@ -1,5 +1,7 @@
-package com.example.events;
+package com.example.events.spring;
 
+import com.example.events.enums.NotificationChannel;
+import com.example.events.enums.ScheduleActionType;
 import lombok.*;
 
 import java.time.LocalDateTime;

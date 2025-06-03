@@ -1,8 +1,10 @@
 package com.example.apiclient.config.kafka;
 
-import com.example.events.NotificationEvents;
+import com.example.events.kafka.MemberSignUpKafkaEvent;
+import com.example.events.kafka.NotificationEvents;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -16,32 +18,33 @@ import java.util.Map;
 @Configuration
 public class KafkaProducerConfig {
 
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String bootstrapServers;
+
     @Bean
     public ProducerFactory<String, NotificationEvents> notificationProducerFactory() {
         Map<String, Object> config = new HashMap<>();
-        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
         return new DefaultKafkaProducerFactory<>(config);
     }
 
-    @Bean(name = "notificationKafkaTemplate")
+    @Bean
     public KafkaTemplate<String, NotificationEvents> notificationKafkaTemplate() {
-        return new KafkaTemplate<>(notificationProducerFactory());
+        return new KafkaTemplate<>(genericProducerFactory(NotificationEvents.class));
     }
-
 
     @Bean
-    public ProducerFactory<String, String> stringProducerFactory() {
-        Map<String, Object> config = new HashMap<>();
-        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        return new DefaultKafkaProducerFactory<>(config);
+    public KafkaTemplate<String, MemberSignUpKafkaEvent> memberKafkaTemplate() {
+        return new KafkaTemplate<>(genericProducerFactory(MemberSignUpKafkaEvent.class));
     }
 
-    @Bean(name = "stringKafkaTemplate")
-    public KafkaTemplate<String, String> stringKafkaTemplate() {
-        return new KafkaTemplate<>(stringProducerFactory());
+    private <T> ProducerFactory<String, T> genericProducerFactory(Class<T> clazz) {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        return new DefaultKafkaProducerFactory<>(config);
     }
 }

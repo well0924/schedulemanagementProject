@@ -1,7 +1,7 @@
 package com.example.service.member;
 
 import com.example.enumerate.member.SearchType;
-import com.example.events.MemberSignUpKafkaEvent;
+import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.events.outbox.OutboxEventService;
 import com.example.model.member.MemberModel;
 import com.example.outbound.member.MemberOutConnector;

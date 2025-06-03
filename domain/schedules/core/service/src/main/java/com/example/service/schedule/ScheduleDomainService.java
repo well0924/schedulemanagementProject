@@ -4,11 +4,11 @@ import com.example.enumerate.schedules.DeleteType;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.enumerate.schedules.RepeatType;
 import com.example.enumerate.schedules.ScheduleType;
-import com.example.events.NotificationChannel;
-import com.example.events.NotificationEvents;
-import com.example.events.ScheduleActionType;
-import com.example.events.ScheduleEvents;
+import com.example.events.enums.ScheduleActionType;
+import com.example.events.kafka.NotificationEvents;
 import com.example.events.outbox.OutboxEventService;
+import com.example.events.enums.NotificationChannel;
+import com.example.events.spring.ScheduleEvents;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
 import com.example.inbound.attach.AttachInConnector;
@@ -110,7 +110,7 @@ public class ScheduleDomainService {
                 .builder()
                 .receiverId(firstSchedule.getUserId())
                 .message("📅 일정이 생성되었습니다: " + firstSchedule.getContents())
-                .notificationType(ScheduleActionType.SCHEDULE_CREATED)
+                .notificationType(com.example.events.enums.ScheduleActionType.SCHEDULE_CREATED)
                 .notificationChannel(NotificationChannel.WEB)
                 .createdTime(LocalDateTime.now())
                 .build();
@@ -164,10 +164,11 @@ public class ScheduleDomainService {
                 result.getId(),
                 result.getUserId(),
                 result.getContents(),
-                ScheduleActionType.SCHEDULE_UPDATED,
+                com.example.events.enums.ScheduleActionType.SCHEDULE_UPDATE,
                 NotificationChannel.WEB,
                 LocalDateTime.now()
         );
+
         return result;
     }
 
@@ -210,11 +211,11 @@ public class ScheduleDomainService {
                 target.getId(),
                 target.getUserId(),
                 target.getContents(),
-                ScheduleActionType.SCHEDULE_DELETED,
+                com.example.events.enums.ScheduleActionType.SCHEDULE_DELETE,
                 NotificationChannel.WEB,
                 LocalDateTime.now()
         );
-        //applicationEventPublisher.publishEvent(scheduleEvents);
+
     }
 
     //선택 삭제
@@ -228,7 +229,7 @@ public class ScheduleDomainService {
                     model.getId(),
                     model.getUserId(),
                     model.getContents(),
-                    ScheduleActionType.SCHEDULE_DELETED,
+                    com.example.events.enums.ScheduleActionType.SCHEDULE_DELETE,
                     NotificationChannel.WEB,
                     LocalDateTime.now()
             );
@@ -288,6 +289,7 @@ public class ScheduleDomainService {
 
     //일정 반복기능
     private List<SchedulesModel> generateRepeatedSchedules(SchedulesModel baseModel) {
+        log.info("반복일정 수행");
         List<SchedulesModel> result = new ArrayList<>();
 
         RepeatType rule = baseModel.getRepeatType();
@@ -296,7 +298,7 @@ public class ScheduleDomainService {
         int interval = Optional.ofNullable(baseModel.getRepeatInterval()).orElse(1);
 
         String groupId = UUID.randomUUID().toString();
-
+        log.info(groupId);
         for (int i = 0; i < count; i++) {
             if (rule == RepeatType.NONE && i > 0) continue;
 
@@ -309,8 +311,8 @@ public class ScheduleDomainService {
                     .repeatGroupId(groupId) // 반복일정의 groupId
                     .build();
 
-            log.debug("groupId::"+groupId);
-            log.debug("repeated::"+repeated);
+            log.info("groupId::"+groupId);
+            log.info("repeated::"+repeated);
             result.add(repeated);
         }
 

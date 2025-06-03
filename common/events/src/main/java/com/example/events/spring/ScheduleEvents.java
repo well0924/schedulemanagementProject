@@ -1,5 +1,6 @@
-package com.example.events;
+package com.example.events.spring;
 
+import com.example.events.enums.NotificationChannel;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -15,5 +16,5 @@ public class ScheduleEvents {
     private String actionType; // 일정행위 (생성,수정,삭제)
     private String contents;
     private LocalDateTime createdTime;
-    private NotificationChannel notificationChannel; 
+    private NotificationChannel notificationChannel;
 }

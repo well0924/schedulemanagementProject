@@ -1,10 +1,15 @@
 package com.example.kafka;
 
 import com.example.enumerate.member.Roles;
+import com.example.events.enums.AggregateType;
+import com.example.events.enums.EventType;
 import com.example.events.enums.NotificationChannel;
 import com.example.events.enums.ScheduleActionType;
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.events.kafka.NotificationEvents;
+import com.example.events.outbox.OutboxEventPublisher;
+import com.example.events.outbox.OutboxEventRepository;
+import com.example.events.outbox.OutboxEventService;
 import com.example.inbound.consumer.member.MemberSignUpDlqRetryScheduler;
 import com.example.inbound.consumer.schedule.NotificationDlqRetryScheduler;
 import com.example.kafka.dlq.DlqTestConsumer;
@@ -83,6 +88,15 @@ public class KafkaIntegrationTest {
 
     @Autowired
     EntityManager em;
+
+    @Autowired
+    OutboxEventService outboxEventService;
+
+    @Autowired
+    OutboxEventPublisher outboxEventPublisher;
+
+    @Autowired
+    OutboxEventRepository outboxEventRepository;
 
     @Autowired
     MemberService memberService;
@@ -394,6 +408,80 @@ public class KafkaIntegrationTest {
                     var notiList = notificationService.getNotificationsByUserId(999L);
                     assertThat(notiList).isNotEmpty();
                     assertThat(notiList.get(0).getMessage()).contains("강제실패 알림");
+                });
+    }
+
+
+    @Test
+    @DisplayName("Outbox → Kafka → Consumer: 회원가입 알림 전파 검증")
+    void memberOutboxToKafkaIntegrationTest() {
+        // 1. 회원가입 Kafka 이벤트 생성
+        MemberSignUpKafkaEvent event = MemberSignUpKafkaEvent
+                .of(555L,"outboxUser","outbox@test.com");
+
+        // 2. Outbox 저장
+        outboxEventService.saveEvent(
+                event,
+                AggregateType.MEMBER.name(),
+                "555",
+                EventType.SIGNED_UP_WELCOME.name()
+        );
+
+        // 3. OutboxPublisher 수동 실행
+        outboxEventPublisher.publishOutboxEvents();
+
+        // 4. Outbox 상태 확인
+        var events = outboxEventRepository.findAll();
+        assertThat(events).isNotEmpty();
+        assertThat(events.get(0).getSent()).isTrue();
+        assertThat(events.get(0).getSentAt()).isNotNull();
+
+        // 5. 알림 저장 확인
+        await().atMost(10, TimeUnit.SECONDS)
+                .pollInterval(500, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    var notiList = notificationService.getNotificationsByUserId(555L);
+                    assertThat(notiList).isNotEmpty();
+                    assertThat(notiList.get(0).getMessage()).contains("🎉 환영합니다, outboxUser님! 회원가입이 완료되었습니다.");
+                });
+    }
+
+    @Test
+    @DisplayName("Outbox → Kafka → Consumer: 일정 생성 알림 전파 검증")
+    void scheduleOutboxToKafkaIntegrationTest() {
+        // 1. 일정 Kafka 이벤트 생성
+        NotificationEvents event = NotificationEvents.builder()
+                .receiverId(888L)
+                .message("일정 알림")
+                .notificationType(ScheduleActionType.SCHEDULE_CREATED)
+                .notificationChannel(NotificationChannel.WEB)
+                .createdTime(LocalDateTime.now())
+                .build();
+
+        // 2. Outbox 저장
+        outboxEventService.saveEvent(
+                event,
+                AggregateType.SCHEDULE.name(),
+                "888",
+                EventType.SCHEDULE_CREATED.name()
+        );
+
+        // 3. OutboxPublisher 수동 실행
+        outboxEventPublisher.publishOutboxEvents();
+
+        // 4. Outbox 상태 확인
+        var events = outboxEventRepository.findAll();
+        assertThat(events).isNotEmpty();
+        assertThat(events.get(0).getSent()).isTrue();
+        assertThat(events.get(0).getSentAt()).isNotNull();
+
+        // 5. 알림 저장 확인
+        await().atMost(10, TimeUnit.SECONDS)
+                .pollInterval(500, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    var notiList = notificationService.getNotificationsByUserId(888L);
+                    assertThat(notiList).isNotEmpty();
+                    assertThat(notiList.get(0).getMessage()).contains("일정 알림");
                 });
     }
 }

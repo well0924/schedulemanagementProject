@@ -2,6 +2,7 @@
 .gradle/
 gradle/
 !gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
 gradle.properties
 # Gradle 빌드 결과물
 build/

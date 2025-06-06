@@ -54,7 +54,7 @@ public class OutboxEventEntity {
     public String resolveTopic() {
         return switch (this.aggregateType) {
             case "MEMBER" -> "member-signup-events";
-            case "SCHEDULE" -> "schedule-events";
+            case "SCHEDULE" -> "notification-events";
             default -> throw new IllegalArgumentException("알 수 없는 aggregateType: " + this.aggregateType);
         };
     }

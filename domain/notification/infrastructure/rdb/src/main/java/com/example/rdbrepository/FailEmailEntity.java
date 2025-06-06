@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
+@Table(name = "fail_email_entity")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

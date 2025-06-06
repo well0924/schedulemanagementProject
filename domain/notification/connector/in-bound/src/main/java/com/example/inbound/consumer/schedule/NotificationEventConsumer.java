@@ -2,7 +2,6 @@ package com.example.inbound.consumer.schedule;
 
 import com.example.events.enums.NotificationChannel;
 import com.example.events.kafka.NotificationEvents;
-import com.example.events.spring.ScheduleEvents;
 import com.example.notification.NotificationType;
 import com.example.notification.model.NotificationModel;
 import com.example.notification.service.NotificationService;
@@ -13,8 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Slf4j
@@ -33,10 +30,7 @@ public class NotificationEventConsumer {
             groupId = "notification-group",
             containerFactory = "notificationKafkaListenerFactory")
     public void consume(NotificationEvents event) {
-        // 테스트용 예외 강제 발생
-//        if ("DLQ 테스트".equals(event.getMessage())) {
-//            throw new RuntimeException("강제 예외 발생 - DLQ로 이동 테스트");
-//        }
+
         try {
             log.info("Kafka 알림 수신: {}", event);
             NotificationChannel channel = Optional.ofNullable(event.getNotificationChannel())
@@ -92,27 +86,6 @@ public class NotificationEventConsumer {
                 .isRead(false)
                 .isSent(false)
                 .build();
-    }
-
-    private NotificationModel toNotificationModel(ScheduleEvents event) {
-        return NotificationModel.builder()
-                .userId(event.getUserId())
-                .scheduleId(event.getScheduleId())
-                .message(buildMessage(event))
-                .notificationType(mapActionToType(event.getActionType()))
-                .isRead(false)
-                .isSent(false)
-                .scheduledAt(LocalDateTime.now())
-                .build();
-    }
-
-    private String buildMessage(ScheduleEvents event) {
-        return switch (event.getActionType()) {
-            case "SCHEDULE_CREATED" -> "새로운 일정이 등록되었습니다.";
-            case "SCHEDULE_UPDATED" -> "일정이 수정되었습니다.";
-            case "SCHEDULE_DELETED" -> "일정이 삭제되었습니다.";
-            default -> "일정에 변경이 있습니다.";
-        };
     }
 
     private NotificationType mapActionToType(String actionType) {

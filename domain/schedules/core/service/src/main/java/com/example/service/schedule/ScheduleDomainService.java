@@ -5,8 +5,6 @@ import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.enumerate.schedules.RepeatType;
 import com.example.enumerate.schedules.ScheduleType;
 import com.example.events.enums.ScheduleActionType;
-import com.example.events.kafka.NotificationEvents;
-import com.example.events.outbox.OutboxEventService;
 import com.example.events.enums.NotificationChannel;
 import com.example.events.spring.ScheduleEvents;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
@@ -16,10 +14,13 @@ import com.example.model.schedules.SchedulesModel;
 import com.example.outbound.schedule.ScheduleOutConnector;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -30,6 +31,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
+@Transactional
 @AllArgsConstructor
 public class ScheduleDomainService {
 
@@ -37,7 +39,7 @@ public class ScheduleDomainService {
 
     private final AttachInConnector attachInConnector;
 
-    private final OutboxEventService outboxEventService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public List<SchedulesModel> getAllSchedules() {
         return scheduleOutConnector.findAllSchedules();
@@ -48,40 +50,42 @@ public class ScheduleDomainService {
     }
 
     //회원별 일정목록
+    @Transactional(readOnly = true)
     public Page<SchedulesModel> getSchedulesByUserFilter(String userId, Pageable pageable) {
         return scheduleOutConnector.findByUserId(userId,pageable);
     }
 
     //카테고리별 일정목록
+    @Transactional(readOnly = true)
     public Page<SchedulesModel> getSchedulesByCategoryFilter(String categoryId,Pageable pageable) {
         return scheduleOutConnector.findByCategoryId(categoryId,pageable);
     }
 
     //일정상태별 일정목록
+    @Transactional(readOnly = true)
     public Page<SchedulesModel> getSchedulesByStatus(String status,String userId,Pageable pageable) {
         return scheduleOutConnector.findAllByPROGRESS_STATUS(userId,status,pageable);
     }
 
     //오늘의 일정 조회
+    @Transactional(readOnly = true)
     public List<SchedulesModel> findByTodaySchedule(Long userId){
         return scheduleOutConnector.findByTodaySchedule(userId);
     }
 
     //일정 단일 조회
+    @Transactional(readOnly = true)
     public SchedulesModel findById(Long scheduleId) {
         return scheduleOutConnector.findById(scheduleId);
     }
 
     //일정 등록
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public SchedulesModel saveSchedule(SchedulesModel model) {
-        List<SchedulesModel> schedulesToSave;
-
         // 반복 없음이면 그냥 1건만 저장
-        if (model.getRepeatType() == RepeatType.NONE || model.getRepeatCount() == null || model.getRepeatCount() <= 0) {
-            schedulesToSave = List.of(model);
-        } else {
-            schedulesToSave = generateRepeatedSchedules(model);
-        }
+        List<SchedulesModel> schedulesToSave = (model.getRepeatType() == RepeatType.NONE || model.getRepeatCount() == null || model.getRepeatCount() <= 0)
+                        ? List.of(model)
+                        : generateRepeatedSchedules(model);
 
         if (schedulesToSave.isEmpty()) {
             throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_CREATED_FAIL);
@@ -105,24 +109,15 @@ public class ScheduleDomainService {
                     .build();
         }
         log.info("일정 저장 완료, 이벤트 발행 시도");
-        // 이벤트 발행.
-        NotificationEvents notificationEvents = NotificationEvents
-                .builder()
-                .receiverId(firstSchedule.getUserId())
-                .message("📅 일정이 생성되었습니다: " + firstSchedule.getContents())
-                .notificationType(com.example.events.enums.ScheduleActionType.SCHEDULE_CREATED)
-                .notificationChannel(NotificationChannel.WEB)
-                .createdTime(LocalDateTime.now())
-                .build();
 
-        outboxEventService.saveEvent(notificationEvents,
-                "SCHEDULE",
-                String.valueOf(notificationEvents.getReceiverId()),
-                ScheduleActionType.SCHEDULE_CREATED.name());
+        // 이벤트 발행.
+        publishScheduleEvent(firstSchedule,ScheduleActionType.SCHEDULE_CREATED);
+
         return firstSchedule;
     }
 
     //일정 수정
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public SchedulesModel updateSchedule(Long scheduleId, SchedulesModel model) {
 
         SchedulesModel existing = getValidatedUpdatableSchedule(scheduleId);
@@ -159,15 +154,8 @@ public class ScheduleDomainService {
         //일정 수정 로직
         SchedulesModel result = scheduleOutConnector.updateSchedule(scheduleId, updated);
 
-        // 일정 수정 후 이벤트 발행
-        ScheduleEvents scheduleEvents = new ScheduleEvents(
-                result.getId(),
-                result.getUserId(),
-                result.getContents(),
-                com.example.events.enums.ScheduleActionType.SCHEDULE_UPDATE,
-                NotificationChannel.WEB,
-                LocalDateTime.now()
-        );
+        // 일정 수정 이벤트를 outbox로 보냄
+        publishScheduleEvent(result, ScheduleActionType.SCHEDULE_UPDATE);
 
         return result;
     }
@@ -190,6 +178,7 @@ public class ScheduleDomainService {
     }
     
     //일정 삭제 (논리 삭제)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deleteSchedule(Long scheduleId, DeleteType deleteType) {
         SchedulesModel target = scheduleOutConnector.findById(scheduleId);
 
@@ -207,33 +196,19 @@ public class ScheduleDomainService {
             }
         }
         //삭제후 이벤트 발행.
-        ScheduleEvents scheduleEvents = new ScheduleEvents(
-                target.getId(),
-                target.getUserId(),
-                target.getContents(),
-                com.example.events.enums.ScheduleActionType.SCHEDULE_DELETE,
-                NotificationChannel.WEB,
-                LocalDateTime.now()
-        );
+        publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE);
 
     }
 
     //선택 삭제
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deleteSchedules(List<Long> ids) {
         scheduleOutConnector.markAsDeletedByIds(ids);
 
         // 각 일정마다 이벤트 발행 (선택)
         for (Long id : ids) {
             SchedulesModel model = scheduleOutConnector.findById(id); // 이벤트 정보용
-            ScheduleEvents scheduleEvents = new ScheduleEvents(
-                    model.getId(),
-                    model.getUserId(),
-                    model.getContents(),
-                    com.example.events.enums.ScheduleActionType.SCHEDULE_DELETE,
-                    NotificationChannel.WEB,
-                    LocalDateTime.now()
-            );
-
+            publishScheduleEvent(model,ScheduleActionType.SCHEDULE_DELETE);
         }
     }
 
@@ -337,5 +312,18 @@ public class ScheduleDomainService {
         } else {
             return ScheduleType.MULTI_DAY;
         }
+    }
+
+    //이벤트 발행
+    private void publishScheduleEvent(SchedulesModel model, ScheduleActionType actionType) {
+        ScheduleEvents event = ScheduleEvents.builder()
+                .scheduleId(model.getId())
+                .userId(model.getUserId())
+                .contents(model.getContents())
+                .notificationType(actionType)
+                .notificationChannel(NotificationChannel.WEB)
+                .createdTime(LocalDateTime.now())
+                .build();
+        applicationEventPublisher.publishEvent(event);
     }
 }

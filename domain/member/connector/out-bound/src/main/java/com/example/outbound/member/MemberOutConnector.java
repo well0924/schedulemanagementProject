@@ -11,12 +11,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 
 @Component
-@Transactional
 @RequiredArgsConstructor
 public class MemberOutConnector {
 
@@ -26,7 +23,6 @@ public class MemberOutConnector {
 
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
-    @Transactional(readOnly = true)
     public Page<MemberModel> findAll(Pageable pageable) {
         Page<MemberModel> memberModelPage = memberRepository
                 .findAll(pageable)
@@ -45,7 +41,6 @@ public class MemberOutConnector {
                 .map(this::toEntity);
     }
 
-    @Transactional(readOnly = true)
     public MemberModel findById(Long id) {
         Member memberEntity = memberRepository
                 .findById(id)

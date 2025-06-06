@@ -16,14 +16,14 @@ public class MemberSignUpKafkaEvent {
     private String notificationType;
     private LocalDateTime createdTime;
 
-    public static com.example.events.MemberSignUpKafkaEvent of(Long receiverId, String username, String email, String message, String type) {
-        return com.example.events.MemberSignUpKafkaEvent
+    public static MemberSignUpKafkaEvent of(Long receiverId, String username, String email) {
+        return MemberSignUpKafkaEvent
                 .builder()
                 .receiverId(receiverId)
                 .username(username)
                 .email(email)
-                .message(message)
-                .notificationType(type)
+                .message("🎉 환영합니다, " + username + "님! 회원가입이 완료되었습니다.")
+                .notificationType("SIGN_UP")
                 .createdTime(LocalDateTime.now())
                 .build();
     }

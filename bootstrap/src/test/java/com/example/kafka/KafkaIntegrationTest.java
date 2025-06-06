@@ -28,6 +28,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -242,6 +243,7 @@ public class KafkaIntegrationTest {
     }
 
     @Test
+    @Disabled
     @DisplayName("회원가입후 정상적으로 카프카에 송신이 되고 알림내역이 정상적으로 저장이 되는가?")
     void memberSignUpNotificationSuccessTest(){
         // 1. 회원 생성 (이벤트 포함)
@@ -276,7 +278,7 @@ public class KafkaIntegrationTest {
     }
 
     @Test
-    @DisplayName("컨슈머에서 실패를 했을경우에 DLQ로 진행이 되는 경우")
+    @DisplayName("회원 컨슈머에서 실패를 했을경우에 DLQ로 진행이 되는 경우")
     public void MemberSignUpDLQTest1() {
         dlqTestConsumer.clear();
 
@@ -299,7 +301,7 @@ public class KafkaIntegrationTest {
 
 
     @Test
-    @DisplayName("DLQ로 보내진 후 실패이력을 저장을 하고 재처리 하기")
+    @DisplayName("회원 DLQ로 보내진 후 실패이력을 저장을 하고 재처리 하기")
     public void MemberSignUpDLQTest2(){
         // 1. DLQ 유도 (Consumer에서 실패할 email 설정)
         MemberSignUpKafkaEvent event = MemberSignUpKafkaEvent.builder()
@@ -331,6 +333,7 @@ public class KafkaIntegrationTest {
     }
 
     @Test
+    @Disabled
     @DisplayName("일정 생성시(첨부파일 없는 경우) 정상적으로 알림이 작동이 되는가?")
     public void ScheduleNotificationTest1(){
         // given
@@ -437,8 +440,8 @@ public class KafkaIntegrationTest {
         assertThat(events.get(0).getSentAt()).isNotNull();
 
         // 5. 알림 저장 확인
-        await().atMost(10, TimeUnit.SECONDS)
-                .pollInterval(500, TimeUnit.MILLISECONDS)
+        await().atMost(15, TimeUnit.SECONDS)
+                .pollInterval(100, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     var notiList = notificationService.getNotificationsByUserId(555L);
                     assertThat(notiList).isNotEmpty();

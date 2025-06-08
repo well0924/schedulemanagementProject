@@ -28,22 +28,22 @@
 ## 🛠 사용 기술 스택
 
 ### Backend
-- Java 17, Spring Boot 3
-- JPA, QueryDSL
-- Kafka (이벤트 전파 및 DLQ 처리)
-- Redis (세션/캐시, 일정 중복 처리)
-- OpenFeign (AI 일정 추천 연동)
-- AWS S3 (Presigned URL 기반 파일 업로드/다운로드)
+- *Java 17, Spring Boot 3*
+- *JPA, QueryDSL*
+- *Kafka (이벤트 전파 및 DLQ 처리)*
+- *Redis (세션/캐시, 일정 중복 처리)*
+- *OpenFeign (AI 일정 추천 연동)*
+- *AWS S3 (Presigned URL 기반 파일 업로드/다운로드)*
 
 ### Frontend
-- Next.js 14 + TypeScript
-- Tailwind CSS
-- FullCalendar
+- *Next.js 14* + *TypeScript*
+- *Tailwind CSS*
+- *FullCalendar*
 
 ### Infra / DevOps
-- AWS Lightsail, RDS, S3
-- GitHub Actions (CI/CD 파이프라인)
-- Docker, Docker Compose
+- *AWS Lightsail, RDS, S3*
+- *GitHub Actions (CI/CD 파이프라인)*
+- *Docker, Docker Compose*
 - Prometheus + Grafana (모니터링 구성 중)
 
 ---
@@ -77,11 +77,11 @@ npm run dev
 
 ## 🧠 기술적 고민 및 해결 사례
 
-| 주제 | 설명 |
-|------|------|
+| 주제                                                                 | 설명 |
+|--------------------------------------------------------------------|------|
 | 🖼️ [Presigned URL 리사이징 비동기 처리](https://codingweb.tistory.com/257) | 대용량 이미지 업로드 시 썸네일 자동 생성 + 서버 부하 분산 |
-| 🧠 [OpenAI API Fallback 처리](https://codingweb.tistory.com/259) | AI 일정 추천 실패 시 CircuitBreaker + Fallback 적용 |
-| 🗓️ [Schedule 충돌 검사 로직](https://codingweb.tistory.com/267) | ScheduleType 분기 + Redis 기반 탐색 처리 |
-| 🔁 [Kafka DLQ 재처리](https://codingweb.tistory.com/268) | Kafka 소비 실패 메시지를 DLQ → DB 저장 및 재처리 스케줄러 구성 |
-
+| 🧠 [OpenAI API Fallback 처리](https://codingweb.tistory.com/259)     | AI 일정 추천 실패 시 CircuitBreaker + Fallback 적용 |
+| 🗓️ [Schedule 충돌 검사 로직](https://codingweb.tistory.com/267)         | ScheduleType 분기 처리로 반복/하루 일정 충돌 탐지. Redis 기반 빠른 탐색은 추후 적용 예정 |
+| 🔁 [Kafka DLQ 재처리](https://codingweb.tistory.com/268)              | Kafka 소비 실패 메시지를 DLQ → DB 저장 및 재처리 스케줄러 구성 |
+| 💾 [Outbox 패턴 기반 이벤트 발행](https://codingweb.tistory.com/272)                                        | Kafka 메시지 유실 방지를 위해 Outbox 테이블에 이벤트 저장 → 전용 Publisher에서 Kafka로 전송. 트랜잭션 일관성과 이벤트 발행 안정성 확보. ShedLock 기반 다중 인스턴스 동시성 제어 적용. |
 ---

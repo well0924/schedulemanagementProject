@@ -1,0 +1,23 @@
+name: Deploy to EC2 via SSH
+
+on:
+  push:
+    branches: 
+      - main # main에 merge가 되었을때 cd가 작동
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/schedule-app
+            docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+            docker-compose -f docker-compose.dev.yml pull
+            docker-compose -f docker-compose.dev.yml up -d

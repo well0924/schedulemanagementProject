@@ -16,7 +16,7 @@ build/
 # YML 설정파일
 *.yml
 **.yml
-
+.env
 # STS 관련
 .apt_generated
 .classpath

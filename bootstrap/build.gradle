@@ -85,12 +85,22 @@ jib {
 	to {
 		image = 'well4149/schedule-management'
 		auth {
-			username = findProperty("dockerHubUsername") ?: ""
-			password = findProperty("dockerHubPassword") ?: ""
+			username = findProperty("dockerHubUsername") ?: System.getenv("DOCKER_USERNAME") ?: ""
+			password = findProperty("dockerHubPassword") ?: System.getenv("DOCKER_PASSWORD") ?: ""
 		}
 	}
 	container {
-		ports = ['8080']
-		jvmFlags = ['-Dspring.profiles.active=prod']
+		ports = ['8082']
+		jvmFlags = ['-Dserver.port=8082','-Dspring.profiles.active=prod']
+		environment = [
+				'SPRING_KAFKA_BOOTSTRAP_SERVERS': 'kafka:9092',
+				'SPRING_DATA_REDIS_HOST': 'redis',
+				'SPRING_DATASOURCE_URL'    : findProperty("SPRING_DATASOURCE_URL") ?: "",
+				'SPRING_DATASOURCE_USERNAME': findProperty("SPRING_DATASOURCE_USERNAME") ?: "",
+				'SPRING_DATASOURCE_PASSWORD': findProperty("SPRING_DATASOURCE_PASSWORD") ?: "",
+				'JWT_SECRET'               : findProperty("JWT_SECRET") ?: "",
+				'MAIL_USERNAME'            : findProperty("MAIL_USERNAME") ?: "",
+				'MAIL_PASSWORD'            : findProperty("MAIL_PASSWORD") ?: ""
+		]
 	}
 }

@@ -134,4 +134,4 @@ services:
     networks:
       - backend-net
 networks:
-  backend-net:
+  backend-net: {}

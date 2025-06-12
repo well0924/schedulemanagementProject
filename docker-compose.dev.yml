@@ -92,7 +92,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/:/etc/prometheus
     restart: always
     networks:
       - backend-net
@@ -125,9 +125,9 @@ services:
     image: grafana/promtail:2.9.2
     container_name: promtail
     volumes:
-      - ./promtail/promtail-config.yaml:/etc/promtail/config.yaml
+      - ./promtail:/etc/promtail
       - /var/log:/var/log
-    command: -config.file=/etc/promtail/config.yaml
+    command: -config.file=/etc/promtail/promtail-config.yaml
     depends_on:
       - loki
     restart: always

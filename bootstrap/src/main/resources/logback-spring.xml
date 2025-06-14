@@ -1,5 +1,5 @@
 <configuration>
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="FILE_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
             <providers>
                 <timestamp>
@@ -21,8 +21,10 @@
                 </stackTrace>
             </providers>
         </encoder>
+        <file>/var/log/schedule-backend/app.log</file>
     </appender>
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_JSON"/>
     </root>
 </configuration>

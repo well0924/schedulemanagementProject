@@ -5,6 +5,8 @@ services:
     container_name: schedule-backend
     ports:
       - "8082:8082"
+    volumes:
+      - /var/log/schedule-backend:/var/log/schedule-backend
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -103,6 +105,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_SERVER_ROOT_URL=https://api.schedulemanagement.site/grafana/
@@ -128,7 +131,7 @@ services:
     container_name: promtail
     volumes:
       - ./promtail:/etc/promtail
-      - /var/log:/var/log
+      - /var/log/schedule-backend:/var/log/schedule-backend
     command: -config.file=/etc/promtail/promtail-config.yaml
     depends_on:
       - loki

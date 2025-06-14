@@ -121,7 +121,7 @@ services:
     container_name: loki
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yml
     restart: always
     networks:
       - backend-net
@@ -132,7 +132,7 @@ services:
     volumes:
       - ./promtail:/etc/promtail
       - /var/log/schedule-backend:/var/log/schedule-backend
-    command: -config.file=/etc/promtail/promtail-config.yaml
+    command: -config.file=/etc/promtail/promtail-config.yml
     depends_on:
       - loki
     restart: always

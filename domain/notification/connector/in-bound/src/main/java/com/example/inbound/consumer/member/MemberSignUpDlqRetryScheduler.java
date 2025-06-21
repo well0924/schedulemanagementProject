@@ -1,6 +1,7 @@
 package com.example.inbound.consumer.member;
 
 import com.example.events.kafka.MemberSignUpKafkaEvent;
+import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.model.FailMessageModel;
 import com.example.notification.service.FailedMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,6 +49,7 @@ public class MemberSignUpDlqRetryScheduler {
 
             try {
                 MemberSignUpKafkaEvent event = objectMapper.readValue(entity.getPayload(), MemberSignUpKafkaEvent.class);
+                KafkaMDCUtil.initMDC(event);
                 String retryTopic = getRetryTopicByCountForMember(entity.getRetryCount());
                 kafkaTemplate.send(retryTopic, event);
                 entity.setResolved();
@@ -57,6 +59,8 @@ public class MemberSignUpDlqRetryScheduler {
                 entity.setLastTriedAt();
                 entity.setExceptionMessage(ex.getMessage());
                 log.warn(" DLQ 재처리 실패 - member signup: id={}, reason={}", entity.getId(), ex.getMessage());
+            } finally {
+                KafkaMDCUtil.clear();
             }
             failedService.updateFailMessage(entity);
         }

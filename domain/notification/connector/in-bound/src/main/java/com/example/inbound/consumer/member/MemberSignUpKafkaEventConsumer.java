@@ -2,6 +2,7 @@ package com.example.inbound.consumer.member;
 
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.interfaces.notification.kafka.KafkaEventConsumer;
+import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.NotificationType;
 import com.example.notification.email.EmailService;
 import com.example.notification.model.NotificationModel;
@@ -37,6 +38,7 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
     @Override
     public void handle(MemberSignUpKafkaEvent event) {
         try {
+            KafkaMDCUtil.initMDC(event);
             // 1. 이메일 발송 (실패해도 서비스 진행은 계속)
             try {
                 emailService.sendHtmlEmail(
@@ -61,6 +63,8 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
         } catch (Exception e) {
             // DLQ 전송을 위해 RuntimeException 으로 감싸서 throw
             throw new RuntimeException("Kafka Consumer 실패 → DLQ로 전송", e);
+        } finally {
+            KafkaMDCUtil.clear();
         }
     }
 

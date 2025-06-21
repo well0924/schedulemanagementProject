@@ -2,6 +2,7 @@ package com.example.inbound.consumer.schedule;
 
 import com.example.events.enums.NotificationChannel;
 import com.example.events.kafka.NotificationEvents;
+import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.NotificationType;
 import com.example.notification.model.NotificationModel;
 import com.example.notification.service.NotificationService;
@@ -35,7 +36,7 @@ public class NotificationEventConsumer {
             log.info("Kafka 알림 수신: {}", event);
             NotificationChannel channel = Optional.ofNullable(event.getNotificationChannel())
                     .orElse(NotificationChannel.WEB);
-
+            KafkaMDCUtil.initMDC(event);
             switch (channel) {
                 case WEB -> {
                     //알림 내역 저장
@@ -64,6 +65,8 @@ public class NotificationEventConsumer {
         } catch (Exception e) {
             log.error("WebSocket 전송 실패", e);
             throw new RuntimeException("WebSocket send failed", e); // DLQ 트리거
+        } finally {
+            KafkaMDCUtil.clear();
         }
     }
 

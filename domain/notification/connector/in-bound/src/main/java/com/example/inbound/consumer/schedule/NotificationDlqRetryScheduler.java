@@ -1,6 +1,7 @@
 package com.example.inbound.consumer.schedule;
 
 import com.example.events.kafka.NotificationEvents;
+import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.model.FailMessageModel;
 import com.example.notification.service.FailedMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,6 +50,7 @@ public class NotificationDlqRetryScheduler {
 
             try {
                 NotificationEvents event = objectMapper.readValue(entity.getPayload(), NotificationEvents.class);
+                KafkaMDCUtil.initMDC(event);
                 String retryTopic = getRetryTopicByCount(entity.getRetryCount());
                 kafkaTemplate.send(retryTopic, event);
                 log.info("재시도 메시지 전송: retryCount={}, topic={}", entity.getRetryCount(), retryTopic);
@@ -60,6 +62,8 @@ public class NotificationDlqRetryScheduler {
                 entity.setLastTriedAt();
                 entity.setExceptionMessage(ex.getMessage());
                 log.warn("DLQ 재처리 실패 - notification: id={}, reason={}", entity.getId(), ex.getMessage());
+            } finally {
+                KafkaMDCUtil.clear();
             }
                 failedMessageService.updateFailMessage(entity);
         }

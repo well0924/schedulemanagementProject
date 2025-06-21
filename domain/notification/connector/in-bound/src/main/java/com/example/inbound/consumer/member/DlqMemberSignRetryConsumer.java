@@ -2,6 +2,7 @@ package com.example.inbound.consumer.member;
 
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.interfaces.notification.kafka.KafkaEventConsumer;
+import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.model.FailMessageModel;
 import com.example.notification.service.FailedMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,6 +25,7 @@ public class DlqMemberSignRetryConsumer implements KafkaEventConsumer<MemberSign
     public void handle(MemberSignUpKafkaEvent event) {
         log.warn(" DLQ 재처리 (member signup): {}", event);
         try {
+            KafkaMDCUtil.initMDC(event);
             String payload = objectMapper.writeValueAsString(event);
             FailMessageModel failMessageModel = FailMessageModel
                     .builder()
@@ -39,6 +41,8 @@ public class DlqMemberSignRetryConsumer implements KafkaEventConsumer<MemberSign
             log.warn(" DLQ 메시지 저장 완료: {}", payload);
         } catch (Exception e) {
             log.error(" DLQ 메시지 저장 실패", e);
+        } finally {
+            KafkaMDCUtil.clear();
         }
     }
 

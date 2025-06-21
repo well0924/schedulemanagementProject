@@ -6,7 +6,7 @@ services:
     ports:
       - "8082:8082"
     volumes:
-      - /var/log/schedule-backend:/var/log/schedule-backend
+      - ./log/schedule-backend:/var/log/schedule-backend
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -30,6 +30,9 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
+    volumes:
+      - ./log/redis:/var/log/redis
+    command: redis-server --logfile /var/log/redis/redis.log
     restart: always
     networks:
       - backend-net
@@ -50,9 +53,14 @@ services:
       - "9092:9092"
     depends_on:
       - zookeeper
+    volumes:
+      - ./log/kafka:/var/log/kafka
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      KAFKA_LOG4J_ROOT_LOGLEVEL: INFO
+      KAFKA_LOG4J_LOG_DIR: /var/log/kafka
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
@@ -88,55 +96,43 @@ services:
     restart: always
     networks:
       - backend-net
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus/:/etc/prometheus
-    restart: always
-    networks:
-      - backend-net
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
-      - GF_SERVER_ROOT_URL=https://api.schedulemanagement.site/grafana/
-    depends_on:
-      - prometheus
-      - loki
-    restart: always
-    networks:
-      - backend-net
-
-  loki:
-    image: grafana/loki:2.9.2
-    container_name: loki
-    ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yml
-    restart: always
-    networks:
-      - backend-net
 
   promtail:
     image: grafana/promtail:2.9.2
     container_name: promtail
     volumes:
       - ./promtail:/etc/promtail
-      - /var/log/schedule-backend:/var/log/schedule-backend
+      - ./log/schedule-backend:/var/log/schedule-backend
+      - ./log/redis:/var/log/redis
+      - ./log/kafka:/var/log/kafka
     command: -config.file=/etc/promtail/promtail-config.yml
-    depends_on:
-      - loki
     restart: always
     networks:
       - backend-net
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter
+    container_name: kafka-exporter
+    ports:
+      - "9308:9308"
+    environment:
+      - KAFKA_SERVER=kafka:9092
+    restart: always
+    depends_on:
+      - kafka
+    networks:
+      - backend-net
+
+  redis-exporter:
+    image: oliver006/redis_exporter
+    container_name: redis-exporter
+    ports:
+      - "9121:9121"
+    restart: always
+    depends_on:
+      - redis
+    networks:
+      - backend-net
+
 networks:
   backend-net: {}

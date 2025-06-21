@@ -1,4 +1,5 @@
 dependencies {
+    implementation project(':common:events')
     //aop
     implementation 'org.springframework.boot:spring-boot-starter-aop'
     implementation 'org.springframework.boot:spring-boot-starter-logging'

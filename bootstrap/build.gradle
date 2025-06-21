@@ -96,7 +96,6 @@ jib {
 		ports = ['8082']
 		jvmFlags = ['-Dserver.port=8082','-Dspring.profiles.active=prod']
 		creationTime = 'USE_CURRENT_TIMESTAMP'
-		entrypoint = ['sh', '-c', 'mkdir -p /var/log/schedule-backend && java -jar /app.jar']
 		environment = [
 				'SPRING_KAFKA_BOOTSTRAP_SERVERS': 'kafka:9092',
 				'SPRING_DATA_REDIS_HOST': 'redis',
@@ -108,4 +107,15 @@ jib {
 				'MAIL_PASSWORD'            : findProperty("MAIL_PASSWORD") ?: ""
 		]
 	}
+}
+
+tasks.named('jar') {
+	from('src/main/resources/logback-spring.xml') {
+		into 'BOOT-INF/classes'
+	}
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType(ProcessResources).configureEach {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

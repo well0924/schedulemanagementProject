@@ -1,6 +1,7 @@
 dependencies {
     implementation project(':common:redis')
     implementation project(':common:events')
+    implementation project(':common:logging')
     implementation project(':domain:notification:connector:interfaces')
     implementation project(':domain:notification:api:api-model')
     implementation project(':domain:notification:connector:out-bound')

@@ -108,6 +108,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/category/**").permitAll()
                         .requestMatchers("/api/attach/**").permitAll()
                         .requestMatchers("/api/schedule/**").permitAll()
+                        .requestMatchers("/actuator/prometheus").permitAll()
                         .requestMatchers("/ws/**", "/topic/**").permitAll()
                         .anyRequest()
                         .authenticated())

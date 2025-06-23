@@ -54,8 +54,26 @@
 
 - 도메인 분리 기반 멀티모듈
 - 각 도메인은 api / core / connector / infra로 계층 분리
-- 이벤트 기반 후처리 (Kafka + Async + EventPublisher)
+- Kafka 기반 이벤트 전파 및 후처리 (Outbox 패턴, DLQ 처리, RetryScheduler)
+- Redis를 이용한 분산락 및 스케줄 중복 방지
+- WebSocket을 통한 실시간 알림 전송
+- Presigned URL을 활용한 S3 직접 업로드 및 비동기 썸네일 생성
 
+🔧 CI/CD 및 운영 모니터링
+
+CI/CD
+
+- GitHub Actions를 활용해 main 브랜치 머지 시 자동 배포
+- Jib 기반 Docker 이미지 빌드 → Lightsail 서버에 SSH로 배포
+- docker-compose.prod.yml로 서비스 컨테이너 구동
+- nginx를 활용한 포트 기반 라우팅 구성
+
+로그 수집 및 모니터링
+
+- Promtail을 통해 Spring Boot / Kafka / Redis 로그를 Loki로 전송
+- Loki + Grafana를 활용해 requestId, email, 알림 수신자 기준 로그 추적
+- Prometheus Exporter (Kafka, Redis, Node, JVM) 기반 메트릭 수집
+- Grafana에서 JVM Heap, GC 시간, Kafka 처리량, DLQ 발생률, WebSocket 지연 시간 등을 시각화
 
 ### 실행 방법 (로컬)
 ```
@@ -72,7 +90,7 @@ npm run dev
 
 ## 🗂 ERD 및 모델 구조
 
-![Image](https://github.com/user-attachments/assets/cac93df5-f180-47d6-bbbf-cff620bffc0a)
+![Image](https://github.com/user-attachments/assets/0d985e10-7b5a-4a5b-bc31-e7be84251119)
 
 
 ## 🧠 기술적 고민 및 해결 사례

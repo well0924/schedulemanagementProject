@@ -50,7 +50,7 @@
 
 ## 🧱 아키텍처
 
-![Image](https://github.com/user-attachments/assets/1fa64eeb-dfe8-4166-82b6-aceac0af3f76)
+![Image](https://github.com/user-attachments/assets/c6b0a448-d7b6-4dc8-a47c-78546f60f4ba)
 
 - 도메인 분리 기반 멀티모듈
 - 각 도메인은 api / core / connector / infra로 계층 분리

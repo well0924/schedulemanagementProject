@@ -83,7 +83,7 @@ springBoot {
 
 jib {
 	from {
-		image = 'eclipse-temurin:17-jdk-alpine'
+		image = 'eclipse-temurin:17-jre-alpine'
 	}
 	to {
 		image = 'well4149/schedule-management'
@@ -100,8 +100,10 @@ jib {
 					'-Xmx512m',
 					'-XX:+UseG1GC',
 					'-XX:MaxMetaspaceSize=128m',
+					'-XX:MaxDirectMemorySize=64m',
+					'-XX:+UseContainerSupport',
 					'-Duser.timezone=Asia/Seoul']
-		creationTime = 'USE_CURRENT_TIMESTAMP'
+		//creationTime = 'USE_CURRENT_TIMESTAMP'
 		environment = [
 				'SPRING_KAFKA_BOOTSTRAP_SERVERS': 'kafka:9092',
 				'SPRING_DATA_REDIS_HOST': 'redis',
@@ -113,6 +115,8 @@ jib {
 				'MAIL_PASSWORD'            : findProperty("MAIL_PASSWORD") ?: ""
 		]
 	}
+	// 캐시 비활성화 → 불필요한 레이어 줄이기
+	allowInsecureRegistries = true
 }
 
 tasks.named('jar') {

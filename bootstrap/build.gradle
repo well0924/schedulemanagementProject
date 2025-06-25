@@ -99,7 +99,7 @@ jib {
 					'-Xms256m',
 					'-Xmx512m',
 					'-XX:+UseG1GC',
-					'-XX:MaxMetaspaceSize=128m',
+					'-XX:MaxMetaspaceSize=512m',
 					'-XX:MaxDirectMemorySize=64m',
 					'-XX:+UseContainerSupport',
 					'-Duser.timezone=Asia/Seoul']

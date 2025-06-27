@@ -101,5 +101,6 @@ npm run dev
 | 🧠 [OpenAI API Fallback 처리](https://codingweb.tistory.com/259)     | AI 일정 추천 실패 시 CircuitBreaker + Fallback 적용 |
 | 🗓️ [Schedule 충돌 검사 로직](https://codingweb.tistory.com/267)         | ScheduleType 분기 처리로 반복/하루 일정 충돌 탐지. Redis 기반 빠른 탐색은 추후 적용 예정 |
 | 🔁 [Kafka DLQ 재처리](https://codingweb.tistory.com/268)              | Kafka 소비 실패 메시지를 DLQ → DB 저장 및 재처리 스케줄러 구성 |
-| 💾 [Outbox 패턴 기반 이벤트 발행](https://codingweb.tistory.com/272)                                        | Kafka 메시지 유실 방지를 위해 Outbox 테이블에 이벤트 저장 → 전용 Publisher에서 Kafka로 전송. 트랜잭션 일관성과 이벤트 발행 안정성 확보. ShedLock 기반 다중 인스턴스 동시성 제어 적용. |
+| 💾 [Outbox 패턴 기반 이벤트 발행](https://codingweb.tistory.com/272)        | Kafka 메시지 유실 방지를 위해 Outbox 테이블에 이벤트 저장 → 전용 Publisher에서 Kafka로 전송. 트랜잭션 일관성과 이벤트 발행 안정성 확보. ShedLock 기반 다중 인스턴스 동시성 제어 적용. |
+| ⚙️ [운영 메모리 최적화 및 모니터링 서버 분리](https://codingweb.tistory.com/281)      | 초기 서비스 서버에서 Prometheus, Loki 등 모니터링 스택을 함께 구동하면서 전체 컨테이너 메모리 사용량이 1.67GB까지 증가. Grafana 기반 메트릭 분석 결과, JVM Heap, Metaspace, DirectMemory에서 과도한 리소스 사용 확인. 이를 해결하기 위해 Prometheus, Loki를 모니터링 전용 서버로 이관하고, Jib 기반 JVM 옵션(-Xmx512m, -XX:MaxMetaspaceSize=128m, G1GC) 튜닝을 병행. 결과적으로 컨테이너 메모리 사용량을 1.56GB까지 절감하고, 서비스 안정성과 로그 수집 효율이 개선됨. |
 ---

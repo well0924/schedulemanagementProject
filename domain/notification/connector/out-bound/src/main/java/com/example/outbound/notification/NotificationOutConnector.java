@@ -8,6 +8,7 @@ import com.example.rdbrepository.Notification;
 import com.example.rdbrepository.NotificationRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -51,14 +52,13 @@ public class NotificationOutConnector {
                 .builder()
                 .id(notificationModel.getId())
                 .isRead(false)
-                .isSent(false)
+                .isSent(notificationModel.isSent())
                 .message(notificationModel.getMessage())
                 .notificationType(String.valueOf(notificationModel.getNotificationType()))
                 .scheduledAt(notificationModel.getScheduledAt())
                 .userId(notificationModel.getUserId())
                 .scheduleId(notificationModel.getScheduleId())
                 .build();
-
         return toModel(notificationRepository.save(notification));
     }
 
@@ -71,6 +71,19 @@ public class NotificationOutConnector {
                 .orElseThrow(() -> new NotificationCustomException(NotificationErrorCode.NOTIFICATION_EMPTY));
         notification.markAsRead();
         notificationRepository.save(notification);
+    }
+
+    @Transactional
+    public void markAsSent(Long id) {
+        notificationRepository.markAsSent(id);
+    }
+
+    public void deleteOldSentReminders(String type,LocalDateTime threshold) {
+        notificationRepository.deleteOldSentReminders(type,threshold);
+    }
+
+    public void deleteReminderByScheduleId(Long scheduleId) {
+        notificationRepository.deleteReminderByScheduleId(scheduleId);
     }
 
     private NotificationModel toModel(Notification notification) {

@@ -6,6 +6,7 @@ import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.NotificationType;
 import com.example.notification.model.NotificationModel;
 import com.example.notification.service.NotificationService;
+import com.example.notification.service.NotificationSettingService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,8 @@ public class NotificationEventConsumer {
 
     private final NotificationService notificationService;
 
+    private final NotificationSettingService notificationSettingService;
+
     private final SimpMessagingTemplate simpMessagingTemplate;
 
     private final ObjectMapper objectMapper;
@@ -32,11 +35,23 @@ public class NotificationEventConsumer {
             containerFactory = "notificationKafkaListenerFactory")
     public void consume(NotificationEvents event) {
 
+        KafkaMDCUtil.initMDC(event);
+        NotificationChannel channel = Optional.ofNullable(event.getNotificationChannel())
+                .orElse(NotificationChannel.WEB);
+
         try {
-            log.info("Kafka 알림 수신: {}", event);
-            NotificationChannel channel = Optional.ofNullable(event.getNotificationChannel())
-                    .orElse(NotificationChannel.WEB);
-            KafkaMDCUtil.initMDC(event);
+            log.info("📩 Kafka 알림 수신: userId={}, type={}, channel={}",
+                    event.getReceiverId(), event.getNotificationType(), channel);
+
+            if (!notificationSettingService.isEnabled(
+                    event.getReceiverId(),
+                    channel)
+            ) {
+                log.info("🔕 사용자 설정에 따라 알림 차단됨: userId={}, type={}, channel={}",
+                        event.getReceiverId(), event.getNotificationType(), event.getNotificationChannel());
+                return;
+            }
+
             switch (channel) {
                 case WEB -> {
                     //알림 내역 저장
@@ -97,6 +112,7 @@ public class NotificationEventConsumer {
             case "SCHEDULE_CREATED" -> NotificationType.SCHEDULE_CREATED;
             case "SCHEDULE_UPDATED" -> NotificationType.SCHEDULE_UPDATED;
             case "SCHEDULE_DELETED" -> NotificationType.SCHEDULE_DELETED;
+            case "SCHEDULE_REMINDER" -> NotificationType.SCHEDULE_REMINDER;
             default -> NotificationType.CUSTOM_NOTIFICATION;
         };
     }

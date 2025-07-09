@@ -14,8 +14,10 @@ import com.example.inbound.consumer.member.MemberSignUpDlqRetryScheduler;
 import com.example.inbound.consumer.schedule.NotificationDlqRetryScheduler;
 import com.example.kafka.dlq.DlqTestConsumer;
 import com.example.model.member.MemberModel;
+import com.example.notification.model.NotificationSettingModel;
 import com.example.notification.service.FailedMessageService;
 import com.example.notification.service.NotificationService;
+import com.example.notification.service.NotificationSettingService;
 import com.example.outbound.notification.NotificationOutConnector;
 import com.example.service.member.MemberService;
 import com.example.service.schedule.ScheduleDomainService;
@@ -46,6 +48,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.util.backoff.FixedBackOff;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -73,12 +76,18 @@ public class KafkaIntegrationTest {
             .withUsername("test")
             .withPassword("test");
 
+    @Container
+    static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7"))
+            .withExposedPorts(6379);
+
     @DynamicPropertySource
     static void kafkaProps(DynamicPropertyRegistry registry) {
         registry.add("spring.kafka.bootstrap-servers", () -> kafka.getBootstrapServers());
         registry.add("spring.datasource.url", mysql::getJdbcUrl);
         registry.add("spring.datasource.username", mysql::getUsername);
         registry.add("spring.datasource.password", mysql::getPassword);
+        registry.add("spring.data.redis.host", redis::getHost);
+        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
     }
 
     @Autowired
@@ -107,6 +116,9 @@ public class KafkaIntegrationTest {
 
     @Autowired
     NotificationService notificationService;
+
+    @Autowired
+    NotificationSettingService notificationSettingService;
 
     @Autowired
     ScheduleDomainService scheduleDomainService;
@@ -485,6 +497,43 @@ public class KafkaIntegrationTest {
                     var notiList = notificationService.getNotificationsByUserId(888L);
                     assertThat(notiList).isNotEmpty();
                     assertThat(notiList.get(0).getMessage()).contains("일정 알림");
+                });
+    }
+
+    @Test
+    @DisplayName("알림 설정이 꺼져 있을 경우 알림이 저장되지 않아야 함")
+    void notificationSettingDisabled_ShouldNotStoreNotification() {
+        // given
+        Long userId = 777L;
+
+        // 알림 설정을 false로 강제로 저장 (WEB 비활성화)
+        notificationSettingService.updateSetting(NotificationSettingModel.builder()
+                .id(userId)
+                .webEnabled(false)
+                .emailEnabled(false)
+                .pushEnabled(false)
+                .scheduleCreatedEnabled(true) // 액션은 켜둠
+                .scheduleUpdatedEnabled(true)
+                .scheduleDeletedEnabled(true)
+                .scheduleRemindEnabled(true)
+                .build());
+
+        NotificationEvents event = NotificationEvents.builder()
+                .receiverId(userId)
+                .message("알림 꺼짐 테스트")
+                .notificationType(ScheduleActionType.SCHEDULE_CREATED)
+                .notificationChannel(NotificationChannel.WEB) // 꺼진 채널
+                .createdTime(LocalDateTime.now())
+                .build();
+
+        // when
+        scheduleTemplate.send("notification-events", event);
+
+        // then
+        await().during(5, TimeUnit.SECONDS).atMost(10, TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    var result = notificationService.getNotificationsByUserId(userId);
+                    assertThat(result).isEmpty();
                 });
     }
 }

@@ -62,6 +62,12 @@ public class AttachOutConnector {
                 .orElseThrow(()-> new AttachCustomExceptionHandler(AttachErrorCode.NOT_FOUND_ATTACH));
     }
 
+    public AttachModel findByStoredFileName(String storedFileName) {
+        return attachRepository.findByStoredFileName(storedFileName)
+                .map(this::toModel)
+                .orElseThrow(()-> new AttachCustomExceptionHandler(AttachErrorCode.NOT_FOUND_ATTACH));
+    }
+
     public AttachModel createAttach(AttachModel attachModel) {
 
         Attach attach = Attach

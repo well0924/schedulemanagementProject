@@ -20,8 +20,10 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -68,16 +70,22 @@ public class AttachService {
         return attachOutConnector.findByOriginFileName(originFileName);
     }
 
+    @Transactional(readOnly = true)
+    public AttachModel findByStoredFileName(String storedFileName) {
+        return attachOutConnector.findByStoredFileName(storedFileName);
+    }
+
     // S3 presingedurl적용.
     @Transactional(readOnly = true)
     public List<String> generatePreSignedUrls(List<String> fileNames) {
         List<String> urls = new ArrayList<>();
         for (String fileName : fileNames) {
+            String key = "temp/" + fileName;
             Date expiration = new Date();
             expiration.setTime(expiration.getTime() + 1000 * 60 * 20); // 20분
 
             GeneratePresignedUrlRequest generatePresignedUrlRequest =
-                    new GeneratePresignedUrlRequest(bucketName, fileName)
+                    new GeneratePresignedUrlRequest(bucketName, key)
                             .withMethod(HttpMethod.PUT)
                             .withExpiration(expiration);
 
@@ -110,14 +118,23 @@ public class AttachService {
 
         List<AttachModel> savedAttachModels = new ArrayList<>();
 
-        for (String storedFileName : uploadedFileNames) {
-            String fileUrl = amazonS3.getUrl(bucketName, storedFileName).toString();
-            ObjectMetadata metadata = amazonS3.getObjectMetadata(bucketName, storedFileName);
+        for (String tempStoredFileName : uploadedFileNames) {
+
+            String finalStoredFileName = tempStoredFileName.replaceFirst("^temp/", "final/");
+
+            // 1. temp → final 복사
+            amazonS3.copyObject(bucketName, tempStoredFileName, bucketName, finalStoredFileName);
+
+            // 2. temp 삭제
+            amazonS3.deleteObject(bucketName, tempStoredFileName);
+
+            String fileUrl = amazonS3.getUrl(bucketName, finalStoredFileName).toString();
+            ObjectMetadata metadata = amazonS3.getObjectMetadata(bucketName, finalStoredFileName);
             long fileSize = metadata.getContentLength();
 
             AttachModel attachModel = AttachModel.builder()
-                    .originFileName(storedFileName)
-                    .storedFileName(storedFileName)
+                    .originFileName(finalStoredFileName)
+                    .storedFileName(finalStoredFileName)
                     .filePath(fileUrl)
                     .fileSize(fileSize)
                     .build();
@@ -152,6 +169,11 @@ public class AttachService {
             S3Object s3Object = amazonS3.getObject(bucketName, attachModel.getStoredFileName());
             InputStream inputStream = s3Object.getObjectContent();
 
+            if (!isImageMimeType(inputStream)) {
+                log.info("[섬네일 건너뜀] MIME 타입으로 확인한 결과 이미지 아님: {}", attachModel.getStoredFileName());
+                return CompletableFuture.completedFuture(null);
+            }
+            
             BufferedImage originalImage = ImageIO.read(inputStream);
             if (originalImage == null) {
                 throw new IllegalArgumentException("썸네일 생성 실패: 유효하지 않은 이미지: " + attachModel.getStoredFileName());
@@ -223,4 +245,18 @@ public class AttachService {
         attachOutConnector.updateScheduleId(fileIds, scheduleId);
     }
 
+    private boolean isImageMimeType(InputStream inputStream) {
+        try {
+            inputStream.mark(100); // mark/reset을 위해
+            String mimeType = URLConnection.guessContentTypeFromStream(inputStream);
+            inputStream.reset();
+
+            if (mimeType == null) return false;
+            return mimeType.startsWith("image/");
+        } catch (IOException e) {
+            log.warn("[MIME 타입 판별 실패]", e);
+            return false;
+        }
+    }
 }
+

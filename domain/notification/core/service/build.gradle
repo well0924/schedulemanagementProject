@@ -2,6 +2,7 @@ dependencies {
     implementation project(':common:events')
     implementation project(':domain:member:core:service')
     implementation project(':domain:member:core:model')
+    implementation project(':domain:schedules:core:model')
     implementation project(':domain:notification:core:model')
     implementation project(':domain:notification:core:enumerate')
     implementation project(':domain:notification:api:api-model')

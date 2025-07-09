@@ -97,6 +97,7 @@ public class NotificationEventConsumer {
             case "SCHEDULE_CREATED" -> NotificationType.SCHEDULE_CREATED;
             case "SCHEDULE_UPDATED" -> NotificationType.SCHEDULE_UPDATED;
             case "SCHEDULE_DELETED" -> NotificationType.SCHEDULE_DELETED;
+            case "SCHEDULE_REMINDER" -> NotificationType.SCHEDULE_REMINDER;
             default -> NotificationType.CUSTOM_NOTIFICATION;
         };
     }

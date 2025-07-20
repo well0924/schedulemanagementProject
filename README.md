@@ -1,8 +1,51 @@
 # 📅 일정 관리 프로젝트
 
-> **개발 기간**: 2025.01 ~ 2025.06  
+> **개발 기간**: 2025.01 ~ 2025.06(1차)  
 > **주요 기술**: Spring Boot, Kafka, Redis, S3, OpenFeign, WebSocket, Next.js  
 > **배포 환경**: AWS Lightsail + GitHub Actions
+
+---
+
+## ✅ 1차 개발 완료 (2025.06 기준)
+
+MVP 수준의 기본 일정 기능, 실시간 알림, 파일 첨부, AI 일정 추천 및 운영 환경 구축까지 완료된 상태입니다.
+
+🎯 완료 기능
+
+- 일정 등록/수정/삭제 (반복 일정 포함: 매일/매주/매월/매년)
+
+- 일정 충돌 방지 (서버단 중복 필터링)
+
+- 일정 리마인드 알림 (예약 이벤트 발행 + DLQ 재처리)
+
+- 사용자 알림 구독 설정 (알림 채널별 토글 API + Consumer 필터링)
+
+- AI 일정 추천 (OpenAI API + Fallback 처리)
+
+- Kafka 기반 이벤트 전파 및 DLQ 처리
+
+- WebSocket 실시간 알림
+
+- Presigned URL 기반 S3 파일 업로드 + 썸네일 비동기 생성
+
+- 회원가입 / 로그인 / JWT + Redis RefreshToken 관리
+
+- Prometheus + Grafana + Loki 운영 모니터링
+
+- GitHub Actions 기반 CI/CD 자동 배포
+
+---
+
+## 🔜 향후 계획 (2차 개발 목표)
+
+- 일정 통계 기능 (일간/주간/월간 기준 시각화)
+- 일정 태그 기능 및 태그 기반 검색
+- Email / Push 알림 채널 연동 (FCM 등)
+- PWA 적용 및 모바일 반응형 UI 고도화
+- 반복 일정 고도화 (종료 조건, 예외 처리 등)
+- 일정 추천 고도화 (프롬프트 개선)
+- WebSocket 재접속 시 미수신 알림 복원 처리
+- GraalVM 적용
 
 ---
 
@@ -44,7 +87,7 @@
 - *AWS Lightsail, RDS, S3*
 - *GitHub Actions (CI/CD 파이프라인)*
 - *Docker, Docker Compose*
-- Prometheus + Grafana (모니터링 구성 중)
+- *Prometheus + Loki + Promtail + Grafana*
 
 ---
 

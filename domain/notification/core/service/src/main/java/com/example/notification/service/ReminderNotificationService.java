@@ -1,6 +1,7 @@
 package com.example.notification.service;
 
 import com.example.events.enums.AggregateType;
+import com.example.events.enums.ScheduleActionType;
 import com.example.events.kafka.NotificationEvents;
 import com.example.events.outbox.OutboxEventService;
 import com.example.model.schedules.SchedulesModel;
@@ -38,7 +39,7 @@ public class ReminderNotificationService {
             if (model.isReadyToSend(now)) {
                 MDC.put("receiverId", String.valueOf(model.getUserId()));
                 MDC.put("scheduleId", String.valueOf(model.getScheduleId()));
-                MDC.put("notificationType", "SCHEDULE_REMINDER");
+                MDC.put("notificationType", String.valueOf(ScheduleActionType.SCHEDULE_REMINDER));
                 log.info("🔔 알림 전송 대상 확인: userId={}, message={}", model.getUserId(), model.getMessage());
 
                 NotificationEvents event = NotificationEvents.fromReminder(model); // 아래에 정의할 팩토리 메서드

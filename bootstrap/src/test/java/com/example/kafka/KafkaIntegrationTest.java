@@ -14,6 +14,10 @@ import com.example.inbound.consumer.member.MemberSignUpDlqRetryScheduler;
 import com.example.inbound.consumer.schedule.NotificationDlqRetryScheduler;
 import com.example.kafka.dlq.DlqTestConsumer;
 import com.example.model.member.MemberModel;
+import com.example.notification.model.NotificationSettingModel;
+import com.example.notification.service.FailedMessageService;
+import com.example.notification.service.NotificationService;
+import com.example.notification.service.NotificationSettingService;
 import com.example.notification.NotificationType;
 import com.example.notification.model.NotificationModel;
 import com.example.notification.service.FailedMessageService;
@@ -118,6 +122,9 @@ public class KafkaIntegrationTest {
 
     @Autowired
     NotificationService notificationService;
+
+    @Autowired
+    NotificationSettingService notificationSettingService;
 
     @Autowired
     ReminderNotificationService reminderNotificationService;
@@ -499,6 +506,44 @@ public class KafkaIntegrationTest {
                     var notiList = notificationService.getNotificationsByUserId(888L);
                     assertThat(notiList).isNotEmpty();
                     assertThat(notiList.get(0).getMessage()).contains("일정 알림");
+                });
+    }
+
+    @Test
+    @DisplayName("알림 설정이 꺼져 있을 경우 알림이 저장되지 않아야 함")
+    void notificationSettingDisabled_ShouldNotStoreNotification() {
+        // given
+        Long userId = 777L;
+
+        // 알림 설정을 false로 강제로 저장 (WEB 비활성화)
+        notificationSettingService.updateSetting(NotificationSettingModel.builder()
+                .id(userId)
+                .webEnabled(false)
+                .emailEnabled(false)
+                .pushEnabled(false)
+                .scheduleCreatedEnabled(true) // 액션은 켜둠
+                .scheduleUpdatedEnabled(true)
+                .scheduleDeletedEnabled(true)
+                .scheduleRemindEnabled(true)
+                .build());
+
+        NotificationEvents event = NotificationEvents.builder()
+                .receiverId(userId)
+                .message("알림 꺼짐 테스트")
+                .notificationType(ScheduleActionType.SCHEDULE_CREATED)
+                .notificationChannel(NotificationChannel.WEB) // 꺼진 채널
+                .createdTime(LocalDateTime.now())
+                .build();
+
+        // when
+        scheduleTemplate.send("notification-events", event);
+
+        // then
+        await().during(5, TimeUnit.SECONDS).atMost(10, TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    var result = notificationService.getNotificationsByUserId(userId);
+                    assertThat(result).isEmpty();
+
                 });
     }
 

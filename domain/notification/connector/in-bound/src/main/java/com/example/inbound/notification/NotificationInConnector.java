@@ -5,6 +5,7 @@ import com.example.apimodel.notification.NotificationApiModel;
 import com.example.interfaces.notification.NotificationInterfaces;
 import com.example.notification.model.NotificationModel;
 import com.example.notification.service.NotificationService;
+import com.example.notification.service.ReminderNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,8 @@ import java.util.stream.Collectors;
 public class NotificationInConnector implements NotificationInterfaces{
 
     private final NotificationService notificationService;
+
+    private final ReminderNotificationService reminderNotificationService;
 
     @Override
     public List<NotificationApiModel.NotificationResponse> getNotificationsByUserId(Long userId) {
@@ -39,6 +42,11 @@ public class NotificationInConnector implements NotificationInterfaces{
     @Override
     public void markedRead(Long id) {
         notificationService.markAsRead(id);
+    }
+
+    @Override
+    public void createReminder(com.example.model.schedules.SchedulesModel schedule) {
+        reminderNotificationService.createReminder(schedule);
     }
 
     private NotificationApiModel.NotificationResponse toApiModelResponse(NotificationModel notificationModel) {

@@ -1,5 +1,7 @@
 package com.example.interfaces.attach;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import static com.example.apimodel.attach.AttachApiModel.AttachResponse;
 
 import java.io.IOException;
@@ -15,4 +17,5 @@ public interface AttachInterfaces {
     void updateScheduleId(List<Long> fileIds, Long scheduleId);
     List<String> generatePreSignedUrls(List<String> fileNames);  // 업로드용 Presigned URL
     String generateDownloadPreSignedUrl(String fileName);
+    List<AttachResponse> uploadDirect(List<MultipartFile>files) throws IOException;
 }

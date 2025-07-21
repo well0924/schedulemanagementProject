@@ -18,6 +18,11 @@ import com.example.notification.model.NotificationSettingModel;
 import com.example.notification.service.FailedMessageService;
 import com.example.notification.service.NotificationService;
 import com.example.notification.service.NotificationSettingService;
+import com.example.notification.NotificationType;
+import com.example.notification.model.NotificationModel;
+import com.example.notification.service.FailedMessageService;
+import com.example.notification.service.NotificationService;
+import com.example.notification.service.ReminderNotificationService;
 import com.example.outbound.notification.NotificationOutConnector;
 import com.example.service.member.MemberService;
 import com.example.service.schedule.ScheduleDomainService;
@@ -58,6 +63,7 @@ import org.testcontainers.utility.DockerImageName;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -71,7 +77,7 @@ public class KafkaIntegrationTest {
     static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.3.0"));
 
     @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>(DockerImageName.parse("mysql:8.0"))
+    static MySQLContainer<?> mysql = new MySQLContainer(DockerImageName.parse("mysql:8.0"))
             .withDatabaseName("testdb")
             .withUsername("test")
             .withPassword("test");
@@ -119,6 +125,9 @@ public class KafkaIntegrationTest {
 
     @Autowired
     NotificationSettingService notificationSettingService;
+
+    @Autowired
+    ReminderNotificationService reminderNotificationService;
 
     @Autowired
     ScheduleDomainService scheduleDomainService;
@@ -534,6 +543,99 @@ public class KafkaIntegrationTest {
                 .untilAsserted(() -> {
                     var result = notificationService.getNotificationsByUserId(userId);
                     assertThat(result).isEmpty();
+
+                });
+    }
+
+    @Test
+    @DisplayName("Outbox → Kafka → Consumer: 일정 리마인드 알림 전파 검증")
+    void scheduleReminderOutboxToKafkaIntegrationTest() {
+        // 1. Reminder Notification 정보 DB에 추가
+        NotificationModel model = NotificationModel.builder()
+                .userId(777L)
+                .scheduleId(1001L)
+                .message("만남 연락 호출")
+                .notificationType(NotificationType.SCHEDULE_REMINDER)
+                .scheduledAt(LocalDateTime.now().minusMinutes(2))
+                .isRead(false)
+                .isSent(false)
+                .build();
+
+        // NotificationService 통해 DB에 저장
+        notificationService.createNotification(model);
+
+        // 2. ReminderNotificationService 실행 (리마인드 저장 + outbox에 event 추가)
+        reminderNotificationService.sendReminderNotifications();
+
+        // 3. Outbox Publisher 실행 (Kafka에 보내기)
+        outboxEventPublisher.publishOutboxEvents();
+
+        // 4. Outbox 상태 확인
+        var events = outboxEventRepository.findAll();
+        assertThat(events).isNotEmpty();
+        assertThat(events.get(0).getSent()).isTrue();
+        assertThat(events.get(0).getSentAt()).isNotNull();
+
+        // 5. Consumer 발송 결과로 알림 저장이 되어있는지 확인
+        await().atMost(15, TimeUnit.SECONDS)
+                .pollInterval(300, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    var notiList = notificationService.getNotificationsByUserId(777L);
+                    assertThat(notiList).isNotEmpty();
+                    assertThat(notiList.get(0).getMessage()).contains("만남 연락 호출");
+                });
+    }
+
+    @Test
+    @DisplayName("리마인드 알림이 조건에 맞을 때만 발송되고 저장되는지 검증")
+    void reminderNotificationTriggerTest() throws InterruptedException {
+        // given - 알림 두 개 생성: 하나는 전송 가능 시간 도달, 하나는 아직 도달 안 함
+        NotificationModel readyToSend = NotificationModel.builder()
+                .userId(777L)
+                .scheduleId(2001L)
+                .message("🚨 리마인드 대상 알림")
+                .notificationType(NotificationType.SCHEDULE_REMINDER)
+                .scheduledAt(LocalDateTime.now().minusMinutes(2)) // 이미 도달
+                .isRead(false)
+                .isSent(false)
+                .build();
+
+        NotificationModel notReadyYet = NotificationModel.builder()
+                .userId(777L)
+                .scheduleId(2002L)
+                .message("❌ 아직 도달 안 한 알림")
+                .notificationType(NotificationType.SCHEDULE_REMINDER)
+                .scheduledAt(LocalDateTime.now().plusHours(1)) // 아직 도달 안함
+                .isRead(false)
+                .isSent(false)
+                .build();
+
+        // 알림 두 개 저장
+        notificationService.createNotification(readyToSend);
+        notificationService.createNotification(notReadyYet);
+
+        // when - 리마인드 전송 시도
+        reminderNotificationService.sendReminderNotifications();
+        outboxEventPublisher.publishOutboxEvents();
+
+        // then - Kafka 통해 Consumer 저장 확인
+        await().atMost(15, TimeUnit.SECONDS)
+                .pollInterval(300, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    em.clear(); // 강제 초기화
+
+                    List<NotificationModel> resultList = notificationService.getNotificationsByUserId(777L);
+                    assertThat(resultList).isNotEmpty();
+
+                    NotificationModel sentNotification = resultList.stream()
+                            .filter(n -> n.getMessage().contains("🚨"))
+                            .findFirst()
+                            .orElseThrow();
+
+                    System.out.println(resultList.stream().collect(Collectors.toList()));
+                    boolean sentWrongly = resultList.stream()
+                            .anyMatch(n -> n.getMessage().contains("❌") && n.isSent());
+                    assertThat(sentWrongly).isFalse();
                 });
     }
 }

@@ -10,6 +10,7 @@ import com.example.events.spring.ScheduleEvents;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
 import com.example.inbound.attach.AttachInConnector;
+import com.example.inbound.notification.NotificationInConnector;
 import com.example.model.schedules.SchedulesModel;
 import com.example.outbound.schedule.ScheduleOutConnector;
 import lombok.AllArgsConstructor;
@@ -38,6 +39,8 @@ public class ScheduleDomainService {
     private final ScheduleOutConnector scheduleOutConnector;
 
     private final AttachInConnector attachInConnector;
+
+    private final NotificationInConnector notificationInConnector;
 
     private final ApplicationEventPublisher applicationEventPublisher;
 
@@ -109,7 +112,8 @@ public class ScheduleDomainService {
                     .build();
         }
         log.info("일정 저장 완료, 이벤트 발행 시도");
-
+        //리마인드 알림 디비 저장
+        notificationInConnector.createReminder(firstSchedule);
         // 이벤트 발행.
         publishScheduleEvent(firstSchedule,ScheduleActionType.SCHEDULE_CREATED);
 
@@ -153,7 +157,8 @@ public class ScheduleDomainService {
         updateProgressStatus(updated);
         //일정 수정 로직
         SchedulesModel result = scheduleOutConnector.updateSchedule(scheduleId, updated);
-
+        //리마인드 알림 생성.
+        notificationInConnector.createReminder(result);
         // 일정 수정 이벤트를 outbox로 보냄
         publishScheduleEvent(result, ScheduleActionType.SCHEDULE_UPDATE);
 

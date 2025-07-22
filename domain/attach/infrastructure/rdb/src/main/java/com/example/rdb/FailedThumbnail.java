@@ -1,9 +1,6 @@
 package com.example.rdb;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -12,6 +9,9 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "failed_thumbnail", indexes = {
+        @Index(name = "idx_resolved_retry", columnList = "resolved, retry_count")
+})
 @Getter
 @Builder
 @NoArgsConstructor

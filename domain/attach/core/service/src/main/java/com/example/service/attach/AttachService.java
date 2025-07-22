@@ -10,17 +10,22 @@ import com.example.attach.exception.AttachCustomExceptionHandler;
 import com.example.model.attach.AttachModel;
 import com.example.outbound.attach.AttachOutConnector;
 import com.example.s3.utile.FileUtile;
+import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -115,6 +120,7 @@ public class AttachService {
     }
 
     //업로드 완료 후 Attach 등록 + 썸네일 생성
+    @Timed(value = "s3.upload.presigned.complete", description = "presigned 업로드 완료 + 썸네일 생성", histogram = true)
     public List<AttachModel> createAttach(List<String> uploadedFileNames) {
 
         List<AttachModel> savedAttachModels = new ArrayList<>();
@@ -161,8 +167,8 @@ public class AttachService {
         return savedAttachModels;
     }
 
-    //비동기 섬네일 이미지 생성.
-    @Async
+    //비동기 섬네일 이미지 생성. 비동기 MDC 적용
+    @Async("threadPoolTaskExecutor")
     public CompletableFuture<Void> createAndUploadThumbnail(AttachModel attachModel) {
         try {
             String fileName = attachModel.getStoredFileName().toLowerCase();
@@ -254,6 +260,67 @@ public class AttachService {
 
     public void updateScheduleId(List<Long> fileIds, Long scheduleId) {
         attachOutConnector.updateScheduleId(fileIds, scheduleId);
+    }
+
+    //일반적인 S3 업로드 histogram = true를 설정하면 Grafana에서 평균/최댓값/퍼센타일까지 확인 가능
+    @Timed(value = "s3.upload.direct", description = "직접 업로드 + 썸네일 생성 시간", histogram = true)
+    public List<AttachModel> uploadDirectToS3WithThumbnail(List<MultipartFile> files) throws IOException {
+        List<AttachModel> savedModels = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+            try {
+                String originalFileName = file.getOriginalFilename();
+                String storedFileName = System.currentTimeMillis() + "_" + originalFileName;
+                MDC.put("uploadType", "direct");
+                MDC.put("fileName", originalFileName);
+                MDC.put("uploadSize", String.valueOf(file.getSize()));
+
+                // 1. S3에 원본 업로드
+                ObjectMetadata metadata = new ObjectMetadata();
+                metadata.setContentLength(file.getSize());
+                metadata.setContentType(file.getContentType());
+
+                amazonS3.putObject(bucketName, storedFileName, file.getInputStream(), metadata);
+                String fileUrl = amazonS3.getUrl(bucketName, storedFileName).toString();
+
+                // 2. 썸네일 동기 생성
+                ByteArrayOutputStream thumbOut = new ByteArrayOutputStream();
+                BufferedImage image = ImageIO.read(file.getInputStream());
+
+                Thumbnails.of(image)
+                        .size(thumbnailWidth, thumbnailHeight)
+                        .outputFormat("jpg")
+                        .toOutputStream(thumbOut);
+
+                byte[] thumbBytes = thumbOut.toByteArray();
+                ByteArrayInputStream thumbIn = new ByteArrayInputStream(thumbBytes);
+
+                ObjectMetadata thumbMetadata = new ObjectMetadata();
+                thumbMetadata.setContentLength(thumbBytes.length);
+                thumbMetadata.setContentType("image/jpeg");
+
+                String thumbFileName = "thumb_" + storedFileName;
+                amazonS3.putObject(bucketName, thumbFileName, thumbIn, thumbMetadata);
+                String thumbnailUrl = amazonS3.getUrl(bucketName, thumbFileName).toString();
+
+                // 3. DB 저장
+                AttachModel attachModel = AttachModel.builder()
+                        .originFileName(originalFileName)
+                        .storedFileName(storedFileName)
+                        .filePath(fileUrl)
+                        .fileSize(file.getSize())
+                        .thumbnailFilePath(thumbnailUrl)
+                        .build();
+
+                AttachModel saved = attachOutConnector.createAttach(attachModel);
+                savedModels.add(saved);
+                log.info("[업로드 완료] {} ({} bytes)", originalFileName, file.getSize());
+            } finally {
+                MDC.clear();
+            }
+        }
+
+        return savedModels;
     }
 }
 

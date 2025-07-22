@@ -6,6 +6,7 @@ import com.example.model.attach.AttachModel;
 import com.example.service.attach.AttachService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -70,6 +71,12 @@ public class AttachInConnector implements AttachInterfaces {
     @Override
     public void updateScheduleId(List<Long> fileIds, Long scheduleId) {
         attachService.updateScheduleId(fileIds,scheduleId);
+    }
+
+    @Override
+    public List<AttachResponse> uploadDirect(List<MultipartFile> files) throws IOException {
+        List<AttachModel> models = attachService.uploadDirectToS3WithThumbnail(files);
+        return models.stream().map(this::toApiModel).collect(Collectors.toList());
     }
 
     //model <-> api model

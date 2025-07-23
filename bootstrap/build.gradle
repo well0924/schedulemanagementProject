@@ -113,7 +113,11 @@ jib {
 				'SPRING_DATASOURCE_PASSWORD': findProperty("SPRING_DATASOURCE_PASSWORD") ?: "",
 				'JWT_SECRET'               : findProperty("JWT_SECRET") ?: "",
 				'MAIL_USERNAME'            : findProperty("MAIL_USERNAME") ?: "",
-				'MAIL_PASSWORD'            : findProperty("MAIL_PASSWORD") ?: ""
+				'MAIL_PASSWORD'            : findProperty("MAIL_PASSWORD") ?: "",
+				'BUCKET'     : findProperty("BUCKET") ?: "",
+				'STATIC'     : findProperty("STATIC") ?: "",
+				'ACCESS_KEY' : findProperty("ACCESS_KEY") ?: "",
+				'SECRET_KEY' : findProperty("SECRET_KEY") ?: "",
 		]
 	}
 	// 캐시 비활성화 → 불필요한 레이어 줄이기

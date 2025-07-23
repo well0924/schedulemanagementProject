@@ -1,0 +1,24 @@
+spring:
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}  # 또는 EC2/Lightsail 주소
+    consumer:
+      group-id: notification-events
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: false
+      properties:
+        spring.json.trusted.packages: "*"
+        # MDC 로깅용
+        isolation.level: read_committed
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      retries: 3
+      acks: all
+    listener:
+      ack-mode: MANUAL  # 직접 ack 처리 (비동기 처리 시 중요)
+      concurrency: 3    # 병렬 Consumer 처리 쓰레드 수
+    properties:
+      linger.ms: 5       # 배치 전송 대기 시간
+      batch.size: 16384  # 배치 전송 크기

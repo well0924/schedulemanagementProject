@@ -1,0 +1,18 @@
+openai:
+  base-url: ${OPENAI_BASE_URL}
+  secret-key: ${OPENAI_SECRET_KEY}
+  model: ${MODEL}
+  timeout:
+    connect: 3000   # ms
+    read: 10000     # ms
+    write: 10000    # ms
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      openAiClient:
+        registerHealthIndicator: true
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50

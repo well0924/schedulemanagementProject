@@ -112,12 +112,17 @@ jib {
 				'SPRING_DATASOURCE_USERNAME': findProperty("SPRING_DATASOURCE_USERNAME") ?: "",
 				'SPRING_DATASOURCE_PASSWORD': findProperty("SPRING_DATASOURCE_PASSWORD") ?: "",
 				'JWT_SECRET'               : findProperty("JWT_SECRET") ?: "",
+				'MAIL_HOST'                : findProperty("MAIL_HOST") ?: "",
+				'MAIL_PORT'                : findProperty("MAIL_PORT") ?: "",
 				'MAIL_USERNAME'            : findProperty("MAIL_USERNAME") ?: "",
 				'MAIL_PASSWORD'            : findProperty("MAIL_PASSWORD") ?: "",
 				'BUCKET'     : findProperty("BUCKET") ?: "",
 				'STATIC'     : findProperty("STATIC") ?: "",
 				'ACCESS_KEY' : findProperty("ACCESS_KEY") ?: "",
 				'SECRET_KEY' : findProperty("SECRET_KEY") ?: "",
+				'OPENAI_BASE_URL' : findProperty("OPENAI_BASE_URL") ?: "",
+				'OPENAI_SECRET_KEY' : findProperty("OPENAI_SECRET_KEY") ?: "",
+				'MODEL' : findProperty("MODEL") ?: ""
 		]
 	}
 	// 캐시 비활성화 → 불필요한 레이어 줄이기

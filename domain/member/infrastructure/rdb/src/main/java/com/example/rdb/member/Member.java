@@ -10,6 +10,7 @@ import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.stereotype.Indexed;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class Member {
 
     @Id
@@ -52,8 +54,8 @@ public class Member {
     private LocalDateTime updatedTime;
 
     public void update(String userId,String userEmail, String userPhone) {
-        this.userId = userId;
-        this.userEmail = userEmail;
-        this.userPhone = userPhone;
+        if(userId !=null) this.userId = userId;
+        if(userEmail != null) this.userEmail = userEmail;
+        if(userPhone != null) this.userPhone = userPhone;
     }
 }

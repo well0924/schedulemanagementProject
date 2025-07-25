@@ -4,10 +4,7 @@ import com.example.events.enums.NotificationChannel;
 import com.example.events.enums.ScheduleActionType;
 import com.example.events.spring.ScheduleEvents;
 import com.example.notification.model.NotificationModel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -17,6 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class NotificationEvents {
     private Long receiverId;
+    private Long scheduleId;
     private String message;
     private ScheduleActionType notificationType;
     private NotificationChannel notificationChannel;
@@ -34,6 +32,7 @@ public class NotificationEvents {
         return NotificationEvents
                 .builder()
                 .receiverId(events.getUserId())
+                .scheduleId(events.getScheduleId())
                 .message(message)
                 .notificationType(events.getNotificationType())
                 .notificationChannel(events.getNotificationChannel())
@@ -48,6 +47,7 @@ public class NotificationEvents {
                 .notificationType(ScheduleActionType.SCHEDULE_REMINDER)
                 .notificationChannel(NotificationChannel.WEB) // 또는 model에서 받아올 수 있음
                 .createdTime(LocalDateTime.now())
+                .scheduleId(model.getScheduleId())
                 .build();
     }
 }

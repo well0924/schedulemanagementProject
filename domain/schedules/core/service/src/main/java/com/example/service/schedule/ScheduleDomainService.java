@@ -327,6 +327,7 @@ public class ScheduleDomainService {
                 .contents(model.getContents())
                 .notificationType(actionType)
                 .notificationChannel(NotificationChannel.WEB)
+                .startTime(model.getStartTime())
                 .createdTime(LocalDateTime.now())
                 .build();
         applicationEventPublisher.publishEvent(event);

@@ -12,7 +12,7 @@ public class NotificationSettingOutConnector {
 
     private final NotificationSettingRepository notificationSettingRepository;
 
-    public NotificationSettingModel findByUserId(String userId) {
+    public NotificationSettingModel findByUserId(Long userId) {
         return toModel(notificationSettingRepository
                 .findByUserId(userId)
                 .orElseThrow());
@@ -25,7 +25,7 @@ public class NotificationSettingOutConnector {
     }
 
     //사용자 알림 설정 조회 또는 생성
-    public NotificationSettingModel getOrCreate(String userId) {
+    public NotificationSettingModel getOrCreate(Long userId) {
         return notificationSettingRepository.findByUserId(userId)
                 .map(this::toModel)
                 .orElseGet(() -> {

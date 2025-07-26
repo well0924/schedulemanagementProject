@@ -14,12 +14,12 @@ public class NotificationSettingInConnector implements NotificationSettingInterf
     private final NotificationSettingService notificationSettingService;
 
     @Override
-    public NotificationSettingApiModel.NotificationSettingResponse updateAllChannels(String userId, boolean enabled) {
+    public NotificationSettingApiModel.NotificationSettingResponse updateAllChannels(Long userId, boolean enabled) {
         return toModel(notificationSettingService.updateAllChannels(userId,enabled));
     }
 
     @Override
-    public void resetToDefault(String userId) {
+    public void resetToDefault(Long userId) {
         notificationSettingService.resetToDefault(userId);
     }
 

@@ -27,8 +27,7 @@ public class OutboxEventEntity {
     @Column(nullable = false)
     private String eventType;     // 예: MEMBER_REGISTERED, SCHEDULE_CREATED
 
-    @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "MEDIUMTEXT")
     private String payload;       // JSON 직렬화된 Kafka Event DTO
 
     @Column(nullable = false)

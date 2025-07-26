@@ -26,7 +26,7 @@ public class NotificationService {
                 .message(model.getMessage())
                 .notificationType(model.getNotificationType())
                 .isRead(false)
-                .isSent(false)
+                .isSent(model.isSent())
                 .scheduledAt(model.getScheduledAt())
                 .build();
 

@@ -17,7 +17,7 @@ public class NotificationSetting {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String userId;
+    private Long userId;
 
     @Builder.Default
     private boolean scheduleCreatedEnabled = true;

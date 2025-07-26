@@ -17,5 +17,6 @@ public class ScheduleEvents {
     private String contents;
     private ScheduleActionType notificationType; // 일정행위 (생성,수정,삭제)
     private NotificationChannel notificationChannel;
+    private LocalDateTime startTime;// 리마인드용 일정 시작 시간.
     private LocalDateTime createdTime;
 }

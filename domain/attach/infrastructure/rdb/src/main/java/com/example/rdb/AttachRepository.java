@@ -12,6 +12,7 @@ import java.util.Optional;
 public interface AttachRepository extends JpaRepository<Attach,Long> {
     Optional<Attach> findById(Long attachId);
     Optional<Attach> findByOriginFileName(String originFileName);
+    Optional<Attach> findByStoredFileName(String storedFileName);
     @Query(value = "select a from Attach a where a.isDeletedAttach = false")
     List<Attach> findAllByIsDeletedAttach();
     List<Attach> findAllByScheduledId(Long scheduleId);

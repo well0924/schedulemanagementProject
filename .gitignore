@@ -12,11 +12,19 @@ build/
 # Gradle 스크립트 파일 (전체 무시 대신 예외 허용)
 *.gradle
 !**/build.gradle
+**/out/
+**/out/**/*
+*.class
+**/build/
+*.log
 
+# 환경 설정 파일
+.env
+*.properties
 # YML 설정파일
 *.yml
 **.yml
-.env
+*.env
 # STS 관련
 .apt_generated
 .classpath

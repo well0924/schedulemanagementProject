@@ -38,6 +38,11 @@ dependencies {
 	implementation project(':domain:schedules:infrastructure:rdb')
 	implementation project(':domain:category:infrastructure:rdb')
 	implementation project(':domain:attach:infrastructure:rdb')
+	implementation project(':domain:attach:connector:out-bound')
+	implementation project(':domain:attach:connector:in-bound')
+	implementation project(':domain:attach:core:service')
+	implementation project(':domain:attach:core:model')
+	implementation project(':domain:attach:core:exception')
 	implementation project(':domain:notification:connector:in-bound')
 	implementation project(':domain:notification:connector:out-bound')
 	implementation project(':domain:notification:connector:out-bound:api-client')
@@ -59,7 +64,10 @@ dependencies {
 	implementation 'io.micrometer:micrometer-registry-prometheus'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+	implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Mockito
+    testImplementation 'org.mockito:mockito-core:5.8.0'
 	testImplementation 'org.testcontainers:testcontainers:1.19.3'
 	// Testcontainers - Kafka
 	testImplementation 'org.testcontainers:kafka:1.19.3'

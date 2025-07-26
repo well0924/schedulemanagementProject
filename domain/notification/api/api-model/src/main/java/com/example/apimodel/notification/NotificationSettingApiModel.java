@@ -8,13 +8,13 @@ public class NotificationSettingApiModel {
     @Builder
     public record NotificationSettingRequest(
             boolean enabled,
-            String userId
+            Long userId
     ){}
 
     @Builder
     public record NotificationSettingResponse(
             Long id,
-            String userId,
+            Long userId,
             boolean scheduleCreatedEnabled,
             boolean scheduleUpdatedEnabled,
             boolean scheduleDeletedEnabled,

@@ -20,7 +20,7 @@ public class NotificationSettingController {
 
     // 알림설정 초기화
     @PostMapping("/me/reset")
-    public void resetToDefault(@PathVariable("id")String userId) {
+    public void resetToDefault(@PathVariable("id")Long userId) {
         notificationSettingInConnector.resetToDefault(userId);
     }
 

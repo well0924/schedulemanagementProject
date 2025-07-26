@@ -1,7 +1,6 @@
 package com.example.notification.service;
 
 import com.example.events.enums.NotificationChannel;
-import com.example.events.enums.ScheduleActionType;
 import com.example.notification.model.NotificationSettingModel;
 import com.example.outbound.notification.NotificationSettingOutConnector;
 import lombok.AllArgsConstructor;
@@ -15,8 +14,7 @@ public class NotificationSettingService {
 
     //알림 발송 여부 판단 (채널 기준만) -> 컨슈머 확인용.
     public boolean isEnabled(Long userId,NotificationChannel channel) {
-        NotificationSettingModel notificationSettingModel = notificationSettingOutConnector.
-                findById(userId);
+        NotificationSettingModel notificationSettingModel = getSetting(userId);
         return isChannelEnabled(notificationSettingModel, channel);
     }
 
@@ -25,7 +23,7 @@ public class NotificationSettingService {
         notificationSettingOutConnector.updateSetting(notificationSettingModel);
     }
 
-    public NotificationSettingModel updateAllChannels(String userId, boolean enabled) {
+    public NotificationSettingModel updateAllChannels(Long userId, boolean enabled) {
         NotificationSettingModel current = notificationSettingOutConnector.getOrCreate(userId);
 
         NotificationSettingModel updated = current
@@ -39,7 +37,7 @@ public class NotificationSettingService {
     }
 
     //초기값으로 되돌리기
-    public void resetToDefault(String userId) {
+    public void resetToDefault(Long userId) {
         NotificationSettingModel defaultSetting = NotificationSettingModel
                 .builder()
                 .userId(userId)
@@ -50,7 +48,7 @@ public class NotificationSettingService {
         notificationSettingOutConnector.updateSetting(defaultSetting);
     }
 
-    public NotificationSettingModel getSetting(String userId) {
+    public NotificationSettingModel getSetting(Long userId) {
         return notificationSettingOutConnector.getOrCreate(userId);
     }
 

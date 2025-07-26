@@ -88,7 +88,11 @@ public class NotificationEventConsumer {
 
     private void handleWebNotification(NotificationEvents event) {
         // DB 저장
-        notificationService.createNotification(toNotificationModel(event));
+        NotificationModel model = toNotificationModel(event);
+
+        // Kafka Consumer에서 전송 직후 저장이므로 isSent = true로 설정
+        model.markAsSent();
+        notificationService.createNotification(model);
     }
 
     private void handlePushNotification(NotificationEvents event) {
@@ -98,9 +102,11 @@ public class NotificationEventConsumer {
     private NotificationModel toNotificationModel(NotificationEvents event) {
         return NotificationModel.builder()
                 .userId(event.getReceiverId())
+                .scheduleId(event.getScheduleId())
                 .message(event.getMessage())
                 .createdTime(event.getCreatedTime())
                 .notificationType(mapActionToType(event.getNotificationType().name()))
+                .scheduledAt(event.getScheduleAt())
                 .isRead(false)
                 .isSent(false)
                 .build();

@@ -42,8 +42,8 @@ public class NotificationEventConsumer {
         try {
             log.info("📩 Kafka 알림 수신: userId={}, type={}, channel={}",
                     event.getReceiverId(), event.getNotificationType(), channel);
-
-            if (!notificationSettingService.isEnabled(
+            // dlq 처리시 조건 추가.
+            if (!event.isForceSend() && !notificationSettingService.isEnabled(
                     event.getReceiverId(),
                     channel)
             ) {

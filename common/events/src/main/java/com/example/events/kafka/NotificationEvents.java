@@ -18,8 +18,13 @@ public class NotificationEvents {
     private String message;
     private ScheduleActionType notificationType;
     private NotificationChannel notificationChannel;
+    private boolean forceSend; // dlq 적용시 강제 적용.
     private LocalDateTime scheduleAt;
     private LocalDateTime createdTime;
+
+    public void setForceSend(boolean forceSend) {
+        this.forceSend = forceSend;
+    }
 
     public static NotificationEvents of(ScheduleEvents events) {
 

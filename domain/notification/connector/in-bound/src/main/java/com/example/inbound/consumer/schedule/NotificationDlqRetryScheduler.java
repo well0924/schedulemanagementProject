@@ -34,7 +34,6 @@ public class NotificationDlqRetryScheduler {
         List<FailMessageModel> failMessageModels = failedMessageService
                 .findByResolvedFalse()
                 .stream()
-                .filter(e -> "NOTIFICATION".equals(e.getMessageType()))
                 .toList();
         log.info("List::"+failMessageModels);
         log.info("size:::"+failMessageModels.size());
@@ -50,12 +49,16 @@ public class NotificationDlqRetryScheduler {
 
             try {
                 NotificationEvents event = objectMapper.readValue(entity.getPayload(), NotificationEvents.class);
+                event.setForceSend(true);
                 KafkaMDCUtil.initMDC(event);
                 String retryTopic = getRetryTopicByCount(entity.getRetryCount());
                 kafkaTemplate.send(retryTopic, event);
                 log.info("재시도 메시지 전송: retryCount={}, topic={}", entity.getRetryCount(), retryTopic);
                 // resolved를 true로 변환
                 entity.setResolved();
+                entity.setLastTriedAt();// dlq처리한 일자
+                entity.setMessageType(event.getNotificationType().name()); //message Type
+                entity.setResolvedAt();
                 log.info("DLQ 재처리 성공 - notification: id={}", entity.getId());
             } catch (Exception ex) {
                 entity.setIncresementRetryCount();

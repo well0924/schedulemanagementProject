@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,6 +36,7 @@ public class FailMessageOutConnector {
                 .retryCount(failMessageModel.getRetryCount())
                 .resolved(failMessageModel.isResolved())
                 .createdAt(failMessageModel.getCreatedAt())
+                .resolvedAt(failMessageModel.getResolvedAt())
                 .lastTriedAt(failMessageModel.getLastTriedAt())
                 .build();
 
@@ -54,6 +56,7 @@ public class FailMessageOutConnector {
                 .resolved(model.isResolved())
                 .retryCount(model.getRetryCount())
                 .lastTriedAt(model.getLastTriedAt())
+                .resolvedAt(model.getResolvedAt())
                 .exceptionMessage(model.getExceptionMessage())
                 .build();
 
@@ -64,6 +67,9 @@ public class FailMessageOutConnector {
         return failedMessageRepository.existsByPayLoad(payload);
     }
 
+    public int deleteByResolvedIsTrueAndResolvedAtBefore(LocalDateTime threshold) {
+        return failedMessageRepository.deleteByResolvedIsTrueAndResolvedAtBefore(threshold);
+    }
 
     private FailMessageModel toModel(FailedMessage failedMessage){
         return FailMessageModel
@@ -75,6 +81,7 @@ public class FailMessageOutConnector {
                 .resolved(failedMessage.isResolved())
                 .retryCount(failedMessage.getRetryCount())
                 .createdAt(failedMessage.getCreatedAt())
+                .resolvedAt(failedMessage.getResolvedAt())
                 .lastTriedAt(failedMessage.getLastTriedAt())
                 .build();
     }

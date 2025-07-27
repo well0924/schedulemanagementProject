@@ -8,11 +8,15 @@ gradle.properties
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
+out/
+.idea/
 
 # Gradle 스크립트 파일 (전체 무시 대신 예외 허용)
 *.gradle
 !**/build.gradle
-
+**/out/
+**/out/production/
+**/out/production/classes/
 # YML 설정파일
 *.yml
 **.yml

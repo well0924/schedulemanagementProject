@@ -18,13 +18,13 @@ public class NotificationController {
 
     //알림 전체 목록(최신순)
     @GetMapping("/{id}")
-    public List<NotificationApiModel.NotificationResponse> getNotificationsByUserId(@PathVariable("id")Long userId){
+    public List<NotificationApiModel.NotificationResponse> getNotificationsByUserId(@PathVariable("id") long userId){
         return notification.getNotificationsByUserId(userId);
     }
 
     //회원의 읽지않은 알림 목록
     @GetMapping("/unread/{id}")
-    public List<NotificationApiModel.NotificationResponse> getUnreadNotificationsByUserId(@PathVariable("id") Long userId) {
+    public List<NotificationApiModel.NotificationResponse> getUnreadNotificationsByUserId(@PathVariable("id") long userId) {
         return notification.getUnreadNotificationsByUserId(userId);
     }
 

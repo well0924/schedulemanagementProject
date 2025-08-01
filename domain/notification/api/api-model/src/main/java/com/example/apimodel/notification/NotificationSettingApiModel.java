@@ -8,7 +8,7 @@ public class NotificationSettingApiModel {
     @Builder
     public record NotificationSettingRequest(
             boolean enabled,
-            Long userId
+            long userId
     ){}
 
     @Builder

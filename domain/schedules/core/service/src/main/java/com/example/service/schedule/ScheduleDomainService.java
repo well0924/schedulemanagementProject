@@ -1,9 +1,6 @@
 package com.example.service.schedule;
 
-import com.example.enumerate.schedules.DeleteType;
-import com.example.enumerate.schedules.PROGRESS_STATUS;
-import com.example.enumerate.schedules.RepeatType;
-import com.example.enumerate.schedules.ScheduleType;
+import com.example.enumerate.schedules.*;
 import com.example.events.enums.ScheduleActionType;
 import com.example.events.enums.NotificationChannel;
 import com.example.events.spring.ScheduleEvents;
@@ -122,47 +119,67 @@ public class ScheduleDomainService {
 
     //일정 수정
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public SchedulesModel updateSchedule(Long scheduleId, SchedulesModel model) {
+    public SchedulesModel updateSchedule(Long scheduleId, SchedulesModel model,RepeatUpdateType updateType) {
 
         SchedulesModel existing = getValidatedUpdatableSchedule(scheduleId);
-        // 변경될 모델 구성
-        SchedulesModel updated = buildUpdatedSchedule(existing,model);
-
-        // scheduleType 재분류
-        ScheduleType type = classifySchedule(updated);
-        updated = updated.toBuilder().scheduleType(type).build();
-
-        try {
-            List<Long> existingAttachIds = Optional.ofNullable(existing.getAttachIds()).orElse(new ArrayList<>());
-            List<Long> newAttachIds = model.getAttachIds(); // null 허용
-
-            if (newAttachIds != null && !newAttachIds.isEmpty()) {
-                // 일부 또는 전체 교체 요청
-                List<Long> toDelete = new ArrayList<>(existingAttachIds);
-                toDelete.removeAll(newAttachIds);
-
-                for (Long attachId : toDelete) {
-                    attachInConnector.deleteAttach(attachId);
+        log.info("수정 요청 들어옴. scheduleId = {}", scheduleId);
+        updateType = Optional.ofNullable(updateType).orElse(RepeatUpdateType.SINGLE);
+        log.info("Repeat Type?? = {}", updateType);
+        switch (updateType) {
+            //전부 수정
+            case ALL -> {
+                if (existing.getRepeatGroupId() == null || existing.getRepeatGroupId().isBlank()) {
+                    throw new ScheduleCustomException(ScheduleErrorCode.INVALID_DELETE_TYPE_FOR_NON_REPEATED);
                 }
+                List<SchedulesModel> repeatSchedules = scheduleOutConnector.findByRepeatGroupId(existing.getRepeatGroupId());
 
-                attachInConnector.updateScheduleId(newAttachIds, scheduleId);
-                updated = updated.toBuilder().attachIds(newAttachIds).build();
+                for (SchedulesModel target : repeatSchedules) {
+                    SchedulesModel updated = buildUpdatedSchedule(target, model)
+                            .toBuilder()
+                            .scheduleType(classifySchedule(target))
+                            .build();
+
+                    handleAttachUpdate(target, updated);
+                    updateProgressStatus(updated);
+                    scheduleOutConnector.updateSchedule(target.getId(), updated);
+                    publishScheduleEvent(updated, ScheduleActionType.SCHEDULE_UPDATE);
+                }
+                return scheduleOutConnector.findById(scheduleId); // 첫 일정 리턴
             }
-            // 3. attachIds == null → 아무 것도 하지 않음 → 기존 그대로 유지
 
-        } catch (Exception e) {
-            log.error("첨부파일 처리 중 오류 발생", e);
+            //일부 수정
+            case AFTER_THIS -> {
+                if (existing.getRepeatGroupId() == null || existing.getRepeatGroupId().isBlank()) {
+                    throw new ScheduleCustomException(ScheduleErrorCode.INVALID_DELETE_TYPE_FOR_NON_REPEATED);
+                }
+                List<SchedulesModel> targets = scheduleOutConnector.findAfterStartTime(existing.getRepeatGroupId(), existing.getStartTime());
+
+                for (SchedulesModel target : targets) {
+                    SchedulesModel updated = buildUpdatedSchedule(target, model)
+                            .toBuilder()
+                            .scheduleType(classifySchedule(target))
+                            .build();
+
+                    handleAttachUpdate(target, updated);
+                    updateProgressStatus(updated);
+                    scheduleOutConnector.updateSchedule(target.getId(), updated);
+                    publishScheduleEvent(updated, ScheduleActionType.SCHEDULE_UPDATE);
+                }
+                return scheduleOutConnector.findById(scheduleId);
+            }
+
+            //단일 수정
+            case SINGLE -> {
+                SchedulesModel updated = buildUpdatedSchedule(existing, model);
+                updated = updated.toBuilder().scheduleType(classifySchedule(updated)).build();
+                handleAttachUpdate(existing,updated);
+                updateProgressStatus(updated);
+                SchedulesModel result = scheduleOutConnector.updateSchedule(scheduleId, updated);
+                publishScheduleEvent(result, ScheduleActionType.SCHEDULE_UPDATE);
+                return result;
+            }
+            default -> throw new IllegalArgumentException("지원하지 않는 반복 수정 타입입니다.");
         }
-        //일정상태 수정
-        updateProgressStatus(updated);
-        //일정 수정 로직
-        SchedulesModel result = scheduleOutConnector.updateSchedule(scheduleId, updated);
-        //리마인드 알림 생성.
-        notificationInConnector.createReminder(result);
-        // 일정 수정 이벤트를 outbox로 보냄
-        publishScheduleEvent(result, ScheduleActionType.SCHEDULE_UPDATE);
-
-        return result;
     }
 
     public PROGRESS_STATUS updateProgressStatus(Long scheduleId, PROGRESS_STATUS newStatus) {
@@ -267,6 +284,29 @@ public class ScheduleDomainService {
         return model.getAttachIds() != null && !model.getAttachIds().isEmpty();
     }
 
+    // 일정 수정용 첨부파일 업로드
+    private void handleAttachUpdate(SchedulesModel existing, SchedulesModel updated) {
+        try {
+            List<Long> existingAttachIds = Optional.ofNullable(existing.getAttachIds()).orElse(new ArrayList<>());
+            List<Long> newAttachIds = updated.getAttachIds(); // null 허용
+
+            if (newAttachIds != null && !newAttachIds.isEmpty()) {
+                List<Long> toDelete = new ArrayList<>(existingAttachIds);
+                toDelete.removeAll(newAttachIds);
+
+                for (Long attachId : toDelete) {
+                    attachInConnector.deleteAttach(attachId);
+                }
+
+                attachInConnector.updateScheduleId(newAttachIds, existing.getId());
+                updated = updated.toBuilder().attachIds(newAttachIds).build();
+            }
+        } catch (Exception e) {
+            log.error("첨부파일 처리 중 오류 발생", e);
+        }
+    }
+
+
     //일정 반복기능
     private List<SchedulesModel> generateRepeatedSchedules(SchedulesModel baseModel) {
         log.info("반복일정 수행");
@@ -279,21 +319,21 @@ public class ScheduleDomainService {
 
         String groupId = UUID.randomUUID().toString();
         log.info(groupId);
-        for (int i = 0; i < count; i++) {
-            if (rule == RepeatType.NONE && i > 0) continue;
-
-            SchedulesModel repeated = baseModel
-                    .shiftScheduleBy(rule, i*interval)
-                    .toBuilder()
-                    .repeatType(baseModel.getRepeatType())   // 반복 일정은 반복 없음으로 저장
-                    .repeatCount(baseModel.getRepeatCount())
-                    .repeatInterval(baseModel.getRepeatInterval()) //반복 간격.
-                    .repeatGroupId(groupId) // 반복일정의 groupId
-                    .build();
-
-            log.info("groupId::"+groupId);
-            log.info("repeated::"+repeated);
-            result.add(repeated);
+        log.info(rule.name());
+        switch (rule) {
+            case DAILY, WEEKLY, MONTHLY -> {
+                for (int i = 0; i < count; i++) {
+                    SchedulesModel repeated = baseModel
+                            .shiftScheduleBy(rule, i * interval)
+                            .toBuilder()
+                            .repeatType(rule)
+                            .repeatCount(count)
+                            .repeatInterval(interval)
+                            .repeatGroupId(groupId)
+                            .build();
+                    result.add(repeated);
+                }
+            }
         }
 
         return result;
@@ -318,7 +358,6 @@ public class ScheduleDomainService {
             return ScheduleType.MULTI_DAY;
         }
     }
-
     //이벤트 발행
     private void publishScheduleEvent(SchedulesModel model, ScheduleActionType actionType) {
         ScheduleEvents event = ScheduleEvents.builder()

@@ -1,6 +1,5 @@
 package com.example.rdbrepository;
 
-import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.rdbrepository.custom.ScheduleRepositoryCustom;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -88,4 +87,9 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     @Modifying
     @Query("UPDATE Schedules s SET s.progress_status = :status WHERE s.id = :scheduleId")
     void updateProgressStatus(@Param("scheduleId") Long scheduleId, @Param("status") String status);
+
+    @Query("select s from Schedules s where s.repeatGroupId = :repeatGroupId")
+    List<Schedules> findByRepeatGroupId(@Param("repeatGroupId") String repeatGroupId);
+
+    List<Schedules> findByRepeatGroupIdAndStartTimeAfter(String repeatGroupId,LocalDateTime startTime);
 }

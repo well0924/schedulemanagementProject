@@ -3,6 +3,7 @@ package com.example.controller.schedule;
 import com.example.apimodel.schedule.ScheduleApiModel;
 import com.example.enumerate.schedules.DeleteType;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
+import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.inbound.schedules.ScheduleServiceConnectorImpl;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -64,8 +65,10 @@ public class ScheduleManageController {
     }
 
     @PatchMapping("/{id}")
-    public ScheduleApiModel.responseSchedule updateSchedule(@PathVariable("id")Long scheduleId,@Validated @RequestBody ScheduleApiModel.updateSchedule updateSchedule) {
-        return scheduleServiceConnector.updateSchedule(scheduleId,updateSchedule);
+    public ScheduleApiModel.responseSchedule updateSchedule(@PathVariable("id")Long scheduleId,
+                                                            @RequestParam(name = "type", defaultValue = "SINGLE") RepeatUpdateType repeatUpdateType,
+                                                            @Validated @RequestBody ScheduleApiModel.updateSchedule updateSchedule) {
+        return scheduleServiceConnector.updateSchedule(scheduleId,updateSchedule,repeatUpdateType);
     }
 
     @PatchMapping("/status/{id}")

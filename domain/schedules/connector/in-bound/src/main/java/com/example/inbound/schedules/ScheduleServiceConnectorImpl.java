@@ -5,6 +5,7 @@ import com.example.apimodel.attach.AttachApiModel;
 import com.example.apimodel.schedule.ScheduleApiModel;
 import com.example.enumerate.schedules.DeleteType;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
+import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.inbound.attach.AttachInConnector;
 import com.example.model.schedules.SchedulesModel;
 import com.example.service.schedule.ScheduleDomainService;
@@ -87,8 +88,8 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
     }
 
     @Override
-    public ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId,ScheduleApiModel.updateSchedule updateSchedule) {
-        return toApiModelWithAttachments(scheduleDomainService.updateSchedule(scheduleId,toModel(updateSchedule)));
+    public ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId, ScheduleApiModel.updateSchedule updateSchedule, RepeatUpdateType repeatUpdateType) {
+        return toApiModelWithAttachments(scheduleDomainService.updateSchedule(scheduleId,toModel(updateSchedule),repeatUpdateType));
     }
 
     @Override

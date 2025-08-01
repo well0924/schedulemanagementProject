@@ -1,13 +1,13 @@
 package com.example.rdbrepository;
 
 import com.example.jpa.config.base.BaseEntity;
+import com.example.model.schedules.SchedulesModel;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 
 @Getter
@@ -60,5 +60,21 @@ public class Schedules extends BaseEntity {
 
     public void isDeletedScheduled() {
         this.isDeletedScheduled = true;
+    }
+
+    public void updateSchedule(SchedulesModel model) {
+        this.contents = model.getContents();
+        this.scheduleDay = model.getScheduleDays();
+        this.scheduleMonth = model.getScheduleMonth();
+        this.progress_status = model.getProgressStatus().name();
+        this.startTime = model.getStartTime();
+        this.endTime = model.getEndTime();
+        this.categoryId = model.getCategoryId();
+        this.userId = model.getUserId();
+        this.repeatType = model.getRepeatType().name();
+        this.repeatCount = model.getRepeatCount();
+        this.repeatInterval = model.getRepeatInterval();
+        this.scheduleType = model.getScheduleType().name();
+        this.isAllDay = model.isAllDay();
     }
 }

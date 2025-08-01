@@ -33,7 +33,7 @@ public class QNotificationSetting extends EntityPathBase<NotificationSetting> {
 
     public final BooleanPath scheduleUpdatedEnabled = createBoolean("scheduleUpdatedEnabled");
 
-    public final NumberPath<Long> userId = createNumber("userId", Long.class);
+    public final StringPath userId = createString("userId");
 
     public final BooleanPath webEnabled = createBoolean("webEnabled");
 

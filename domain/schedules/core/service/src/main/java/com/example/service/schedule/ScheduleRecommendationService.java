@@ -2,7 +2,7 @@ package com.example.service.schedule;
 
 import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.model.schedules.SchedulesModel;
-import com.example.outbound.openai.client.OpenAiClient;
+import com.example.outbound.openai.config.OpenAiWebClient;
 import com.example.outbound.openai.dto.OpenAiRequest;
 import com.example.outbound.openai.dto.OpenAiResponse;
 import com.example.outbound.openai.dto.ScheduleRecommendationDto;
@@ -34,7 +34,7 @@ public class ScheduleRecommendationService {
 
     private final MemberRepository memberRepository;
 
-    private final OpenAiClient aiClient;
+    private final OpenAiWebClient aiClient;
 
     private final ObjectMapper objectMapper;
 

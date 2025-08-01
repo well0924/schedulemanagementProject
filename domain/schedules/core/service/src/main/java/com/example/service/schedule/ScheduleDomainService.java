@@ -113,7 +113,7 @@ public class ScheduleDomainService {
         }
         log.info("일정 저장 완료, 이벤트 발행 시도");
         //리마인드 알림 디비 저장
-        notificationInConnector.createReminder(firstSchedule);
+        //notificationInConnector.createReminder(firstSchedule);
         // 이벤트 발행.
         publishScheduleEvent(firstSchedule,ScheduleActionType.SCHEDULE_CREATED);
 

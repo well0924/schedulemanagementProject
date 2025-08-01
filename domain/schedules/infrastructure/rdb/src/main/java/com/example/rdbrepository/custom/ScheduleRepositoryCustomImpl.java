@@ -128,7 +128,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 .leftJoin(qAttach).on(
                         qSchedules.id.eq(qAttach.scheduledId)
                         .and(qAttach.isDeletedAttach.eq(false)))
-                .where(qSchedules.id.eq(scheduleId))
+                .where(qSchedules.id.eq(scheduleId),
+                        qAttach.isDeletedAttach.eq(false))
                 .fetch();
 
         if (results.isEmpty()) {
@@ -376,11 +377,10 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qAttach.id
                 )
                 .from(qSchedules)
-                .leftJoin(qAttach).on(qSchedules.id.eq(qAttach.scheduledId)).fetchJoin()
+                .leftJoin(qAttach).on(qSchedules.id.eq(qAttach.scheduledId))
                 .join(qMember).on(qSchedules.userId.eq(qMember.id))
                 .where(qMember.userId.eq(userId)
-                        .and(qSchedules.progress_status.stringValue().eq(progressStatus))
-                        .and(qAttach.id.isNotNull()))
+                        .and(qSchedules.progress_status.stringValue().eq(progressStatus)))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();

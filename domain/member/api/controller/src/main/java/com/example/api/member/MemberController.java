@@ -39,8 +39,8 @@ public class MemberController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<Page<MemberResponse>> findAllMemberSearch(@RequestParam("keyword") String keyword, @RequestParam("searchType") SearchType searchType, @PageableDefault Pageable pageable) {
-        Page<MemberResponse> memberSearchResult = memberInConnector.findAllMemberSearch(keyword, searchType, pageable);
+    public ResponseEntity<Page<MemberResponse>> findAllMemberSearch(@RequestParam("keyword") String keyword, @RequestParam("searchType") String searchType, @PageableDefault Pageable pageable) {
+        Page<MemberResponse> memberSearchResult = memberInConnector.findAllMemberSearch(keyword, SearchType.valueOf(String.valueOf(SearchType.toSearch(searchType))), pageable);
         logger.info("searchResult::"+memberSearchResult);
         return ResponseEntity.status(HttpStatus.OK).body(memberSearchResult);
     }

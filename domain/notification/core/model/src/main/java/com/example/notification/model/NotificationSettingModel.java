@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class NotificationSettingModel {
 
     private Long id;
-    private String userId;
+    private Long userId;
     private boolean scheduleCreatedEnabled;
     private boolean scheduleUpdatedEnabled;
     private boolean scheduleDeletedEnabled;

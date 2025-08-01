@@ -35,6 +35,8 @@ public class QFailedMessage extends EntityPathBase<FailedMessage> {
 
     public final BooleanPath resolved = createBoolean("resolved");
 
+    public final DateTimePath<java.time.LocalDateTime> resolvedAt = createDateTime("resolvedAt", java.time.LocalDateTime.class);
+
     public final NumberPath<Integer> retryCount = createNumber("retryCount", Integer.class);
 
     public final StringPath topic = createString("topic");

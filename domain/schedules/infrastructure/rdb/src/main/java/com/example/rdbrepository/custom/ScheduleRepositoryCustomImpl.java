@@ -128,8 +128,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 .leftJoin(qAttach).on(
                         qSchedules.id.eq(qAttach.scheduledId)
                         .and(qAttach.isDeletedAttach.eq(false)))
-                .where(qSchedules.id.eq(scheduleId),
-                        qAttach.isDeletedAttach.eq(false))
+                .where(qSchedules.id.eq(scheduleId))
                 .fetch();
 
         if (results.isEmpty()) {

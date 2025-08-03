@@ -120,7 +120,7 @@ public class AttachService {
     }
 
     //업로드 완료 후 Attach 등록 + 썸네일 생성
-    @Timed(value = "s3.upload.presigned.complete", description = "presigned 업로드 완료 + 썸네일 생성", histogram = true)
+    @Timed(value = "s3_upload_presigned_complete", description = "presigned 업로드 완료 + 썸네일 생성", histogram = true)
     public List<AttachModel> createAttach(List<String> uploadedFileNames) {
 
         List<AttachModel> savedAttachModels = new ArrayList<>();
@@ -168,6 +168,7 @@ public class AttachService {
     }
 
     //비동기 섬네일 이미지 생성. 비동기 MDC 적용
+    @Timed(value = "s3_thumbnail_generation", description = "썸네일 생성 시간", histogram = true)
     @Async("threadPoolTaskExecutor")
     public CompletableFuture<Void> createAndUploadThumbnail(AttachModel attachModel) {
         try {
@@ -263,7 +264,7 @@ public class AttachService {
     }
 
     //일반적인 S3 업로드 histogram = true를 설정하면 Grafana에서 평균/최댓값/퍼센타일까지 확인 가능
-    @Timed(value = "s3.upload.direct", description = "직접 업로드 + 썸네일 생성 시간", histogram = true)
+    @Timed(value = "s3_upload_direct", description = "직접 업로드 + 썸네일 생성 시간", histogram = true)
     public List<AttachModel> uploadDirectToS3WithThumbnail(List<MultipartFile> files) throws IOException {
         List<AttachModel> savedModels = new ArrayList<>();
 

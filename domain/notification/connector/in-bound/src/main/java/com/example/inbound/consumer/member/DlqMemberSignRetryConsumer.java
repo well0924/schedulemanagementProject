@@ -6,6 +6,7 @@ import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.model.FailMessageModel;
 import com.example.notification.service.FailedMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -20,6 +21,7 @@ public class DlqMemberSignRetryConsumer implements KafkaEventConsumer<MemberSign
     private final FailedMessageService failedMessageService;
     private final ObjectMapper objectMapper;
 
+    @Timed(value = "kafka.dlq.signup.save.duration", description = "회원가입 DLQ 저장 처리 시간")
     @KafkaListener(topics = "member-signup-events.DLQ", groupId = "dlq-retry-group")
     @Override
     public void handle(MemberSignUpKafkaEvent event) {

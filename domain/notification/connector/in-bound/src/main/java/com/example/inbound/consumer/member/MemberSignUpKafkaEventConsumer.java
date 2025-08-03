@@ -9,6 +9,8 @@ import com.example.notification.model.NotificationModel;
 import com.example.notification.service.NotificationService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.annotation.Counted;
+import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -30,6 +32,8 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
 
     private final ObjectMapper objectMapper;
 
+    @Timed(value = "kafka.consumer.signup.duration", description = "회원가입 Kafka 메시지 처리 시간")
+    @Counted(value = "kafka.consumer.signup.count", description = "회원가입 Kafka 메시지 수신 횟수")
     @KafkaListener(
             topics = "member-signup-events",
             groupId = "member-group",

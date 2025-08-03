@@ -5,6 +5,7 @@ import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.model.FailMessageModel;
 import com.example.notification.service.FailedMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.annotation.Timed;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -25,6 +26,7 @@ public class NotificationDlqRetryScheduler {
     private static final int MAX_RETRY_COUNT = 5;
     public static int EXECUTION_COUNT = 0;
 
+    @Timed(value = "kafka.dlq.retry.duration", description = "DLQ 재시도 처리 시간")
     @Scheduled(fixedDelay = 10 * 60 * 1000)
     @SchedulerLock(name = "retryNotificationDlq", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
     public void retryNotifications() {

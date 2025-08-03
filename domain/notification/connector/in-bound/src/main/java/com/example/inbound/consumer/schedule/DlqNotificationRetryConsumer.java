@@ -6,6 +6,7 @@ import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.model.FailMessageModel;
 import com.example.notification.service.FailedMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.annotation.Timed;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -21,6 +22,7 @@ public class DlqNotificationRetryConsumer implements KafkaDlqConsumer {
     private final FailedMessageService failedMessageService;
     private final ObjectMapper objectMapper;
 
+    @Timed(value = "kafka.dlq.notification.save.duration", description = "알림 DLQ 저장 처리 시간")
     @KafkaListener(topics = "notification-events.DLQ", groupId = "dlq-retry-group")
     @Override
     public void consume(String message) {

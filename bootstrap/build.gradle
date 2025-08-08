@@ -16,8 +16,6 @@ dependencies {
 
 	implementation 'mysql:mysql-connector-java:8.0.33'
 	implementation 'org.springframework.kafka:spring-kafka'
-	//open-feign
-	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
 	implementation project(':common:security')
 	implementation project(':common:jpa')
@@ -31,6 +29,7 @@ dependencies {
 	implementation project(':domain:member:core:model')
 	implementation project(':domain:member:core:service')
 	implementation project(':domain:member:core:enumerate')
+	implementation project(':domain:member:infrastructure:rdb')
 	implementation project(':domain:schedules:api:controller')
 	implementation project(':domain:category:api:controller')
 	implementation project(':domain:attach:api:controller')
@@ -54,7 +53,8 @@ dependencies {
 	implementation project(':domain:schedules:connector:out-bound:open-ai')
 	implementation project(':domain:schedules:core:service')
 	implementation project(':domain:schedules:core:model')
-	
+	//webclient
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter'
@@ -147,3 +147,7 @@ tasks.named('jar') {
 tasks.withType(ProcessResources).configureEach {
 	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
+//tasks.withType(Test).configureEach {
+//	useJUnitPlatform()
+//}

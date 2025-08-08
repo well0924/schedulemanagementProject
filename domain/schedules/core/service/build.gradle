@@ -1,6 +1,7 @@
 dependencies {
     implementation project(':common:jpa')
     implementation project(':common:events')
+    implementation project(':common:redis')
     implementation project(':domain:schedules:core:model')
     implementation project(':domain:schedules:core:enumerate')
     implementation project(':domain:schedules:core:exception')
@@ -15,10 +16,12 @@ dependencies {
     implementation project(':domain:attach:core:model')
     implementation project(':domain:notification:connector:in-bound')
     implementation project(':domain:notification:connector:interfaces')
+    implementation project(':domain:member:core:exception')
     implementation project(':domain:attach:infrastructure:rdb')
     implementation project(':domain:member:infrastructure:rdb')
     implementation project(':domain:category:infrastructure:rdb')
 
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter'

@@ -1,6 +1,5 @@
 package com.example.rdbrepository;
 
-import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.rdbrepository.custom.ScheduleRepositoryCustom;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -28,7 +27,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
         FROM 
             Schedules s
         WHERE 
-            s.userId = :userId
+            s.memberId = :userId
         AND s.scheduleType = 'SINGLE_DAY'
         AND (:startTime < s.endTime AND :endTime > s.startTime)
         AND (:excludeId IS NULL OR s.id != :excludeId)
@@ -41,12 +40,12 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     //당일인지 하루종일인지 확인하는 쿼리.
     @Query("""
     SELECT COUNT(s) FROM Schedules s
-    WHERE s.userId = :userId
+    WHERE s.memberId = :userId
       AND s.isAllDay = true
       AND DATE(s.startTime) = :date
       AND s.isDeletedScheduled = false
     """)
-    Long countAllDayOnDate(@Param("userId") Long userId, @Param("date") LocalDate date);
+    Long countAllDayOnDate(@Param("userId") Long memberId, @Param("date") LocalDate date);
 
     //일정 삭제 관련
     @Modifying
@@ -74,7 +73,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
         s 
     FROM 
         Schedules s
-    WHERE s.userId = :userId
+    WHERE s.memberId = :userId
       AND s.isDeletedScheduled = false
       AND s.progress_status IN :statusList
       AND s.startTime <= :today

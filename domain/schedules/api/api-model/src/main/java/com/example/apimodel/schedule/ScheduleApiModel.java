@@ -119,7 +119,7 @@ public class ScheduleApiModel {
             Integer scheduleMonth, // 일정 월
             LocalDateTime startTime, // 시작 시간
             LocalDateTime endTime, // 종료 시간
-            long userId, // 회원 ID
+            long memberId, // 회원 ID
             long categoryId, // 카테고리 ID
             PROGRESS_STATUS progressStatus, // 진행 상태
             boolean isDeletedScheduled, // 삭제 여부

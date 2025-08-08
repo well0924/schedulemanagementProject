@@ -6,7 +6,9 @@ import com.example.service.schedule.ScheduleRecommendationService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,21 +19,28 @@ public class ScheduleRecommendationConnectorImpl implements ScheduleRecommendati
     private final ScheduleRecommendationService scheduleRecommendationService;
 
     @Override
-    public List<ScheduleApiModel.responseSchedule> recommend(String userId, Pageable pageable) throws Exception {
+    public Mono<List<ScheduleApiModel.responseSchedule>> recommend(String userId, Pageable pageable) {
         return scheduleRecommendationService.recommendSchedules(userId,pageable)
-                .stream().map(this::toApi).collect(Collectors.toList());
+                .map(schedules -> schedules.stream()
+                        .map(this::toApi)
+                        .collect(Collectors.toList()));
     }
 
     private ScheduleApiModel.responseSchedule toApi(SchedulesModel schedulesModel){
+        Long id = schedulesModel.getId();
+        Long categoryId = schedulesModel.getCategoryId();
         return ScheduleApiModel.responseSchedule
                 .builder()
-                .id(schedulesModel.getId())
+                .id(id != null ? id : -1L)
                 .contents(schedulesModel.getContents())
-                .categoryId(schedulesModel.getCategoryId())
-                .userId(schedulesModel.getUserId())
+                .categoryId(categoryId != null ? categoryId : -1L)
+                .memberId(schedulesModel.getMemberId())
                 .scheduleMonth(schedulesModel.getScheduleMonth())
-                .createdTime(schedulesModel.getCreatedTime())
-                .updatedTime(schedulesModel.getUpdatedTime())
+                .scheduleDays(schedulesModel.getScheduleDays())
+                .startTime(schedulesModel.getStartTime())
+                .endTime(schedulesModel.getEndTime())
+                .createdTime(LocalDateTime.now())
+                .updatedTime(LocalDateTime.now())
                 .build();
     }
 }

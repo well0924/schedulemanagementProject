@@ -24,7 +24,17 @@ public class OpenAiResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Choice {
         private int index;
-        private OpenAiRequest.Message message;
+        private Message message;
         private String finish_reason;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Message {
+        private String role;
+        private String content;
     }
 }

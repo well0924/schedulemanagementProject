@@ -7,19 +7,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ScheduleRecommendationDto {
-
-    private String contents;
-    private Integer scheduleMonth;
-    private Integer scheduleDay;
+    private Object contents;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime startTime;
-
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime endTime;
 }

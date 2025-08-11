@@ -10,6 +10,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -17,6 +18,8 @@ import java.util.stream.Collectors;
 public class ScheduleRecommendationConnectorImpl implements ScheduleRecommendationConnector {
 
     private final ScheduleRecommendationService scheduleRecommendationService;
+
+    private static final long DEFAULT_ID = -1L;
 
     @Override
     public Mono<List<ScheduleApiModel.responseSchedule>> recommend(String userId, Pageable pageable) {
@@ -27,13 +30,11 @@ public class ScheduleRecommendationConnectorImpl implements ScheduleRecommendati
     }
 
     private ScheduleApiModel.responseSchedule toApi(SchedulesModel schedulesModel){
-        Long id = schedulesModel.getId();
-        Long categoryId = schedulesModel.getCategoryId();
         return ScheduleApiModel.responseSchedule
                 .builder()
-                .id(id != null ? id : -1L)
+                .id(Optional.ofNullable(schedulesModel.getId()).orElse(DEFAULT_ID))
                 .contents(schedulesModel.getContents())
-                .categoryId(categoryId != null ? categoryId : -1L)
+                .categoryId(Optional.ofNullable(schedulesModel.getCategoryId()).orElse(DEFAULT_ID))
                 .memberId(schedulesModel.getMemberId())
                 .scheduleMonth(schedulesModel.getScheduleMonth())
                 .scheduleDays(schedulesModel.getScheduleDays())

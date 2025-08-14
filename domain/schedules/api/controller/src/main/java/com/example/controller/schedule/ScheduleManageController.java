@@ -31,9 +31,10 @@ public class ScheduleManageController {
         return scheduleServiceConnector.findAllDeletedSchedules();
     }
 
-    @GetMapping("/user/{id}")
-    public Page<ScheduleApiModel.responseSchedule> findAllByUserId(@PathVariable("id")String userId, @PageableDefault Pageable pageable) {
-        return scheduleServiceConnector.getSchedulesByUserId(userId,pageable);
+    @GetMapping("/user")
+    public Page<ScheduleApiModel.responseSchedule> findAllByUserId(@PageableDefault Pageable pageable) {
+        return scheduleServiceConnector.getSchedulesByUserId(pageable);
+
     }
 
     @GetMapping("/category/{category-name}")
@@ -43,14 +44,13 @@ public class ScheduleManageController {
 
     @GetMapping("/status")
     public Page<ScheduleApiModel.responseSchedule> findAllByPRGRESS_STATUS(@RequestParam("status") String progressStatus,
-                                                                           @RequestParam("userId") String userId,
                                                                            @PageableDefault(sort = "id",direction = Sort.Direction.DESC) Pageable pageable) {
-        return scheduleServiceConnector.getSchedulesByStatus(progressStatus,userId,pageable);
+        return scheduleServiceConnector.getSchedulesByStatus(progressStatus,pageable);
     }
 
-    @GetMapping("/today/{id}")
-    public List<ScheduleApiModel.responseSchedule> findByTodaySchedules(@PathVariable("id")Long userId) {
-        return scheduleServiceConnector.findByTodaySchedule(userId);
+    @GetMapping("/today")
+    public List<ScheduleApiModel.responseSchedule> findByTodaySchedules() {
+        return scheduleServiceConnector.findByTodaySchedule();
     }
 
     @GetMapping("/{id}")

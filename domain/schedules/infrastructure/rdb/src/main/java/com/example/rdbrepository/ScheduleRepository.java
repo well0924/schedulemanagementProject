@@ -92,4 +92,8 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     List<Schedules> findByRepeatGroupId(@Param("repeatGroupId") String repeatGroupId);
 
     List<Schedules> findByRepeatGroupIdAndStartTimeAfter(String repeatGroupId,LocalDateTime startTime);
+
+    // 선택 일정 삭제시 사용자 번호(userId) 인증
+    @Query(value = "select s.userId from Schedules s where s.id in(:ids) and s.userId = :me")
+    List<Long> findOwnedIds(@Param("me") Long me ,@Param("ids") List<Long> ids);
 }

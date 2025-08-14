@@ -28,7 +28,6 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
 
     private final AttachInConnector attachInConnector;
 
-
     @Override
     public List<ScheduleApiModel.responseSchedule> findAllDeletedSchedules() {
         return scheduleDomainService.getAllDeletedSchedules()
@@ -47,9 +46,9 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
     }
 
     @Override
-    public Page<ScheduleApiModel.responseSchedule> getSchedulesByUserId(String userId, Pageable pageable) {
+    public Page<ScheduleApiModel.responseSchedule> getSchedulesByUserId(Pageable pageable) {
         return scheduleDomainService
-                .getSchedulesByUserFilter(userId, pageable)
+                .getSchedulesByUserFilter(pageable)
                 .map(this::toApiModelWithAttachments);
     }
 
@@ -61,15 +60,15 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
     }
 
     @Override
-    public Page<ScheduleApiModel.responseSchedule> getSchedulesByStatus(String status, String userId,Pageable pageable) {
+    public Page<ScheduleApiModel.responseSchedule> getSchedulesByStatus(String status, Pageable pageable) {
         return scheduleDomainService
-                .getSchedulesByStatus(status,userId,pageable)
+                .getSchedulesByStatus(status,pageable)
                 .map(this::toApiModelWithAttachments);
     }
 
     @Override
-    public List<ScheduleApiModel.responseSchedule> findByTodaySchedule(Long userId) {
-        return scheduleDomainService.findByTodaySchedule(userId).stream()
+    public List<ScheduleApiModel.responseSchedule> findByTodaySchedule() {
+        return scheduleDomainService.findByTodaySchedule().stream()
                 .map(this::toApiModelWithAttachments)
                 .collect(Collectors.toList());
     }

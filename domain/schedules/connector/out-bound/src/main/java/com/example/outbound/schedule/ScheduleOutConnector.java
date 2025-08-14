@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -214,6 +215,11 @@ public class ScheduleOutConnector {
         if (count != null && count > 0) {
             throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_TIME_CONFLICT);
         }
+    }
+
+    // 선택 일정 삭제시 사용자 번호(userId) 인증
+    public List<Long> findOwnedIds(Long me , List<Long> ids) {
+        return scheduleRepository.findOwnedIds(me,ids);
     }
 
     private void validateScheduleData(SchedulesModel model) {

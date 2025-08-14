@@ -16,7 +16,12 @@ import java.time.LocalDateTime;
 @Table(
         name = "schedules",
         indexes = {
-                @Index(name = "idx_schedules_user_time", columnList = "userId, startTime, endTime")
+                // 일정 충돌 인덱스
+                @Index(name = "idx_schedules_user_time", columnList = "userId, startTime, endTime"),
+                // [반복/그룹 조작] repeat_group_id + user_id (+ start_time >= ?)
+                @Index(name = "idx_sched_group_user_start", columnList = "repeat_group_id, user_id, start_time"),
+                // [상태별 조회]
+                @Index(name = "idx_sched_user_status", columnList = "user_id, progress_status")
         }
 )
 @NoArgsConstructor

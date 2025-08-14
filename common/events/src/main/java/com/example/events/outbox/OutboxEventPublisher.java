@@ -3,6 +3,8 @@ package com.example.events.outbox;
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.events.kafka.NotificationEvents;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.annotation.Counted;
+import io.micrometer.core.annotation.Timed;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -25,6 +27,8 @@ public class OutboxEventPublisher {
 
     private final ObjectMapper objectMapper;
 
+    @Timed(value = "outbox.publish.duration", description = "Outbox Kafka 발행 처리 시간")
+    @Counted(value = "outbox.publish.count", description = "Outbox Kafka 발행 실행 횟수")
     @Scheduled(fixedDelay = 3000) //3초마다 실행
     @SchedulerLock(name = "OutboxPublisherLock", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
     public void publishOutboxEvents() {

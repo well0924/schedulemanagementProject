@@ -9,6 +9,8 @@ import com.example.notification.service.NotificationService;
 import com.example.notification.service.NotificationSettingService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.annotation.Counted;
+import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -29,6 +31,8 @@ public class NotificationEventConsumer {
 
     private final ObjectMapper objectMapper;
 
+    @Timed(value = "kafka.consumer.notification.duration", description = "알림 Kafka 메시지 처리 시간")
+    @Counted(value = "kafka.consumer.notification.count", description = "알림 Kafka 메시지 처리 횟수")
     @KafkaListener(
             topics = "notification-events",
             groupId = "notification-group",
@@ -42,8 +46,8 @@ public class NotificationEventConsumer {
         try {
             log.info("📩 Kafka 알림 수신: userId={}, type={}, channel={}",
                     event.getReceiverId(), event.getNotificationType(), channel);
-
-            if (!notificationSettingService.isEnabled(
+            // dlq 처리시 조건 추가.
+            if (!event.isForceSend() && !notificationSettingService.isEnabled(
                     event.getReceiverId(),
                     channel)
             ) {
@@ -88,7 +92,11 @@ public class NotificationEventConsumer {
 
     private void handleWebNotification(NotificationEvents event) {
         // DB 저장
-        notificationService.createNotification(toNotificationModel(event));
+        NotificationModel model = toNotificationModel(event);
+
+        // Kafka Consumer에서 전송 직후 저장이므로 isSent = true로 설정
+        model.markAsSent();
+        notificationService.createNotification(model);
     }
 
     private void handlePushNotification(NotificationEvents event) {
@@ -98,9 +106,11 @@ public class NotificationEventConsumer {
     private NotificationModel toNotificationModel(NotificationEvents event) {
         return NotificationModel.builder()
                 .userId(event.getReceiverId())
+                .scheduleId(event.getScheduleId())
                 .message(event.getMessage())
                 .createdTime(event.getCreatedTime())
                 .notificationType(mapActionToType(event.getNotificationType().name()))
+                .scheduledAt(event.getScheduleAt())
                 .isRead(false)
                 .isSent(false)
                 .build();

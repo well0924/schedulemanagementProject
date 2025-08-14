@@ -9,6 +9,7 @@ import com.example.attach.dto.AttachErrorCode;
 import com.example.attach.exception.AttachCustomExceptionHandler;
 import com.example.model.attach.AttachModel;
 import com.example.outbound.attach.AttachOutConnector;
+import com.example.s3.utile.FileUtile;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,8 @@ public class AttachService {
 
     private final AmazonS3 amazonS3;
 
+    private final FileUtile fileUtile;
+
     @Value("${cloud.aws.s3.bucket}")
     private String bucketName;
 
@@ -73,16 +76,22 @@ public class AttachService {
         return attachOutConnector.findByOriginFileName(originFileName);
     }
 
+    @Transactional(readOnly = true)
+    public AttachModel findByStoredFileName(String storedFileName) {
+        return attachOutConnector.findByStoredFileName(storedFileName);
+    }
+
     // S3 presingedurl적용.
     @Transactional(readOnly = true)
     public List<String> generatePreSignedUrls(List<String> fileNames) {
         List<String> urls = new ArrayList<>();
         for (String fileName : fileNames) {
+            String key = "temp/" + fileName;
             Date expiration = new Date();
             expiration.setTime(expiration.getTime() + 1000 * 60 * 20); // 20분
 
             GeneratePresignedUrlRequest generatePresignedUrlRequest =
-                    new GeneratePresignedUrlRequest(bucketName, fileName)
+                    new GeneratePresignedUrlRequest(bucketName, key)
                             .withMethod(HttpMethod.PUT)
                             .withExpiration(expiration);
 
@@ -111,59 +120,83 @@ public class AttachService {
     }
 
     //업로드 완료 후 Attach 등록 + 썸네일 생성
-    @Timed(value = "s3.upload.presigned.complete", description = "presigned 업로드 완료 + 썸네일 생성", histogram = true)
+    @Timed(value = "s3_upload_presigned_complete", description = "presigned 업로드 완료 + 썸네일 생성", histogram = true)
     public List<AttachModel> createAttach(List<String> uploadedFileNames) {
 
         List<AttachModel> savedAttachModels = new ArrayList<>();
+        List<CompletableFuture<Void>> thumbnailFutures = new ArrayList<>();
 
-        for (String storedFileName : uploadedFileNames) {
-            String fileUrl = amazonS3.getUrl(bucketName, storedFileName).toString();
-            ObjectMetadata metadata = amazonS3.getObjectMetadata(bucketName, storedFileName);
-            long fileSize = metadata.getContentLength();
+        for (String tempStoredFileName : uploadedFileNames) {
+            try {
+                String finalStoredFileName = tempStoredFileName.replaceFirst("^temp/", "final/");
 
-            AttachModel attachModel = AttachModel.builder()
-                    .originFileName(storedFileName)
-                    .storedFileName(storedFileName)
-                    .filePath(fileUrl)
-                    .fileSize(fileSize)
-                    .build();
+                // 1. temp → final 복사
+                amazonS3.copyObject(bucketName, tempStoredFileName, bucketName, finalStoredFileName);
 
-            AttachModel savedAttach = attachOutConnector.createAttach(attachModel);
+                // 2. temp 삭제
+                amazonS3.deleteObject(bucketName, tempStoredFileName);
 
-            // 비동기로 썸네일 생성
-            createAndUploadThumbnail(savedAttach);
+                String fileUrl = amazonS3.getUrl(bucketName, finalStoredFileName).toString();
+                ObjectMetadata metadata = amazonS3.getObjectMetadata(bucketName, finalStoredFileName);
+                long fileSize = metadata.getContentLength();
 
-            savedAttachModels.add(savedAttach);
+                AttachModel attachModel = AttachModel.builder()
+                        .originFileName(finalStoredFileName)
+                        .storedFileName(finalStoredFileName)
+                        .filePath(fileUrl)
+                        .fileSize(fileSize)
+                        .build();
+
+                AttachModel savedAttach = attachOutConnector.createAttach(attachModel);
+                savedAttachModels.add(savedAttach);
+
+                // 비동기로 썸네일 생성
+                CompletableFuture<Void> future = createAndUploadThumbnail(savedAttach);
+                thumbnailFutures.add(future);
+
+            } catch (Exception e) {
+                log.error("[파일 업로드 실패] 파일: {}", tempStoredFileName, e);
+                throw new AttachCustomExceptionHandler(AttachErrorCode.S3_OPERATION_FAIL);
+            }
         }
+
+        // 6. 모든 썸네일 생성 작업 병렬 완료까지 대기
+        CompletableFuture.allOf(thumbnailFutures.toArray(new CompletableFuture[0])).join();
+        log.info("[썸네일 생성 완료] 전체 {}건", thumbnailFutures.size());
 
         return savedAttachModels;
     }
 
     //비동기 섬네일 이미지 생성. 비동기 MDC 적용
+    @Timed(value = "s3_thumbnail_generation", description = "썸네일 생성 시간", histogram = true)
     @Async("threadPoolTaskExecutor")
     public CompletableFuture<Void> createAndUploadThumbnail(AttachModel attachModel) {
         try {
             String fileName = attachModel.getStoredFileName().toLowerCase();
             // 1. 이미지 파일 여부 체크
-            if (!fileName.endsWith(".jpg") && !fileName.endsWith(".jpeg")
-                    && !fileName.endsWith(".png") && !fileName.endsWith(".bmp")
-                    && !fileName.endsWith(".gif") && !fileName.endsWith(".webp")) {
+            if (!fileUtile.isSupportedImageExtension(fileName)) {
                 log.info("[섬네일 건너뜀] 이미지 파일 아님: {}", fileName);
                 return CompletableFuture.completedFuture(null);
             }
 
             log.info("[썸네일 생성 시작] {}", attachModel.getStoredFileName());
 
-
             S3Object s3Object = amazonS3.getObject(bucketName, attachModel.getStoredFileName());
             InputStream inputStream = s3Object.getObjectContent();
 
+            if (!fileUtile.isSupportedImageExtension(fileName)) {
+                log.info("[섬네일 건너뜀] MIME 타입으로 확인한 결과 이미지 아님: {}", attachModel.getStoredFileName());
+                return CompletableFuture.completedFuture(null);
+            }
+            
             BufferedImage originalImage = ImageIO.read(inputStream);
+
             if (originalImage == null) {
                 throw new IllegalArgumentException("썸네일 생성 실패: 유효하지 않은 이미지: " + attachModel.getStoredFileName());
             }
 
             ByteArrayOutputStream thumbnailOutputStream = new ByteArrayOutputStream();
+
             Thumbnails.of(originalImage)
                     .size(thumbnailWidth, thumbnailHeight)
                     .outputFormat("jpg")
@@ -180,14 +213,15 @@ public class AttachService {
             amazonS3.putObject(bucketName, thumbnailFileName, thumbnailInputStream, metadata);
 
             String thumbnailUrl = amazonS3.getUrl(bucketName, thumbnailFileName).toString();
+
             attachModel.setThumbnailFilePath(thumbnailUrl);
             attachOutConnector.updateAttach(attachModel.getId(), attachModel);
+
             log.info("[썸네일 업로드 완료] {}", thumbnailUrl);
 
             CompletableFuture<Void> done = new CompletableFuture<>();
             done.complete(null);
             return done;
-
         } catch (Exception e) {
             log.error("[썸네일 생성 실패]", e);
             throw new AttachCustomExceptionHandler(AttachErrorCode.THUMBNAIL_CREATE_FAIL);
@@ -230,7 +264,7 @@ public class AttachService {
     }
 
     //일반적인 S3 업로드 histogram = true를 설정하면 Grafana에서 평균/최댓값/퍼센타일까지 확인 가능
-    @Timed(value = "s3.upload.direct", description = "직접 업로드 + 썸네일 생성 시간", histogram = true)
+    @Timed(value = "s3_upload_direct", description = "직접 업로드 + 썸네일 생성 시간", histogram = true)
     public List<AttachModel> uploadDirectToS3WithThumbnail(List<MultipartFile> files) throws IOException {
         List<AttachModel> savedModels = new ArrayList<>();
 
@@ -290,3 +324,4 @@ public class AttachService {
         return savedModels;
     }
 }
+

@@ -37,7 +37,8 @@ public class FailedMessage {
 
     private LocalDateTime lastTriedAt;
 
-    private LocalDateTime createdAt;
+    private LocalDateTime resolvedAt;
 
+    private LocalDateTime createdAt;
 
 }

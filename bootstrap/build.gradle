@@ -54,6 +54,7 @@ dependencies {
 	implementation project(':domain:schedules:connector:out-bound:open-ai')
 	implementation project(':domain:schedules:core:service')
 	implementation project(':domain:schedules:core:model')
+	implementation project(':domain:schedules:core:enumerate')
 	
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -66,6 +67,7 @@ dependencies {
 	implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
 	implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
     // Mockito
     testImplementation 'org.mockito:mockito-core:5.8.0'
 	testImplementation 'org.testcontainers:testcontainers:1.19.3'

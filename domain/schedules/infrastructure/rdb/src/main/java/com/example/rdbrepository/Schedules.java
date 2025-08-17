@@ -35,7 +35,7 @@ public class Schedules extends BaseEntity {
 
     private Boolean isDeletedScheduled = false;
     //회원의 번호
-    private Long userId;
+    private Long memberId;
     //카테고리의 번호
     private Long categoryId;
     //일정 상태

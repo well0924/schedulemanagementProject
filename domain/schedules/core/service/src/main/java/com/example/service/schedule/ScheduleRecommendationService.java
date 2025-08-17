@@ -75,7 +75,7 @@ public class ScheduleRecommendationService {
                 .scheduleDay(LocalDateTime.now().getDayOfMonth())
                 .startTime(LocalDateTime.now())
                 .endTime(LocalDateTime.now().plusHours(1))
-                .userId(Long.parseLong(userId))
+                .memberId(Long.parseLong(userId))
                 .build();
 
         return List.of(fallbackSchedule);
@@ -90,7 +90,7 @@ public class ScheduleRecommendationService {
                     .scheduleMonth(model.getScheduleMonth())
                     .scheduleDay(model.getScheduleDays())
                     .isDeletedScheduled(model.isDeletedScheduled())
-                    .userId(model.getUserId())
+                    .memberId(model.getMemberId())
                     .categoryId(model.getCategoryId())
                     .progress_status(String.valueOf(model.getProgressStatus()))
                     .startTime(model.getStartTime())
@@ -112,7 +112,7 @@ public class ScheduleRecommendationService {
                     .startTime(dto.getStartTime())
                     .endTime(dto.getEndTime())
                     .progressStatus(PROGRESS_STATUS.IN_COMPLETE)
-                    .userId(memberId)
+                    .memberId(memberId)
                     .build());
         }
 

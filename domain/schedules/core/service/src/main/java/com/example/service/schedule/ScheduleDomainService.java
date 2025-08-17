@@ -232,7 +232,7 @@ public class ScheduleDomainService {
                 .startTime(updates.getStartTime() != null ? updates.getStartTime() : existing.getStartTime())
                 .endTime(updates.getEndTime() != null ? updates.getEndTime() : existing.getEndTime())
                 .categoryId(updates.getCategoryId() != null ? updates.getCategoryId() : existing.getCategoryId())
-                .userId(updates.getUserId() != null ? updates.getUserId() : existing.getUserId())
+                .memberId(updates.getMemberId() != null ? updates.getMemberId() : existing.getMemberId())
                 .repeatType(updates.getRepeatType() != null ? updates.getRepeatType() : existing.getRepeatType())
                 .repeatCount(updates.getRepeatCount() != null ? updates.getRepeatCount() : existing.getRepeatCount())
                 .repeatInterval(updates.getRepeatInterval() != null ? updates.getRepeatInterval() : existing.getRepeatInterval())
@@ -323,7 +323,7 @@ public class ScheduleDomainService {
     private void publishScheduleEvent(SchedulesModel model, ScheduleActionType actionType) {
         ScheduleEvents event = ScheduleEvents.builder()
                 .scheduleId(model.getId())
-                .userId(model.getUserId())
+                .userId(model.getMemberId())
                 .contents(model.getContents())
                 .notificationType(actionType)
                 .notificationChannel(NotificationChannel.WEB)

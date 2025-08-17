@@ -119,7 +119,7 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .scheduleMonth(request.scheduleMonth())
                 .startTime(request.startTime())
                 .endTime(request.endTime())
-                .userId(request.userId())
+                .memberId(request.userId())
                 .categoryId(request.categoryId())
                 .attachIds(request.attachIds())
                 .progressStatus(PROGRESS_STATUS.IN_COMPLETE) // 기본값 설정
@@ -141,7 +141,7 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .startTime(request.startTime())
                 .endTime(request.endTime())
                 .categoryId(request.categoryId())
-                .userId(request.userId())
+                .memberId(request.memberId())
                 .progressStatus(PROGRESS_STATUS.IN_COMPLETE) // 기본값 설정
                 .repeatType(request.repeatType())
                 .repeatCount(request.repeatCount())
@@ -168,7 +168,7 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
                 .scheduleMonth(model.getScheduleMonth())
                 .startTime(model.getStartTime())
                 .endTime(model.getEndTime())
-                .userId(model.getUserId())
+                .memberId(model.getMemberId())
                 .categoryId(model.getCategoryId())
                 .progressStatus(model.getProgressStatus())
                 .repeatType(model.getRepeatType())

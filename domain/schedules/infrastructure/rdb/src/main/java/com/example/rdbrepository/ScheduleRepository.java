@@ -28,7 +28,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
         FROM 
             Schedules s
         WHERE 
-            s.userId = :userId
+            s.memberId = :userId
         AND s.scheduleType = 'SINGLE_DAY'
         AND (:startTime < s.endTime AND :endTime > s.startTime)
         AND (:excludeId IS NULL OR s.id != :excludeId)
@@ -41,7 +41,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     //당일인지 하루종일인지 확인하는 쿼리.
     @Query("""
     SELECT COUNT(s) FROM Schedules s
-    WHERE s.userId = :userId
+    WHERE s.memberId = :userId
       AND s.isAllDay = true
       AND DATE(s.startTime) = :date
       AND s.isDeletedScheduled = false
@@ -74,7 +74,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
         s 
     FROM 
         Schedules s
-    WHERE s.userId = :userId
+    WHERE s.memberId = :userId
       AND s.isDeletedScheduled = false
       AND s.progress_status IN :statusList
       AND s.startTime <= :today

@@ -91,7 +91,7 @@ public class ScheduleApiModel {
             Long categoryId,
 
             @NotNull(message = "회원 ID는 필수입니다.")
-            Long userId,
+            Long memberId,
 
             RepeatType repeatType,
 

@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -36,6 +37,9 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
 
     @Override
     public List<SchedulesModel> findAllSchedule() {
+        LocalDate from = LocalDate.now().withDayOfMonth(1);
+        LocalDate toEx = from.plusMonths(1);
+
         List<Tuple> results = queryFactory
                 .select(
                         qSchedules.id,
@@ -56,51 +60,12 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qAttach.storedFileName
                 )
                 .from(qSchedules)
-                .leftJoin(qAttach).on(qAttach.scheduledId.eq(qSchedules.id))
+                .leftJoin(qAttach)
+                .on(qAttach.scheduledId.eq(qSchedules.id).and(qAttach.isDeletedAttach.eq(false)))
                 .where(qSchedules.isDeletedScheduled.eq(false))
                 .fetch();
 
-        return  results.stream()
-                .collect(Collectors.groupingBy(tuple -> tuple.get(qSchedules.id)))
-                .values()
-                .stream()
-                .map(groupedTuples -> {
-                    // 이 ID에 해당하는 모든 튜플
-
-                    Tuple first = groupedTuples.get(0); // 일정 공통 정보는 첫 번째에서 뽑음
-
-                    return new SchedulesModel(
-                            first.get(qSchedules.id),
-                            first.get(qSchedules.contents),
-                            first.get(qSchedules.scheduleMonth),
-                            first.get(qSchedules.scheduleDay),
-                            first.get(qSchedules.startTime),
-                            first.get(qSchedules.endTime),
-                            first.get(qSchedules.memberId),
-                            first.get(qSchedules.categoryId),
-                            first.get(qSchedules.progress_status),
-                            first.get(qSchedules.repeatType),
-                            first.get(qSchedules.repeatCount),
-                            first.get(qSchedules.repeatInterval),
-                            first.get(qSchedules.repeatGroupId),
-                            first.get(qSchedules.scheduleType),
-                            first.get(qSchedules.createdBy),
-                            first.get(qSchedules.updatedBy),
-                            first.get(qSchedules.createdTime),
-                            first.get(qSchedules.updatedTime),
-                            groupedTuples.stream()
-                                    .map(t -> t.get(qAttach.storedFileName))
-                                    .filter(Objects::nonNull)
-                                    .distinct()
-                                    .collect(Collectors.toList()),
-                            groupedTuples.stream()
-                                    .map(t -> t.get(qAttach.id))
-                                    .filter(Objects::nonNull)
-                                    .distinct()
-                                    .collect(Collectors.toList())
-                    );
-                })
-                .collect(Collectors.toList());
+        return  mapTuples(results);
 
     }
 
@@ -126,52 +91,51 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 )
                 .from(qSchedules)
                 .leftJoin(qAttach).on(
-                        qSchedules.id.eq(qAttach.scheduledId)
-                        .and(qAttach.isDeletedAttach.eq(false)))
-                .where(qSchedules.id.eq(scheduleId),
-                        qAttach.isDeletedAttach.eq(false))
+                        qSchedules.id.eq(qAttach.scheduledId))
+                .where(qSchedules.id.eq(scheduleId))
+                .orderBy(qSchedules.startTime.asc(), qSchedules.id.asc())
                 .fetch();
 
         if (results.isEmpty()) {
             return null; // 결과가 없는 경우 `null` 반환
         }
+        List<SchedulesModel> list = mapTuples(results);
 
-        SchedulesModel schedule = new SchedulesModel(
-                results.get(0).get(qSchedules.id),
-                results.get(0).get(qSchedules.contents),
-                results.get(0).get(qSchedules.scheduleMonth),
-                results.get(0).get(qSchedules.scheduleDay),
-                results.get(0).get(qSchedules.startTime),
-                results.get(0).get(qSchedules.endTime),
-                results.get(0).get(qSchedules.memberId),
-                results.get(0).get(qSchedules.categoryId),
-                results.get(0).get(qSchedules.progress_status),
-                results.get(0).get(qSchedules.repeatType),
-                results.get(0).get(qSchedules.repeatCount),
-                results.get(0).get(qSchedules.repeatInterval),
-                results.get(0).get(qSchedules.repeatGroupId),
-                results.get(0).get(qSchedules.scheduleType),
-                results.get(0).get(qSchedules.createdBy),
-                results.get(0).get(qSchedules.updatedBy),
-                results.get(0).get(qSchedules.createdTime),
-                results.get(0).get(qSchedules.updatedTime),
-                results.stream()
-                        .map(tuple -> tuple.get(qAttach.storedFileName))
-                        .filter(Objects::nonNull)
-                        .distinct()
-                        .collect(Collectors.toList()),
-                results.stream()
-                        .map(tuple -> tuple.get(qAttach.id))
-                        .filter(Objects::nonNull)
-                        .distinct()
-                        .collect(Collectors.toList())
-        );
-
-        return schedule;
+        return list.get(0);
     }
 
     @Override
     public Page<SchedulesModel> findAllByUserId(String userId, Pageable pageable) {
+        // 1) ID만 정확히 페이징
+        List<Long> pageIds = queryFactory
+                .select(qSchedules.id)
+                .from(qSchedules)
+                .join(qMember).on(qSchedules.memberId.eq(qMember.id))
+                .where(
+                        qMember.userId.eq(userId),
+                        qSchedules.isDeletedScheduled.eq(false)
+                )
+                .orderBy(qSchedules.id.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        if (pageIds.isEmpty()) {
+            Long total0 = Optional.ofNullable(
+                    queryFactory
+                            .select(qSchedules.count())
+                            .from(qSchedules)
+                            .join(qMember).on(qSchedules.memberId.eq(qMember.id))
+                            .where(
+                                    qMember.userId.eq(userId),
+                                    qSchedules.isDeletedScheduled.eq(false)
+                            )
+                            .fetchOne()
+            ).orElse(0L);
+            return new PageImpl<>(Collections.emptyList(), pageable, total0);
+        }
+
+        // 2) IN 조회 + LEFT JOIN(첨부)
         List<Tuple> results = queryFactory
                 .select(
                         qSchedules.id,
@@ -195,66 +159,23 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qAttach.id
                 )
                 .from(qSchedules)
-                .join(qMember).on(qSchedules.memberId.eq(qMember.id))
-                .leftJoin(qAttach).on(qSchedules.id.eq(qAttach.scheduledId)
-                        .and(qAttach.isDeletedAttach.eq(false)))
-                .where(qMember.userId.eq(userId).or(qAttach.isDeletedAttach.eq(false)))
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
+                .leftJoin(qAttach).on(
+                        qSchedules.id.eq(qAttach.scheduledId)
+                )
+                .where(qSchedules.id.in(pageIds),qAttach.isDeletedAttach.eq(false))
                 .fetch();
 
-        List<SchedulesModel> scheduleList = new ArrayList<>();
-
-        for (Tuple tuple : results) {
-            Long scheduleId = tuple.get(qSchedules.id);
-
-            SchedulesModel schedule = scheduleList
-                    .stream()
-                    .filter(s -> s.getId().equals(scheduleId))
-                    .findFirst()
-                    .orElse(null);
-
-            if (schedule == null) {
-                schedule = new SchedulesModel(
-                        tuple.get(qSchedules.id),
-                        tuple.get(qSchedules.contents),
-                        tuple.get(qSchedules.scheduleMonth),
-                        tuple.get(qSchedules.scheduleDay),
-                        tuple.get(qSchedules.startTime),
-                        tuple.get(qSchedules.endTime),
-                        tuple.get(qSchedules.memberId),
-                        tuple.get(qSchedules.categoryId),
-                        tuple.get(qSchedules.progress_status.stringValue()),
-                        tuple.get(qSchedules.repeatType.stringValue()),
-                        tuple.get(qSchedules.repeatCount),
-                        tuple.get(qSchedules.repeatInterval),
-                        tuple.get(qSchedules.repeatGroupId),
-                        tuple.get(qSchedules.scheduleType),
-                        tuple.get(qSchedules.createdBy),
-                        tuple.get(qSchedules.updatedBy),
-                        tuple.get(qSchedules.createdTime),
-                        tuple.get(qSchedules.updatedTime),
-                        new ArrayList<>(),
-                        new ArrayList<>()
-                );
-                scheduleList.add(schedule);
-            }
-
-            String fileName = tuple.get(qAttach.storedFileName);
-            Long fileId = tuple.get(qAttach.id);
-
-            if (fileName != null && fileId != null) {
-                schedule.getAttachThumbNailImagePath().add(fileName);
-                schedule.getAttachIds().add(fileId);
-            }
-        }
+        List<SchedulesModel> scheduleList = sortByIdOrder(mapTuples(results), pageIds);
 
         Long total = Optional.ofNullable(
                 queryFactory
                         .select(qSchedules.count())
                         .from(qSchedules)
                         .join(qMember).on(qSchedules.memberId.eq(qMember.id))
-                        .where(qMember.userId.eq(userId))
+                        .where(
+                                qMember.userId.eq(userId),
+                                qSchedules.isDeletedScheduled.eq(false)
+                        )
                         .fetchOne()
         ).orElse(0L);
 
@@ -263,98 +184,36 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
 
     @Override
     public Page<SchedulesModel> findAllByCategoryName(String categoryName, Pageable pageable) {
-        List<Tuple> results = queryFactory
-                .select(
-                        qSchedules.id,
-                        qSchedules.contents,
-                        qSchedules.scheduleMonth,
-                        qSchedules.scheduleDay,
-                        qSchedules.startTime,
-                        qSchedules.endTime,
-                        qSchedules.memberId,
-                        qSchedules.categoryId,
-                        qSchedules.progress_status.stringValue(),
-                        qSchedules.repeatType,
-                        qSchedules.repeatCount,
-                        qSchedules.repeatInterval,
-                        qSchedules.repeatGroupId,
-                        qSchedules.createdTime,
-                        qSchedules.createdBy,
-                        qSchedules.updatedBy,
-                        qSchedules.updatedTime,
-                        qAttach.storedFileName,
-                        qAttach.id
-                )
+        // 1) ID 페이징
+        List<Long> pageIds = queryFactory
+                .select(qSchedules.id)
                 .from(qSchedules)
-                .leftJoin(qAttach)
-                .on(qSchedules.id.eq(qAttach.scheduledId))
-                .join(qCategory)
-                .on(qSchedules.categoryId.eq(qCategory.id))
-                .where(qCategory.name.eq(categoryName))
+                .join(qCategory).on(qSchedules.categoryId.eq(qCategory.id))
+                .where(
+                        qCategory.name.eq(categoryName),
+                        qSchedules.isDeletedScheduled.eq(false)
+                )
+                .orderBy(qSchedules.id.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
 
-        List<SchedulesModel> scheduleList = new ArrayList<>();
-
-        for (Tuple tuple : results) {
-            Long scheduleId = tuple.get(qSchedules.id);
-
-            SchedulesModel schedule = scheduleList
-                    .stream()
-                    .filter(s -> s.getId().equals(scheduleId))
-                    .findFirst()
-                    .orElse(null);
-
-            if (schedule == null) {
-                schedule = new SchedulesModel(
-                        tuple.get(qSchedules.id),
-                        tuple.get(qSchedules.contents),
-                        tuple.get(qSchedules.scheduleMonth),
-                        tuple.get(qSchedules.scheduleDay),
-                        tuple.get(qSchedules.startTime),
-                        tuple.get(qSchedules.endTime),
-                        tuple.get(qSchedules.memberId),
-                        tuple.get(qSchedules.categoryId),
-                        tuple.get(qSchedules.progress_status.stringValue()),
-                        tuple.get(qSchedules.repeatType.stringValue()),
-                        tuple.get(qSchedules.repeatCount),
-                        tuple.get(qSchedules.repeatInterval),
-                        tuple.get(qSchedules.repeatGroupId),
-                        tuple.get(qSchedules.scheduleType),
-                        tuple.get(qSchedules.createdBy),
-                        tuple.get(qSchedules.updatedBy),
-                        tuple.get(qSchedules.createdTime),
-                        tuple.get(qSchedules.updatedTime),
-                        new ArrayList<>(),
-                        new ArrayList<>()
-                );
-                scheduleList.add(schedule);
-            }
-
-            String fileName = tuple.get(qAttach.storedFileName);
-            Long fileId = tuple.get(qAttach.id);
-
-            if (fileName != null && fileId != null) {
-                schedule.getAttachThumbNailImagePath().add(fileName);
-                schedule.getAttachIds().add(fileId);
-            }
+        if (pageIds.isEmpty()) {
+            Long total0 = Optional.ofNullable(
+                    queryFactory
+                            .select(qSchedules.count())
+                            .from(qSchedules)
+                            .join(qCategory).on(qSchedules.categoryId.eq(qCategory.id))
+                            .where(
+                                    qCategory.name.eq(categoryName),
+                                    qSchedules.isDeletedScheduled.eq(false)
+                            )
+                            .fetchOne()
+            ).orElse(0L);
+            return new PageImpl<>(Collections.emptyList(), pageable, total0);
         }
 
-        Long total = Optional.ofNullable(
-                queryFactory
-                        .select(qSchedules.count())
-                        .from(qSchedules)
-                        .join(qCategory).on(qSchedules.categoryId.eq(qCategory.id))
-                        .where(qCategory.name.eq(categoryName))
-                        .fetchOne()
-        ).orElse(0L);
-
-        return new PageImpl<>(scheduleList,pageable,total);
-    }
-
-    @Override
-    public Page<SchedulesModel> findAllByProgressStatus(String userId, String progressStatus, Pageable pageable) {
+        // 2) 본 조회
         List<Tuple> results = queryFactory
                 .select(
                         qSchedules.id,
@@ -379,66 +238,146 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 )
                 .from(qSchedules)
                 .leftJoin(qAttach).on(qSchedules.id.eq(qAttach.scheduledId))
+                .where(qSchedules.id.in(pageIds))
+                .fetch();
+
+        List<SchedulesModel> scheduleList = sortByIdOrder(mapTuples(results), pageIds);
+
+
+        Long total = Optional.ofNullable(
+                queryFactory
+                        .select(qSchedules.count())
+                        .from(qSchedules)
+                        .join(qCategory).on(qSchedules.categoryId.eq(qCategory.id))
+                        .where(
+                                qCategory.name.eq(categoryName),
+                                qSchedules.isDeletedScheduled.eq(false)
+                        )
+                        .fetchOne()
+        ).orElse(0L);
+
+        return new PageImpl<>(scheduleList,pageable,total);
+    }
+
+    @Override
+    public Page<SchedulesModel> findAllByProgressStatus(String userId, String progressStatus, Pageable pageable) {
+        // 1) ID 페이징
+        List<Long> pageIds = queryFactory
+                .select(qSchedules.id)
+                .from(qSchedules)
                 .join(qMember).on(qSchedules.memberId.eq(qMember.id))
-                .where(qMember.userId.eq(userId)
-                        .and(qSchedules.progress_status.stringValue().eq(progressStatus)))
+                .where(
+                        qMember.userId.eq(userId),
+                        qSchedules.isDeletedScheduled.eq(false),
+                        qSchedules.progress_status.stringValue().eq(progressStatus)
+                )
+                .orderBy(qSchedules.id.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
 
-        List<SchedulesModel> scheduleList = results.stream()
-                .collect(Collectors.groupingBy(tuple -> tuple.get(qSchedules.id)))
-                .entrySet()
-                .stream()
-                .map(entry -> {
-                    List<Tuple> scheduleTuples = entry.getValue();
+        if (pageIds.isEmpty()) {
+            Long total0 = Optional.ofNullable(
+                    queryFactory
+                            .select(qSchedules.count())
+                            .from(qSchedules)
+                            .join(qMember).on(qSchedules.memberId.eq(qMember.id))
+                            .where(
+                                    qMember.userId.eq(userId),
+                                    qSchedules.isDeletedScheduled.eq(false),
+                                    qSchedules.progress_status.stringValue().eq(progressStatus)
+                            )
+                            .fetchOne()
+            ).orElse(0L);
+            return new PageImpl<>(Collections.emptyList(), pageable, total0);
+        }
 
-                    return new SchedulesModel(
-                            scheduleTuples.get(0).get(qSchedules.id),
-                            scheduleTuples.get(0).get(qSchedules.contents),
-                            scheduleTuples.get(0).get(qSchedules.scheduleMonth),
-                            scheduleTuples.get(0).get(qSchedules.scheduleDay),
-                            scheduleTuples.get(0).get(qSchedules.startTime),
-                            scheduleTuples.get(0).get(qSchedules.endTime),
-                            scheduleTuples.get(0).get(qSchedules.memberId),
-                            scheduleTuples.get(0).get(qSchedules.categoryId),
-                            scheduleTuples.get(0).get(qSchedules.progress_status.stringValue()),
-                            scheduleTuples.get(0).get(qSchedules.repeatType.stringValue()),
-                            scheduleTuples.get(0).get(qSchedules.repeatCount),
-                            scheduleTuples.get(0).get(qSchedules.repeatInterval),
-                            scheduleTuples.get(0).get(qSchedules.repeatGroupId),
-                            scheduleTuples.get(0).get(qSchedules.scheduleType),
-                            scheduleTuples.get(0).get(qSchedules.createdBy),
-                            scheduleTuples.get(0).get(qSchedules.updatedBy),
-                            scheduleTuples.get(0).get(qSchedules.createdTime),
-                            scheduleTuples.get(0).get(qSchedules.updatedTime),
-                            Optional.of(scheduleTuples.stream()
-                                            .map(t -> t.get(qAttach.storedFileName))
-                                            .filter(Objects::nonNull)
-                                            .distinct()
-                                            .collect(Collectors.toList()))
-                                    .orElse(Collections.emptyList()),
-                            Optional.of(scheduleTuples.stream()
-                                            .map(t -> t.get(qAttach.id))
-                                            .filter(Objects::nonNull)
-                                            .distinct()
-                                            .collect(Collectors.toList()))
-                                    .orElse(Collections.emptyList())
-                    );
-                })
-                .collect(Collectors.toList());
+        // 2) 본 조회
+        List<Tuple> results = queryFactory
+                .select(
+                        qSchedules.id,
+                        qSchedules.contents,
+                        qSchedules.scheduleMonth,
+                        qSchedules.scheduleDay,
+                        qSchedules.startTime,
+                        qSchedules.endTime,
+                        qSchedules.memberId,
+                        qSchedules.categoryId,
+                        qSchedules.progress_status.stringValue(),
+                        qSchedules.repeatType,
+                        qSchedules.repeatCount,
+                        qSchedules.repeatInterval,
+                        qSchedules.repeatGroupId,
+                        qSchedules.createdTime,
+                        qSchedules.createdBy,
+                        qSchedules.updatedBy,
+                        qSchedules.updatedTime,
+                        qAttach.storedFileName,
+                        qAttach.id
+                )
+                .from(qSchedules)
+                .leftJoin(qAttach).on(
+                        qSchedules.id.eq(qAttach.scheduledId)
+                                .and(qAttach.isDeletedAttach.eq(false))
+                )
+                .where(qSchedules.id.in(pageIds))
+                .fetch();
+
+        List<SchedulesModel> scheduleList = sortByIdOrder(mapTuples(results), pageIds);
 
         Long total = Optional.ofNullable(
                 queryFactory
                         .select(qSchedules.count())
                         .from(qSchedules)
                         .join(qMember).on(qSchedules.memberId.eq(qMember.id))
-                        .where(qMember.userId.eq(userId)
-                                .and(qSchedules.progress_status.stringValue().eq(progressStatus)))
+                        .where(
+                                qMember.userId.eq(userId),
+                                qSchedules.isDeletedScheduled.eq(false),
+                                qSchedules.progress_status.stringValue().eq(progressStatus)
+                        )
                         .fetchOne()
         ).orElse(0L);
 
         return new PageImpl<>(scheduleList,pageable,total);
+    }
+
+    // 맵핑 로직
+    private List<SchedulesModel> mapTuples(List<Tuple> results) {
+        return results.stream()
+                .collect(Collectors.groupingBy(t -> t.get(qSchedules.id)))
+                .values().stream()
+                .map(group -> {
+                    Tuple first = group.get(0);
+                    return new SchedulesModel(
+                            first.get(qSchedules.id),
+                            first.get(qSchedules.contents),
+                            first.get(qSchedules.scheduleDay),
+                            first.get(qSchedules.scheduleMonth),
+                            first.get(qSchedules.startTime),
+                            first.get(qSchedules.endTime),
+                            first.get(qSchedules.memberId),
+                            first.get(qSchedules.categoryId),
+                            first.get(qSchedules.progress_status),
+                            first.get(qSchedules.repeatType),
+                            first.get(qSchedules.repeatCount),
+                            first.get(qSchedules.repeatInterval),
+                            first.get(qSchedules.repeatGroupId),
+                            first.get(qSchedules.scheduleType),
+                            first.get(qSchedules.createdBy),
+                            first.get(qSchedules.updatedBy),
+                            first.get(qSchedules.createdTime),
+                            first.get(qSchedules.updatedTime),
+                            group.stream().map(t -> t.get(qAttach.storedFileName)).filter(Objects::nonNull).distinct().toList(),
+                            group.stream().map(t -> t.get(qAttach.id)).filter(Objects::nonNull).distinct().toList()
+                    );
+                }).toList();
+    }
+
+    private List<SchedulesModel> sortByIdOrder(List<SchedulesModel> list, List<Long> orderIds) {
+        Map<Long, Integer> order = new HashMap<>();
+        for (int i = 0; i < orderIds.size(); i++) order.put(orderIds.get(i), i);
+        list.sort(Comparator.comparingInt(m -> order.getOrDefault(m.getId(), Integer.MAX_VALUE)));
+        return list;
     }
 }
 

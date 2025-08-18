@@ -11,6 +11,7 @@ import com.example.service.auth.oauth2.OAuth2AuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -102,6 +103,7 @@ public class SecurityConfig {
                 .addFilterAfter(new MDCFilter(), JwtAuthenticationFilter.class)
                 .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry
                         -> authorizationManagerRequestMatcherRegistry
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 프리플라이트 전부 허용
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/member/**").permitAll()
                         .requestMatchers("/api/notice/**").permitAll()

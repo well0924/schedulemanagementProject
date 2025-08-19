@@ -126,7 +126,7 @@ public class ScheduleOutConnector {
                 .scheduleMonth(model.getScheduleMonth())
                 .startTime(model.getStartTime())
                 .endTime(model.getEndTime())
-                .userId(model.getUserId())
+                .memberId(model.getMemberId())
                 .categoryId(model.getCategoryId())
                 .isDeletedScheduled(false)
                 .progress_status(String.valueOf(model.getProgressStatus()))
@@ -196,7 +196,7 @@ public class ScheduleOutConnector {
         // 3. 시간대 충돌 검사
         if (model.getScheduleType() == ScheduleType.SINGLE_DAY) {
             Long conflictCount = scheduleRepository.countOverlappingSchedules(
-                    model.getUserId(),
+                    model.getMemberId(),
                     model.getStartTime(),
                     model.getEndTime(),
                     model.getId() // 수정이면 자기 자신 제외
@@ -210,7 +210,7 @@ public class ScheduleOutConnector {
 
     public void validateAllDayScheduleConflict(SchedulesModel model) {
         LocalDate date = model.getStartTime().toLocalDate();
-        Long count = scheduleRepository.countAllDayOnDate(model.getUserId(), date);
+        Long count = scheduleRepository.countAllDayOnDate(model.getMemberId(), date);
 
         if (count != null && count > 0) {
             throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_TIME_CONFLICT);
@@ -223,7 +223,7 @@ public class ScheduleOutConnector {
     }
 
     private void validateScheduleData(SchedulesModel model) {
-        if (!memberRepository.existsById(model.getUserId())) {
+        if (!memberRepository.existsById(model.getMemberId())) {
             throw new MemberCustomException(MemberErrorCode.NOT_FIND_USERID);
         }
         if (!categoryRepository.existsById(model.getCategoryId())) {
@@ -250,7 +250,7 @@ public class ScheduleOutConnector {
                 .startTime(schedules.getStartTime())
                 .endTime(schedules.getEndTime())
                 .categoryId(schedules.getCategoryId())
-                .userId(schedules.getUserId())
+                .memberId(schedules.getMemberId())
                 .repeatType(RepeatType.valueOf(schedules.getRepeatType()))//일정 반복 유형
                 .repeatCount(schedules.getRepeatCount())//반복횟수
                 .repeatInterval(schedules.getRepeatInterval())

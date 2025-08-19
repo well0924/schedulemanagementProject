@@ -28,7 +28,7 @@ public class ScheduleRecommendationConnectorImpl implements ScheduleRecommendati
                 .id(schedulesModel.getId())
                 .contents(schedulesModel.getContents())
                 .categoryId(schedulesModel.getCategoryId())
-                .userId(schedulesModel.getUserId())
+                .userId(schedulesModel.getMemberId())
                 .scheduleMonth(schedulesModel.getScheduleMonth())
                 .createdTime(schedulesModel.getCreatedTime())
                 .updatedTime(schedulesModel.getUpdatedTime())

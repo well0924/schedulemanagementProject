@@ -32,7 +32,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
         AND (:startTime < s.endTime AND :endTime > s.startTime)
         AND (:excludeId IS NULL OR s.id != :excludeId)
     """)
-    Long countOverlappingSchedules(@Param("userId") Long userId,
+    Long countOverlappingSchedules(@Param("userId") Long memberId,
                                    @Param("startTime") LocalDateTime startTime,
                                    @Param("endTime") LocalDateTime endTime,
                                    @Param("excludeId") Long excludeId);
@@ -45,7 +45,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
       AND DATE(s.startTime) = :date
       AND s.isDeletedScheduled = false
     """)
-    Long countAllDayOnDate(@Param("userId") Long userId, @Param("date") LocalDate date);
+    Long countAllDayOnDate(@Param("userId") Long memberId, @Param("date") LocalDate date);
 
     //일정 삭제 관련
     @Modifying

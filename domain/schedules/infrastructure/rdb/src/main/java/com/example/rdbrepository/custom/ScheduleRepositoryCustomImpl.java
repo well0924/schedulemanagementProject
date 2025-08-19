@@ -43,7 +43,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qSchedules.scheduleMonth,
                         qSchedules.scheduleDay,
                         qSchedules.isDeletedScheduled,
-                        qSchedules.userId,
+                        qSchedules.memberId,
                         qSchedules.categoryId,
                         qSchedules.progress_status,
                         qSchedules.repeatType,
@@ -76,7 +76,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                             first.get(qSchedules.scheduleDay),
                             first.get(qSchedules.startTime),
                             first.get(qSchedules.endTime),
-                            first.get(qSchedules.userId),
+                            first.get(qSchedules.memberId),
                             first.get(qSchedules.categoryId),
                             first.get(qSchedules.progress_status),
                             first.get(qSchedules.repeatType),
@@ -115,7 +115,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qSchedules.startTime,
                         qSchedules.endTime,
                         qSchedules.progress_status,
-                        qSchedules.userId,
+                        qSchedules.memberId,
                         qSchedules.categoryId,
                         qSchedules.repeatType,
                         qSchedules.repeatCount,
@@ -142,7 +142,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 results.get(0).get(qSchedules.scheduleDay),
                 results.get(0).get(qSchedules.startTime),
                 results.get(0).get(qSchedules.endTime),
-                results.get(0).get(qSchedules.userId),
+                results.get(0).get(qSchedules.memberId),
                 results.get(0).get(qSchedules.categoryId),
                 results.get(0).get(qSchedules.progress_status),
                 results.get(0).get(qSchedules.repeatType),
@@ -179,7 +179,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qSchedules.endTime,
                         qSchedules.scheduleMonth,
                         qSchedules.scheduleDay,
-                        qSchedules.userId,
+                        qSchedules.memberId,
                         qSchedules.categoryId,
                         qSchedules.progress_status,
                         qSchedules.repeatType,
@@ -195,7 +195,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 )
                 .from(qSchedules)
                 .leftJoin(qAttach).on(qSchedules.id.eq(qAttach.scheduledId))
-                .join(qMember).on(qSchedules.userId.eq(qMember.id))
+                .join(qMember).on(qSchedules.memberId.eq(qMember.id))
                 .where(qMember.userId.eq(userId))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -220,7 +220,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         tuple.get(qSchedules.scheduleDay),
                         tuple.get(qSchedules.startTime),
                         tuple.get(qSchedules.endTime),
-                        tuple.get(qSchedules.userId),
+                        tuple.get(qSchedules.memberId),
                         tuple.get(qSchedules.categoryId),
                         tuple.get(qSchedules.progress_status.stringValue()),
                         tuple.get(qSchedules.repeatType.stringValue()),
@@ -251,7 +251,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 queryFactory
                         .select(qSchedules.count())
                         .from(qSchedules)
-                        .join(qMember).on(qSchedules.userId.eq(qMember.id))
+                        .join(qMember).on(qSchedules.memberId.eq(qMember.id))
                         .where(qMember.userId.eq(userId))
                         .fetchOne()
         ).orElse(0L);
@@ -269,7 +269,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qSchedules.scheduleDay,
                         qSchedules.startTime,
                         qSchedules.endTime,
-                        qSchedules.userId,
+                        qSchedules.memberId,
                         qSchedules.categoryId,
                         qSchedules.progress_status.stringValue(),
                         qSchedules.repeatType,
@@ -312,7 +312,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         tuple.get(qSchedules.scheduleDay),
                         tuple.get(qSchedules.startTime),
                         tuple.get(qSchedules.endTime),
-                        tuple.get(qSchedules.userId),
+                        tuple.get(qSchedules.memberId),
                         tuple.get(qSchedules.categoryId),
                         tuple.get(qSchedules.progress_status.stringValue()),
                         tuple.get(qSchedules.repeatType.stringValue()),
@@ -361,7 +361,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qSchedules.scheduleDay,
                         qSchedules.startTime,
                         qSchedules.endTime,
-                        qSchedules.userId,
+                        qSchedules.memberId,
                         qSchedules.categoryId,
                         qSchedules.progress_status.stringValue(),
                         qSchedules.repeatType,
@@ -377,7 +377,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 )
                 .from(qSchedules)
                 .leftJoin(qAttach).on(qSchedules.id.eq(qAttach.scheduledId))
-                .join(qMember).on(qSchedules.userId.eq(qMember.id))
+                .join(qMember).on(qSchedules.memberId.eq(qMember.id))
                 .where(qMember.userId.eq(userId)
                         .and(qSchedules.progress_status.stringValue().eq(progressStatus)))
                 .offset(pageable.getOffset())
@@ -398,7 +398,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                             scheduleTuples.get(0).get(qSchedules.scheduleDay),
                             scheduleTuples.get(0).get(qSchedules.startTime),
                             scheduleTuples.get(0).get(qSchedules.endTime),
-                            scheduleTuples.get(0).get(qSchedules.userId),
+                            scheduleTuples.get(0).get(qSchedules.memberId),
                             scheduleTuples.get(0).get(qSchedules.categoryId),
                             scheduleTuples.get(0).get(qSchedules.progress_status.stringValue()),
                             scheduleTuples.get(0).get(qSchedules.repeatType.stringValue()),
@@ -430,7 +430,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 queryFactory
                         .select(qSchedules.count())
                         .from(qSchedules)
-                        .join(qMember).on(qSchedules.userId.eq(qMember.id))
+                        .join(qMember).on(qSchedules.memberId.eq(qMember.id))
                         .where(qMember.userId.eq(userId)
                                 .and(qSchedules.progress_status.stringValue().eq(progressStatus)))
                         .fetchOne()

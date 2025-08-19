@@ -27,7 +27,7 @@ public class AllRepeatDeleteHandler implements RepeatDeleteHandler {
         guard.validateRepeatDelete(target);
         Long me = SecurityUtil.currentUserId();
         boolean anyNotMine = out.findAfterStartTime(target.getRepeatGroupId(), target.getStartTime())
-                .stream().anyMatch(t -> !me.equals(t.getUserId()));
+                .stream().anyMatch(t -> !me.equals(t.getMemberId()));
         if (anyNotMine) throw guard.notOwner();
         out.markAsDeletedByRepeatGroupId(target.getRepeatGroupId());
     }

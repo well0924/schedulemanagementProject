@@ -37,7 +37,7 @@ public class AllRepeatUpdateHandler implements RepeatUpdateHandler{
 
         Long me = SecurityUtil.currentUserId();
         boolean anyNotMine = out.findAfterStartTime(existing.getRepeatGroupId(), existing.getStartTime())
-                .stream().anyMatch(s -> !me.equals(s.getUserId()));
+                .stream().anyMatch(s -> !me.equals(s.getMemberId()));
         if (anyNotMine) throw guard.notOwner();
 
         out.findAfterStartTime(existing.getRepeatGroupId(), existing.getStartTime()).forEach(target -> {

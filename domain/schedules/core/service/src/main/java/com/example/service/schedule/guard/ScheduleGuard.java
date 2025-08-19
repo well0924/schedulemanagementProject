@@ -29,7 +29,7 @@ public class ScheduleGuard {
     public void assertOwnerOrAdmin(SchedulesModel schedule) {
         if (SecurityUtil.hasRole("ADMIN")) return;
         var me = SecurityUtil.currentUserId();
-        if (!Objects.equals(schedule.getUserId(), me)) {
+        if (!Objects.equals(schedule.getMemberId(), me)) {
             throw new ScheduleCustomException(ScheduleErrorCode.NOT_SCHEDULE_OWNER);
         }
     }

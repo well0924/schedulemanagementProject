@@ -37,7 +37,7 @@ public class AfterThisUpdateHandler implements RepeatUpdateHandler {
 
         Long me = SecurityUtil.currentUserId(); // 타입 맞춰라
         boolean anyNotMine = out.findAfterStartTime(existing.getRepeatGroupId(), existing.getStartTime())
-                .stream().anyMatch(s -> !me.equals(s.getUserId()));
+                .stream().anyMatch(s -> !me.equals(s.getMemberId()));
         if (anyNotMine) throw guard.notOwner();
 
         out.findAfterStartTime(existing.getRepeatGroupId(), existing.getStartTime()).forEach(target -> {

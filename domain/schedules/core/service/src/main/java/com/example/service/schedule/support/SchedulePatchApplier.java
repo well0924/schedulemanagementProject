@@ -14,7 +14,7 @@ public final class SchedulePatchApplier {
                 .startTime(nvl(updates.getStartTime(), existing.getStartTime()))
                 .endTime(nvl(updates.getEndTime(), existing.getEndTime()))
                 .categoryId(nvl(updates.getCategoryId(), existing.getCategoryId()))
-                .userId(existing.getUserId()) // 소유자 불변
+                .memberId(existing.getMemberId()) // 소유자 불변
                 .repeatType(nvl(updates.getRepeatType(), existing.getRepeatType()))
                 .repeatCount(nvl(updates.getRepeatCount(), existing.getRepeatCount()))
                 .repeatInterval(nvl(updates.getRepeatInterval(), existing.getRepeatInterval()))

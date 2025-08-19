@@ -62,7 +62,7 @@ public class ReminderNotificationService {
 
         // 2. 새 알림 등록
         NotificationModel reminder = NotificationModel.builder()
-                .userId(schedule.getUserId())
+                .userId(schedule.getMemberId())
                 .scheduleId(schedule.getId())
                 .message("⏰ " + schedule.getContents() + " 일정이 곧 시작됩니다.")
                 .notificationType(NotificationType.SCHEDULE_REMINDER)

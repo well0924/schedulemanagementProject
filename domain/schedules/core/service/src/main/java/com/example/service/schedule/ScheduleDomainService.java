@@ -183,7 +183,7 @@ public class ScheduleDomainService {
         ScheduleType type = scheduleClassifier.classify(schedule);
         schedule = schedule.toBuilder()
                 .scheduleType(type)
-                .userId(SecurityUtil.currentUserId())
+                .memberId(SecurityUtil.currentUserId())
                 .build();
         log.info(type.name());
         scheduleOutConnector.validateScheduleConflict(schedule);

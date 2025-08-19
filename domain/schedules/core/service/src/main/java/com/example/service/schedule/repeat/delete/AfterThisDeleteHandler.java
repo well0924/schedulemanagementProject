@@ -29,7 +29,7 @@ public class AfterThisDeleteHandler implements RepeatDeleteHandler {
         // 오너 검증: 이후 전부 내 거인지
         Long me = SecurityUtil.currentUserId();
         boolean anyNotMine = out.findAfterStartTime(target.getRepeatGroupId(), target.getStartTime())
-                .stream().anyMatch(t -> !me.equals(t.getUserId()));
+                .stream().anyMatch(t -> !me.equals(t.getMemberId()));
         if (anyNotMine) throw guard.notOwner();
 
         out.markAsDeletedAfter(target.getRepeatGroupId(), target.getStartTime());

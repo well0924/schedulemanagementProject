@@ -19,7 +19,7 @@ public class DomainEventPublisher {
     public void publishScheduleEvent(SchedulesModel model, ScheduleActionType actionType) {
         ScheduleEvents event = ScheduleEvents.builder()
                 .scheduleId(model.getId())
-                .userId(model.getUserId())
+                .userId(model.getMemberId())
                 .contents(model.getContents())
                 .notificationType(actionType)
                 .notificationChannel(NotificationChannel.WEB)

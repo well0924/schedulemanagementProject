@@ -82,7 +82,7 @@ public class ScheduleCRUDTest {
             SchedulesModel saved = req
                     .toBuilder()
                     .id(999L)
-                    .userId(100L)
+                    .memberId(100L)
                     .scheduleType(ScheduleType.SINGLE_DAY)
                     .build();
 
@@ -92,7 +92,7 @@ public class ScheduleCRUDTest {
 
             // then
             assertThat(result.getId()).isEqualTo(999L);
-            assertThat(result.getUserId()).isEqualTo(100L);
+            assertThat(result.getMemberId()).isEqualTo(100L);
             assertThat(result.getScheduleType()).isEqualTo(ScheduleType.SINGLE_DAY);
             verify(out).validateScheduleConflict(any(SchedulesModel.class));
             verify(out).saveSchedule(any(SchedulesModel.class));
@@ -146,7 +146,7 @@ public class ScheduleCRUDTest {
             return arg
                     .toBuilder()
                     .id(idSeq[0]++)
-                    .userId(100L)
+                    .memberId(100L)
                     .scheduleType(ScheduleType.SINGLE_DAY)
                     .build();
                     });
@@ -155,7 +155,7 @@ public class ScheduleCRUDTest {
             SchedulesModel firstSaved = svc.saveSchedule(base);
             // then
             assertThat(firstSaved.getId()).isEqualTo(1L);
-            assertThat(firstSaved.getUserId()).isEqualTo(100L);
+            assertThat(firstSaved.getMemberId()).isEqualTo(100L);
             // 3건 저장 호출 확인
             verify(out, times(3)).saveSchedule(any(SchedulesModel.class));
             // 이벤트 1회(최초 스케줄 기준) 발행 확인
@@ -181,7 +181,7 @@ public class ScheduleCRUDTest {
             when(classifier.classify(any())).thenReturn(ScheduleType.ALL_DAY);
             doNothing().when(out).validateScheduleConflict(any());
             when(out.saveSchedule(any())).thenAnswer(inv -> ((SchedulesModel)inv.getArgument(0))
-                    .toBuilder().id(500L).userId(777L).scheduleType(ScheduleType.ALL_DAY).build());
+                    .toBuilder().id(500L).memberId(777L).scheduleType(ScheduleType.ALL_DAY).build());
 
             when(attach.hasAttachFiles(req)).thenReturn(false);
 
@@ -189,7 +189,7 @@ public class ScheduleCRUDTest {
 
             assertThat(saved.getId()).isEqualTo(500L);
             assertThat(saved.getScheduleType()).isEqualTo(ScheduleType.ALL_DAY);
-            assertThat(saved.getUserId()).isEqualTo(777L);
+            assertThat(saved.getMemberId()).isEqualTo(777L);
 
             verify(events).publishScheduleEvent(saved, ScheduleActionType.SCHEDULE_CREATED);
         }
@@ -201,7 +201,7 @@ public class ScheduleCRUDTest {
         try (MockedStatic<SecurityUtil> mocked = Mockito.mockStatic(SecurityUtil.class)) {
             mocked.when(SecurityUtil::currentUserId).thenReturn(100L);
             SchedulesModel target = SchedulesModel
-                    .builder().id(10L).userId(100L).build();
+                    .builder().id(10L).memberId(100L).build();
 
             when(out.findById(10L)).thenReturn(target);
             doNothing().when(guard).assertOwnerOrAdmin(target);
@@ -227,7 +227,7 @@ public class ScheduleCRUDTest {
             SchedulesModel target = SchedulesModel
                     .builder()
                     .id(20L)
-                    .userId(200L)
+                    .memberId(200L)
                     .repeatGroupId("RG")
                     .build();
 
@@ -257,7 +257,7 @@ public class ScheduleCRUDTest {
             SchedulesModel target = SchedulesModel
                     .builder()
                     .id(30L)
-                    .userId(300L)
+                    .memberId(300L)
                     .repeatGroupId("GRP")
                     .startTime(st)
                     .build();
@@ -283,7 +283,7 @@ public class ScheduleCRUDTest {
             SchedulesModel existing = SchedulesModel
                     .builder()
                     .id(1L)
-                    .userId(100L)
+                    .memberId(100L)
                     .contents("old")
                     .startTime(t(2025,8,22,9,0))
                     .endTime(t(2025,8,22,10,0))
@@ -313,7 +313,7 @@ public class ScheduleCRUDTest {
         SchedulesModel existing = SchedulesModel
                 .builder()
                 .id(2L)
-                .userId(9L)
+                .memberId(9L)
                 .repeatGroupId("G")
                 .startTime(t(2025,8,20,9,0))
                 .endTime(t(2025,8,20,10,0))
@@ -342,7 +342,7 @@ public class ScheduleCRUDTest {
         SchedulesModel existing = SchedulesModel
                 .builder()
                 .id(3L)
-                .userId(9L)
+                .memberId(9L)
                 .repeatGroupId("G2")
                 .startTime(t(2025,8,21,9,0))
                 .endTime(t(2025,8,21,10,0))
@@ -372,7 +372,7 @@ public class ScheduleCRUDTest {
     private static SchedulesModel baseSingle(Long userId, String contents, LocalDateTime start, LocalDateTime end) {
         return SchedulesModel
                 .builder()
-                .userId(userId)
+                .memberId(userId)
                 .contents(contents)
                 .startTime(start)
                 .endTime(end)

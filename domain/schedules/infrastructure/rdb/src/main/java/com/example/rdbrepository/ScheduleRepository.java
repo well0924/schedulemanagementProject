@@ -27,7 +27,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
         FROM 
             Schedules s
         WHERE 
-            s.userId = :userId
+            s.memberId = :userId
         AND s.scheduleType = 'SINGLE_DAY'
         AND (:startTime < s.endTime AND :endTime > s.startTime)
         AND (:excludeId IS NULL OR s.id != :excludeId)
@@ -40,7 +40,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     //당일인지 하루종일인지 확인하는 쿼리.
     @Query("""
     SELECT COUNT(s) FROM Schedules s
-    WHERE s.userId = :userId
+    WHERE s.memberId = :userId
       AND s.isAllDay = true
       AND DATE(s.startTime) = :date
       AND s.isDeletedScheduled = false
@@ -73,14 +73,14 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
         s 
     FROM 
         Schedules s
-    WHERE s.userId = :userId
+    WHERE s.memberId = :userId
       AND s.isDeletedScheduled = false
       AND s.progress_status IN :statusList
       AND s.startTime <= :today
       AND s.endTime >= :today
     """)
     List<Schedules> findTodayActiveSchedules(
-            @Param("userId") Long userId,
+            @Param("userId") Long memberId,
             @Param("today") LocalDateTime today,
             @Param("statusList") List<String> statusList);
 
@@ -94,6 +94,6 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     List<Schedules> findByRepeatGroupIdAndStartTimeAfter(String repeatGroupId,LocalDateTime startTime);
 
     // 선택 일정 삭제시 사용자 번호(userId) 인증
-    @Query(value = "select s.userId from Schedules s where s.id in(:ids) and s.userId = :me")
+    @Query(value = "select s.memberId from Schedules s where s.id in(:ids) and s.memberId = :me")
     List<Long> findOwnedIds(@Param("me") Long me ,@Param("ids") List<Long> ids);
 }

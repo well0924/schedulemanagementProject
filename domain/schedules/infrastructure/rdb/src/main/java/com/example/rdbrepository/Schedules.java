@@ -40,7 +40,7 @@ public class Schedules extends BaseEntity {
 
     private Boolean isDeletedScheduled = false;
     //회원의 번호
-    private Long userId;
+    private Long memberId;
     //카테고리의 번호
     private Long categoryId;
     //일정 상태
@@ -75,7 +75,7 @@ public class Schedules extends BaseEntity {
         this.startTime = model.getStartTime();
         this.endTime = model.getEndTime();
         this.categoryId = model.getCategoryId();
-        this.userId = model.getUserId();
+        this.memberId = model.getMemberId();
         this.repeatType = model.getRepeatType().name();
         this.repeatCount = model.getRepeatCount();
         this.repeatInterval = model.getRepeatInterval();

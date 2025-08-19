@@ -22,7 +22,7 @@ public class SchedulesModel {
     private Integer scheduleMonth;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private Long userId; //회원 번호
+    private Long memberId; //회원 번호
     private Long categoryId; // 카테고리 번호
     private PROGRESS_STATUS progressStatus;
     private boolean isDeletedScheduled;
@@ -45,7 +45,7 @@ public class SchedulesModel {
                           Integer scheduleMonth,
                           LocalDateTime startTime,
                           LocalDateTime endTime,
-                          Long userId,
+                          Long memberId,
                           Long categoryId,
                           String progressStatus,
                           String repeatType,
@@ -65,7 +65,7 @@ public class SchedulesModel {
         this.scheduleDays = scheduleDays;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.userId = userId;
+        this.memberId = memberId;
         this.categoryId = categoryId;
         this.createdBy = createdBy;
         this.updatedBy = updatedBy;

@@ -39,6 +39,8 @@ public class QSchedules extends EntityPathBase<Schedules> {
 
     public final BooleanPath isDeletedScheduled = createBoolean("isDeletedScheduled");
 
+    public final NumberPath<Long> memberId = createNumber("memberId", Long.class);
+
     public final StringPath progress_status = createString("progress_status");
 
     public final NumberPath<Integer> repeatCount = createNumber("repeatCount", Integer.class);
@@ -62,8 +64,6 @@ public class QSchedules extends EntityPathBase<Schedules> {
 
     //inherited
     public final DateTimePath<java.time.LocalDateTime> updatedTime = _super.updatedTime;
-
-    public final NumberPath<Long> userId = createNumber("userId", Long.class);
 
     public QSchedules(String variable) {
         super(Schedules.class, forVariable(variable));

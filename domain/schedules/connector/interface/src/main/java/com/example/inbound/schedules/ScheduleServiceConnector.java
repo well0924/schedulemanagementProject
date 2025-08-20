@@ -3,6 +3,7 @@ package com.example.inbound.schedules;
 import com.example.apimodel.schedule.ScheduleApiModel;
 import com.example.enumerate.schedules.DeleteType;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
+import com.example.enumerate.schedules.RepeatUpdateType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -19,17 +20,17 @@ public interface ScheduleServiceConnector {
 
     List<responseSchedule> findAllDeletedSchedules();
 
-    Page<responseSchedule> getSchedulesByUserId(String userId, Pageable pageable) throws IOException;
+    Page<responseSchedule> getSchedulesByUserId(Pageable pageable) throws IOException;
 
     Page<responseSchedule> getSchedulesByCategoryName(String categoryId,Pageable pageable) throws IOException;
 
-    List<responseSchedule> findByTodaySchedule(Long userId);
+    List<responseSchedule> findByTodaySchedule();
 
     ScheduleApiModel.responseSchedule findById(Long scheduleId) throws IOException;
 
     ScheduleApiModel.responseSchedule saveSchedule(requestSchedule requestSchedule) throws IOException;
 
-    ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId,updateSchedule updateSchedule) throws IOException;
+    ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId, updateSchedule updateSchedule, RepeatUpdateType repeatUpdateType) throws IOException;
 
     ScheduleApiModel.responseScheduleStatus updateScheduleStatus(Long scheduleId, PROGRESS_STATUS progressStatus);
 
@@ -39,5 +40,5 @@ public interface ScheduleServiceConnector {
 
     void deleteSchedules(List<Long> ids);
 
-    Page<responseSchedule> getSchedulesByStatus(String status, String userId,Pageable pageable) throws IOException;
+    Page<responseSchedule> getSchedulesByStatus(String status, Pageable pageable) throws IOException;
 }

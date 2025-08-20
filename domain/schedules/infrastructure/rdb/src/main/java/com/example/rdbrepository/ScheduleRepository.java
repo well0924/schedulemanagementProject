@@ -1,6 +1,5 @@
 package com.example.rdbrepository;
 
-import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.rdbrepository.custom.ScheduleRepositoryCustom;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -33,7 +32,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
         AND (:startTime < s.endTime AND :endTime > s.startTime)
         AND (:excludeId IS NULL OR s.id != :excludeId)
     """)
-    Long countOverlappingSchedules(@Param("userId") Long userId,
+    Long countOverlappingSchedules(@Param("userId") Long memberId,
                                    @Param("startTime") LocalDateTime startTime,
                                    @Param("endTime") LocalDateTime endTime,
                                    @Param("excludeId") Long excludeId);
@@ -46,7 +45,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
       AND DATE(s.startTime) = :date
       AND s.isDeletedScheduled = false
     """)
-    Long countAllDayOnDate(@Param("userId") Long userId, @Param("date") LocalDate date);
+    Long countAllDayOnDate(@Param("userId") Long memberId, @Param("date") LocalDate date);
 
     //일정 삭제 관련
     @Modifying
@@ -81,11 +80,20 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
       AND s.endTime >= :today
     """)
     List<Schedules> findTodayActiveSchedules(
-            @Param("userId") Long userId,
+            @Param("userId") Long memberId,
             @Param("today") LocalDateTime today,
             @Param("statusList") List<String> statusList);
 
     @Modifying
     @Query("UPDATE Schedules s SET s.progress_status = :status WHERE s.id = :scheduleId")
     void updateProgressStatus(@Param("scheduleId") Long scheduleId, @Param("status") String status);
+
+    @Query("select s from Schedules s where s.repeatGroupId = :repeatGroupId")
+    List<Schedules> findByRepeatGroupId(@Param("repeatGroupId") String repeatGroupId);
+
+    List<Schedules> findByRepeatGroupIdAndStartTimeAfter(String repeatGroupId,LocalDateTime startTime);
+
+    // 선택 일정 삭제시 사용자 번호(userId) 인증
+    @Query(value = "select s.memberId from Schedules s where s.id in(:ids) and s.memberId = :me")
+    List<Long> findOwnedIds(@Param("me") Long me ,@Param("ids") List<Long> ids);
 }

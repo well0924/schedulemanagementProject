@@ -14,8 +14,10 @@ import com.example.rdb.CategoryRepository;
 import com.example.rdb.member.MemberRepository;
 import com.example.rdbrepository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ScheduleOutConnector {
@@ -80,6 +83,20 @@ public class ScheduleOutConnector {
                 .orElseThrow(()->new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_EMPTY));
     }
 
+    public List<SchedulesModel> findByRepeatGroupId(String repeatGroupId) {
+        return scheduleRepository.findByRepeatGroupId(repeatGroupId)
+                .stream()
+                .map(this::toModel)
+                .collect(Collectors.toList());
+    }
+
+    public List<SchedulesModel> findAfterStartTime(String repeatGroupId,LocalDateTime startTime) {
+        return scheduleRepository.findByRepeatGroupIdAndStartTimeAfter(repeatGroupId,startTime)
+                .stream()
+                .map(this::toModel)
+                .collect(Collectors.toList());
+    }
+
     //일정 단일 조회 (첨부파일 포함)
     public SchedulesModel findById(Long scheduleId) {
         return Optional.ofNullable(scheduleRepository.findByScheduleId(scheduleId))
@@ -120,44 +137,16 @@ public class ScheduleOutConnector {
                 .isAllDay(model.isAllDay())
                 .scheduleType(String.valueOf(model.getScheduleType()))
                 .build();
-
-        return toModel(scheduleRepository.save(schedules));
+                return toModel(scheduleRepository.save(schedules));
     }
 
     //일정 수정
     public SchedulesModel updateSchedule(Long scheduleId, SchedulesModel model) {
         Schedules schedules = getScheduleById(scheduleId);
-
         validateScheduleData(model);
-
-        LocalDateTime now = LocalDateTime.now();
-        PROGRESS_STATUS newStatus;
-
-        if (model.getEndTime().isBefore(now)) {
-            newStatus = PROGRESS_STATUS.COMPLETE;
-        } else if (model.getStartTime().isBefore(now)) {
-            newStatus = PROGRESS_STATUS.PROGRESS;
-        } else {
-            newStatus = PROGRESS_STATUS.IN_COMPLETE;
-        }
-
-        Schedules updatedSchedules = schedules.toBuilder()
-                .contents(model.getContents())
-                .scheduleDay(model.getScheduleDays())
-                .scheduleMonth(model.getScheduleMonth())
-                .progress_status(newStatus.name())  // 상태 업데이트 반영
-                .startTime(model.getStartTime())
-                .endTime(model.getEndTime())
-                .categoryId(model.getCategoryId())
-                .memberId(model.getMemberId())
-                .repeatType(String.valueOf(model.getRepeatType()))
-                .repeatCount(model.getRepeatCount())
-                .repeatInterval(model.getRepeatInterval())
-                .scheduleType(String.valueOf(model.getScheduleType()))
-                .isAllDay(model.isAllDay())
-                .build();
-
-        return toModel(scheduleRepository.save(updatedSchedules)); // 일정 저장 후 모델 변환
+        model.updateProgressStatus();
+        schedules.updateSchedule(model);
+        return toModel(schedules);
     }
     
     //일정상태 변경
@@ -226,6 +215,11 @@ public class ScheduleOutConnector {
         if (count != null && count > 0) {
             throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_TIME_CONFLICT);
         }
+    }
+
+    // 선택 일정 삭제시 사용자 번호(userId) 인증
+    public List<Long> findOwnedIds(Long me , List<Long> ids) {
+        return scheduleRepository.findOwnedIds(me,ids);
     }
 
     private void validateScheduleData(SchedulesModel model) {

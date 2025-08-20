@@ -3,6 +3,7 @@ package com.example.controller.schedule;
 import com.example.apimodel.schedule.ScheduleApiModel;
 import com.example.enumerate.schedules.DeleteType;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
+import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.inbound.schedules.ScheduleServiceConnectorImpl;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,9 +31,10 @@ public class ScheduleManageController {
         return scheduleServiceConnector.findAllDeletedSchedules();
     }
 
-    @GetMapping("/user/{id}")
-    public Page<ScheduleApiModel.responseSchedule> findAllByUserId(@PathVariable("id")String userId, @PageableDefault Pageable pageable) {
-        return scheduleServiceConnector.getSchedulesByUserId(userId,pageable);
+    @GetMapping("/user")
+    public Page<ScheduleApiModel.responseSchedule> findAllByUserId(@PageableDefault Pageable pageable) {
+        return scheduleServiceConnector.getSchedulesByUserId(pageable);
+
     }
 
     @GetMapping("/category/{category-name}")
@@ -42,14 +44,13 @@ public class ScheduleManageController {
 
     @GetMapping("/status")
     public Page<ScheduleApiModel.responseSchedule> findAllByPRGRESS_STATUS(@RequestParam("status") String progressStatus,
-                                                                           @RequestParam("userId") String userId,
                                                                            @PageableDefault(sort = "id",direction = Sort.Direction.DESC) Pageable pageable) {
-        return scheduleServiceConnector.getSchedulesByStatus(progressStatus,userId,pageable);
+        return scheduleServiceConnector.getSchedulesByStatus(progressStatus,pageable);
     }
 
-    @GetMapping("/today/{id}")
-    public List<ScheduleApiModel.responseSchedule> findByTodaySchedules(@PathVariable("id")Long userId) {
-        return scheduleServiceConnector.findByTodaySchedule(userId);
+    @GetMapping("/today")
+    public List<ScheduleApiModel.responseSchedule> findByTodaySchedules() {
+        return scheduleServiceConnector.findByTodaySchedule();
     }
 
     @GetMapping("/{id}")
@@ -64,8 +65,10 @@ public class ScheduleManageController {
     }
 
     @PatchMapping("/{id}")
-    public ScheduleApiModel.responseSchedule updateSchedule(@PathVariable("id")Long scheduleId,@Validated @RequestBody ScheduleApiModel.updateSchedule updateSchedule) {
-        return scheduleServiceConnector.updateSchedule(scheduleId,updateSchedule);
+    public ScheduleApiModel.responseSchedule updateSchedule(@PathVariable("id")Long scheduleId,
+                                                            @RequestParam(name = "type", defaultValue = "SINGLE") RepeatUpdateType repeatUpdateType,
+                                                            @Validated @RequestBody ScheduleApiModel.updateSchedule updateSchedule) {
+        return scheduleServiceConnector.updateSchedule(scheduleId,updateSchedule,repeatUpdateType);
     }
 
     @PatchMapping("/status/{id}")

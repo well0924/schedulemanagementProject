@@ -10,6 +10,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@ToString
 @Getter
 @Builder(toBuilder = true)
 @NoArgsConstructor
@@ -150,4 +151,11 @@ public class SchedulesModel {
                 .build();
     }
 
+    @Override
+    public String toString() {
+        return "SchedulesModel{" +
+                "attachThumbNailImagePath=" + attachThumbNailImagePath +
+                ", attachIds=" + attachIds +
+        '}';
+    }
 }

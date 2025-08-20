@@ -1,5 +1,6 @@
 dependencies {
     implementation project(':domain:schedules:connector:in-bound')
+    implementation project(':domain:schedules:connector:out-bound:open-ai')
     implementation project(':domain:schedules:api:api-model')
     implementation project(':domain:schedules:connector:interface')
     implementation project(':domain:schedules:core:enumerate')

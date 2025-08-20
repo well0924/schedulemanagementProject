@@ -21,7 +21,7 @@ public class ScheduleRecommendController {
 
     @GetMapping("/recommend")
     public List<ScheduleApiModel.responseSchedule> recommend(@RequestParam(name = "userId") String userId, @PageableDefault Pageable pageable) throws Exception {
-        List<ScheduleApiModel.responseSchedule> result = scheduleRecommendationConnector.recommend(userId, pageable);
+        List<ScheduleApiModel.responseSchedule> result = scheduleRecommendationConnector.recommend(userId, pageable).block();
         return result;
     }
 }

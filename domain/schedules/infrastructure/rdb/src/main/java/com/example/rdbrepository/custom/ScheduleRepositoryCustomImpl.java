@@ -243,6 +243,7 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
 
         List<SchedulesModel> scheduleList = sortByIdOrder(mapTuples(results), pageIds);
 
+
         Long total = Optional.ofNullable(
                 queryFactory
                         .select(qSchedules.count())

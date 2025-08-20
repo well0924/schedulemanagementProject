@@ -11,11 +11,8 @@ dependencies {
     implementation project(':domain:member:infrastructure:rdb')
     implementation project(':domain:member:core:exception')
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    //open-feign
-    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
     // Resilience4j 서킷 브레이커 + Feign 연동
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
-    implementation 'io.github.resilience4j:resilience4j-feign'
     implementation 'io.github.resilience4j:resilience4j-timelimiter'
     implementation 'io.github.resilience4j:resilience4j-circuitbreaker'
     // (선택) Micrometer 연동 (서킷 상태 모니터링용)

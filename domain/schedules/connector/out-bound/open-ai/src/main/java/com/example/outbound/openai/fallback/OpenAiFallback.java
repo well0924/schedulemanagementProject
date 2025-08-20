@@ -15,7 +15,7 @@ public class OpenAiFallback  {
 
         OpenAiResponse.Choice fallbackChoice = OpenAiResponse.Choice.builder()
                 .index(0)
-                .message(fallbackMsg)
+                .message(null)
                 .finish_reason("fallback")
                 .build();
 

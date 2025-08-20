@@ -82,7 +82,7 @@ public class SchedulesModel {
         this.scheduleType = scheduleType != null ? ScheduleType.valueOf(scheduleType) : ScheduleType.SINGLE_DAY;
     }
 
-    //진행상태 변경
+    //진행상태 업데이트
     public void updateProgressStatus() {
 
         LocalDateTime now = LocalDateTime.now();

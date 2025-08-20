@@ -18,6 +18,7 @@ dependencies {
     implementation project(':domain:notification:connector:interfaces')
     implementation project(':domain:member:core:exception')
     implementation project(':domain:attach:infrastructure:rdb')
+    implementation project(':domain:member:core:service')
     implementation project(':domain:member:infrastructure:rdb')
     implementation project(':domain:category:infrastructure:rdb')
 

@@ -1,13 +1,13 @@
 package com.example.rdbrepository;
 
 import com.example.jpa.config.base.BaseEntity;
+import com.example.model.schedules.SchedulesModel;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 
 @Getter
@@ -16,7 +16,12 @@ import java.time.LocalDateTime;
 @Table(
         name = "schedules",
         indexes = {
-                @Index(name = "idx_schedules_user_time", columnList = "userId, startTime, endTime")
+                // 일정 충돌 인덱스
+                @Index(name = "idx_schedules_user_time", columnList = "userId, startTime, endTime"),
+                // [반복/그룹 조작] repeat_group_id + user_id (+ start_time >= ?)
+                @Index(name = "idx_sched_group_user_start", columnList = "repeat_group_id, user_id, start_time"),
+                // [상태별 조회]
+                @Index(name = "idx_sched_user_status", columnList = "user_id, progress_status")
         }
 )
 @NoArgsConstructor
@@ -60,5 +65,21 @@ public class Schedules extends BaseEntity {
 
     public void isDeletedScheduled() {
         this.isDeletedScheduled = true;
+    }
+
+    public void updateSchedule(SchedulesModel model) {
+        this.contents = model.getContents();
+        this.scheduleDay = model.getScheduleDays();
+        this.scheduleMonth = model.getScheduleMonth();
+        this.progress_status = model.getProgressStatus().name();
+        this.startTime = model.getStartTime();
+        this.endTime = model.getEndTime();
+        this.categoryId = model.getCategoryId();
+        this.memberId = model.getMemberId();
+        this.repeatType = model.getRepeatType().name();
+        this.repeatCount = model.getRepeatCount();
+        this.repeatInterval = model.getRepeatInterval();
+        this.scheduleType = model.getScheduleType().name();
+        this.isAllDay = model.isAllDay();
     }
 }

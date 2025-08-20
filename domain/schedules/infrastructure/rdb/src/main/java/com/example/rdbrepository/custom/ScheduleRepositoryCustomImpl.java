@@ -91,9 +91,9 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 )
                 .from(qSchedules)
                 .leftJoin(qAttach).on(
-                        qSchedules.id.eq(qAttach.scheduledId))
+                        qSchedules.id.eq(qAttach.scheduledId)
+                        .and(qAttach.isDeletedAttach.eq(false)))
                 .where(qSchedules.id.eq(scheduleId))
-                .orderBy(qSchedules.startTime.asc(), qSchedules.id.asc())
                 .fetch();
 
         if (results.isEmpty()) {
@@ -330,11 +330,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         .select(qSchedules.count())
                         .from(qSchedules)
                         .join(qMember).on(qSchedules.memberId.eq(qMember.id))
-                        .where(
-                                qMember.userId.eq(userId),
-                                qSchedules.isDeletedScheduled.eq(false),
-                                qSchedules.progress_status.stringValue().eq(progressStatus)
-                        )
+                        .where(qMember.userId.eq(userId)
+                                .and(qSchedules.progress_status.stringValue().eq(progressStatus)))
                         .fetchOne()
         ).orElse(0L);
 

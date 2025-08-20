@@ -16,7 +16,11 @@ public enum ScheduleErrorCode {
     SCHEDULE_CREATED_FAIL(50020,"일정 생성에 실패를 했습니다."),
     NOT_START_TIME_AND_END_TIME(50021,"시작 시간과 종료 시간이 설정되지 않았습니다."),
     START_TIME_AFTER_END_TIME_EXCEPTION(50022,"시작 시간은 종료 시간보다 이후일 수 없습니다."),
-    INVALID_DELETE_TYPE_FOR_NON_REPEATED(50023,"유효하지 않은 삭제 유형입니다.");
+    INVALID_DELETE_TYPE_FOR_NON_REPEATED(50023,"유효하지 않은 삭제 유형입니다."),
+    NOT_SCHEDULE_OWNER(50024,"현재 사용자가 아닙니다."),
+    INVALID_OWNER_FOR_BULK(50025,"일정선택삭제에 유효하지 않은 사용자입니다."),
+    SCHEDULE_UPDATED_FAIL(50026,"일정 수정에 실패했습니다."),
+    SCHEDULE_DELETE_FAIL(50027,"일정 삭제에 실패했습니다.");
 
     private final int status;
 

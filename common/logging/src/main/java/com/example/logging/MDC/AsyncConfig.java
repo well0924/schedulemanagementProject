@@ -19,8 +19,11 @@ public class AsyncConfig {
         return runnable -> {
             Map<String, String> contextMap = MDC.getCopyOfContextMap();
             return () -> {
+                Map<String, String> backup = MDC.getCopyOfContextMap();
                 if (contextMap != null) MDC.setContextMap(contextMap);
-                runnable.run();
+                if (contextMap != null) MDC.setContextMap(contextMap); else MDC.clear();
+                try { runnable.run(); }
+                finally { if (backup != null) MDC.setContextMap(backup); else MDC.clear();}
             };
         };
     }

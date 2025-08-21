@@ -10,6 +10,7 @@ import com.example.model.attach.AttachModel;
 import com.example.outbound.attach.AttachOutConnector;
 import com.example.s3.utile.FileUtile;
 import com.example.service.attach.AttachService;
+import com.example.service.attach.ThumbnailService;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +43,9 @@ public class AttachUnitTest {
 
     @InjectMocks
     private AttachService attachService;
+
+    @InjectMocks
+    private ThumbnailService thumbnailService;
 
     @Mock
     private AttachOutConnector attachOutConnector;
@@ -112,7 +116,7 @@ public class AttachUnitTest {
                 .thenReturn(new URL("https://dummy-url.com/thumb_test-image.jpg"));
 
         // when
-        CompletableFuture<Void> future = attachService.createAndUploadThumbnail(attachModel);
+        CompletableFuture<Void> future = thumbnailService.createAndUploadThumbnail(attachModel);
         future.join();
 
         // then

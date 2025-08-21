@@ -4,19 +4,16 @@ import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
 import com.example.attach.dto.AttachErrorCode;
 import com.example.attach.exception.AttachCustomExceptionHandler;
 import com.example.model.attach.AttachModel;
 import com.example.outbound.attach.AttachOutConnector;
-import com.example.s3.utile.FileUtile;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +23,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -41,11 +37,13 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class AttachService {
 
+    private final AmazonS3Service amazonS3Service;
+
+    private final ThumbnailService thumbnailService;
+
     private final AttachOutConnector attachOutConnector;
 
     private final AmazonS3 amazonS3;
-
-    private final FileUtile fileUtile;
 
     @Value("${cloud.aws.s3.bucket}")
     private String bucketName;
@@ -87,15 +85,7 @@ public class AttachService {
         List<String> urls = new ArrayList<>();
         for (String fileName : fileNames) {
             String key = "temp/" + fileName;
-            Date expiration = new Date();
-            expiration.setTime(expiration.getTime() + 1000 * 60 * 20); // 20분
-
-            GeneratePresignedUrlRequest generatePresignedUrlRequest =
-                    new GeneratePresignedUrlRequest(bucketName, key)
-                            .withMethod(HttpMethod.PUT)
-                            .withExpiration(expiration);
-
-            URL url = amazonS3.generatePresignedUrl(generatePresignedUrlRequest);
+            URL url = amazonS3Service.generatePresignedUrl(key,HttpMethod.PUT,1000*60*20L);
             urls.add(url.toString());
         }
         return urls;
@@ -131,14 +121,14 @@ public class AttachService {
                 String finalStoredFileName = tempStoredFileName.replaceFirst("^temp/", "final/");
 
                 // 1. temp → final 복사
-                amazonS3.copyObject(bucketName, tempStoredFileName, bucketName, finalStoredFileName);
+                amazonS3Service.copy(tempStoredFileName,finalStoredFileName);
 
                 // 2. temp 삭제
-                amazonS3.deleteObject(bucketName, tempStoredFileName);
+                amazonS3Service.delete(tempStoredFileName);
 
-                String fileUrl = amazonS3.getUrl(bucketName, finalStoredFileName).toString();
-                ObjectMetadata metadata = amazonS3.getObjectMetadata(bucketName, finalStoredFileName);
-                long fileSize = metadata.getContentLength();
+                String fileUrl = amazonS3Service.getFileUrl(finalStoredFileName);
+
+                long fileSize = amazonS3Service.fileSize(finalStoredFileName);
 
                 AttachModel attachModel = AttachModel.builder()
                         .originFileName(finalStoredFileName)
@@ -149,11 +139,20 @@ public class AttachService {
 
                 AttachModel savedAttach = attachOutConnector.createAttach(attachModel);
                 savedAttachModels.add(savedAttach);
+                // 로깅
+                MDC.put("flow", "presigned-complete");
+                MDC.put("storedFile", finalStoredFileName);
+                MDC.put("attachId", String.valueOf(savedAttach.getId()));
 
                 // 비동기로 썸네일 생성
-                CompletableFuture<Void> future = createAndUploadThumbnail(savedAttach);
-                thumbnailFutures.add(future);
-
+                try{
+                    CompletableFuture<Void> future = thumbnailService.createAndUploadThumbnail(savedAttach);
+                    thumbnailFutures.add(future);
+                } finally {
+                    MDC.remove("flow");
+                    MDC.remove("storedFile");
+                    MDC.remove("attachId");
+                }
             } catch (Exception e) {
                 log.error("[파일 업로드 실패] 파일: {}", tempStoredFileName, e);
                 throw new AttachCustomExceptionHandler(AttachErrorCode.S3_OPERATION_FAIL);
@@ -167,81 +166,20 @@ public class AttachService {
         return savedAttachModels;
     }
 
-    //비동기 섬네일 이미지 생성. 비동기 MDC 적용
-    @Timed(value = "s3_thumbnail_generation", description = "썸네일 생성 시간", histogram = true)
-    @Async("threadPoolTaskExecutor")
-    public CompletableFuture<Void> createAndUploadThumbnail(AttachModel attachModel) {
-        try {
-            String fileName = attachModel.getStoredFileName().toLowerCase();
-            // 1. 이미지 파일 여부 체크
-            if (!fileUtile.isSupportedImageExtension(fileName)) {
-                log.info("[섬네일 건너뜀] 이미지 파일 아님: {}", fileName);
-                return CompletableFuture.completedFuture(null);
-            }
-
-            log.info("[썸네일 생성 시작] {}", attachModel.getStoredFileName());
-
-            S3Object s3Object = amazonS3.getObject(bucketName, attachModel.getStoredFileName());
-            InputStream inputStream = s3Object.getObjectContent();
-
-            if (!fileUtile.isSupportedImageExtension(fileName)) {
-                log.info("[섬네일 건너뜀] MIME 타입으로 확인한 결과 이미지 아님: {}", attachModel.getStoredFileName());
-                return CompletableFuture.completedFuture(null);
-            }
-            
-            BufferedImage originalImage = ImageIO.read(inputStream);
-
-            if (originalImage == null) {
-                throw new IllegalArgumentException("썸네일 생성 실패: 유효하지 않은 이미지: " + attachModel.getStoredFileName());
-            }
-
-            ByteArrayOutputStream thumbnailOutputStream = new ByteArrayOutputStream();
-
-            Thumbnails.of(originalImage)
-                    .size(thumbnailWidth, thumbnailHeight)
-                    .outputFormat("jpg")
-                    .toOutputStream(thumbnailOutputStream);
-
-            byte[] thumbnailBytes = thumbnailOutputStream.toByteArray();
-            ByteArrayInputStream thumbnailInputStream = new ByteArrayInputStream(thumbnailBytes);
-
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentLength(thumbnailBytes.length);
-            metadata.setContentType("image/jpeg");
-
-            String thumbnailFileName = "thumb_" + attachModel.getStoredFileName();
-            amazonS3.putObject(bucketName, thumbnailFileName, thumbnailInputStream, metadata);
-
-            String thumbnailUrl = amazonS3.getUrl(bucketName, thumbnailFileName).toString();
-
-            attachModel.setThumbnailFilePath(thumbnailUrl);
-            attachOutConnector.updateAttach(attachModel.getId(), attachModel);
-
-            log.info("[썸네일 업로드 완료] {}", thumbnailUrl);
-
-            CompletableFuture<Void> done = new CompletableFuture<>();
-            done.complete(null);
-            return done;
-        } catch (Exception e) {
-            log.error("[썸네일 생성 실패]", e);
-            throw new AttachCustomExceptionHandler(AttachErrorCode.THUMBNAIL_CREATE_FAIL);
-        }
-    }
-
     //  S3 파일 삭제 (원본 + 썸네일)
     @Transactional
     public void deleteFileFromS3(String storedFileName) {
         try {
-            amazonS3.deleteObject(bucketName, storedFileName);
+            amazonS3Service.delete(storedFileName);
             log.info("[S3 파일 삭제 완료] 원본: {}", storedFileName);
 
             String thumbnailFileName = "thumb_" + storedFileName;
-            amazonS3.deleteObject(bucketName, thumbnailFileName);
+            amazonS3Service.delete(thumbnailFileName);
             log.info("[S3 썸네일 삭제 완료] 썸네일: {}", thumbnailFileName);
 
         } catch (Exception e) {
             log.error("[S3 파일 삭제 실패]", e);
-            throw new RuntimeException("S3 파일 삭제 실패", e);
+            throw new AttachCustomExceptionHandler(AttachErrorCode.S3_DELETE_FAIL);
         }
     }
 

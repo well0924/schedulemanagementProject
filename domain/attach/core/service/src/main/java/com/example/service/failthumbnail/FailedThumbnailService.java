@@ -1,4 +1,4 @@
-package com.example.service.attach;
+package com.example.service.failthumbnail;
 
 import com.example.model.attach.FailedThumbnailModel;
 import com.example.outbound.attach.FailedThumbnailOutConnector;

@@ -1,5 +1,6 @@
 package com.example.service.auth.jwt;
 
+import com.example.model.auth.CustomMemberDetails;
 import com.example.outbound.auth.AuthOutConnector;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
@@ -49,6 +50,7 @@ public class JwtTokenProvider {
 
         String accessToken = Jwts.builder()
                 .setSubject(authentication.getName())
+                .claim("memberId", ((CustomMemberDetails) authentication.getPrincipal()).getMemberModel().getId())
                 .claim("auth", authorities)
                 .setExpiration(accessTokenExpiredTime)
                 .signWith(key, SignatureAlgorithm.HS256)

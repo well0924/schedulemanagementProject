@@ -8,6 +8,9 @@ dependencies {
     implementation project(':domain:notification:api:api-model')
     implementation project(':domain:notification:connector:interfaces')
     implementation project(':domain:notification:connector:out-bound')
+    // web push
+    implementation 'nl.martijndwars:web-push:5.1.1'
+    implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter'

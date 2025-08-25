@@ -67,6 +67,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
 	implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
+	// web push 보안
+	implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
+	implementation 'org.bouncycastle:bcpkix-jdk15on:1.70'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
     // Mockito

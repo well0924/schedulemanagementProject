@@ -1,6 +1,7 @@
 package com.example.inbound.notification;
 
 import com.example.apimodel.notification.NotificationSettingApiModel;
+import com.example.events.enums.NotificationChannel;
 import com.example.interfaces.notification.NotificationSettingInterfaces;
 import com.example.notification.model.NotificationSettingModel;
 import com.example.notification.service.NotificationSettingService;
@@ -21,6 +22,11 @@ public class NotificationSettingInConnector implements NotificationSettingInterf
     @Override
     public void resetToDefault(Long userId) {
         notificationSettingService.resetToDefault(userId);
+    }
+
+    @Override
+    public boolean isEnabled(Long memberId, NotificationChannel channel) {
+        return notificationSettingService.isEnabled(memberId,channel);
     }
 
     private NotificationSettingApiModel.NotificationSettingResponse toModel(NotificationSettingModel model) {

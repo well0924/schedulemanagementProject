@@ -1,6 +1,7 @@
 package com.example.service.schedule;
 
 import com.example.enumerate.schedules.*;
+import com.example.events.enums.NotificationChannel;
 import com.example.events.enums.ScheduleActionType;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
@@ -117,7 +118,9 @@ public class ScheduleDomainService {
         }
         log.info("일정 저장 완료, 이벤트 발행 시도");
         // 이벤트 발행.
-        domainEventPublisher.publishScheduleEvent(firstSchedule,ScheduleActionType.SCHEDULE_CREATED);
+        NotificationChannel channel = domainEventPublisher.resolveChannel(firstSchedule.getMemberId());
+        log.info(channel.toString());
+        domainEventPublisher.publishScheduleEvent(firstSchedule,ScheduleActionType.SCHEDULE_CREATED,channel);
 
         return firstSchedule;
     }
@@ -148,7 +151,8 @@ public class ScheduleDomainService {
         //타입에 따른 일정 삭제
         repeatDeleteRegistry.dispatch(deleteType,target);
         //삭제후 이벤트 발행.
-        domainEventPublisher.publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE);
+        NotificationChannel channel = domainEventPublisher.resolveChannel(target.getMemberId());
+        domainEventPublisher.publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE,channel);
     }
 
     //선택 삭제
@@ -167,7 +171,8 @@ public class ScheduleDomainService {
         // 각 일정마다 이벤트 발행
         for (Long id : ids) {
             SchedulesModel model = scheduleOutConnector.findById(id); // 이벤트 정보용
-            domainEventPublisher.publishScheduleEvent(model,ScheduleActionType.SCHEDULE_DELETE);
+            NotificationChannel channel = domainEventPublisher.resolveChannel(model.getMemberId());
+            domainEventPublisher.publishScheduleEvent(model,ScheduleActionType.SCHEDULE_DELETE,channel);
         }
     }
 

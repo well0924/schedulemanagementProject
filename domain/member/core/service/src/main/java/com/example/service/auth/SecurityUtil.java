@@ -25,7 +25,7 @@ public class SecurityUtil {
         if (auth == null || !(auth.getPrincipal() instanceof CustomMemberDetails d)) {
             throw new AccessDeniedException("인증 필요");
         }
-        return d.getMemberModel().getUserName();
+        return d.getMemberModel().getUserId();
     }
     
     // 로그인한 회원 권한

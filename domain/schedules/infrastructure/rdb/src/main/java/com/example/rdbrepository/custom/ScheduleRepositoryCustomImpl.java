@@ -6,17 +6,19 @@ import com.example.rdb.QAttach;
 import com.example.rdb.QCategory;
 import com.example.rdbrepository.QSchedules;
 import com.querydsl.core.Tuple;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Repository
 public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
 
@@ -34,12 +36,11 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
         this.qMember = QMember.member;
         this.qCategory = QCategory.category;
     }
-
+    
+    // 메인 캘린더에 사용되는 일정 전체 목록
     @Override
     public List<SchedulesModel> findAllSchedule() {
-        LocalDate from = LocalDate.now().withDayOfMonth(1);
-        LocalDate toEx = from.plusMonths(1);
-
+        
         List<Tuple> results = queryFactory
                 .select(
                         qSchedules.id,
@@ -61,7 +62,8 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 )
                 .from(qSchedules)
                 .leftJoin(qAttach)
-                .on(qAttach.scheduledId.eq(qSchedules.id).and(qAttach.isDeletedAttach.eq(false)))
+                .on(qAttach.scheduledId.eq(qSchedules.id)
+                        .and(qAttach.isDeletedAttach.eq(false)))
                 .where(qSchedules.isDeletedScheduled.eq(false))
                 .fetch();
 
@@ -69,8 +71,10 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
 
     }
 
+    // 일정 단일 조회
     @Override
     public SchedulesModel findByScheduleId(Long scheduleId) {
+
         List<Tuple> results = queryFactory
                 .select(
                         qSchedules.id,
@@ -96,46 +100,18 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 .where(qSchedules.id.eq(scheduleId))
                 .fetch();
 
+        // 결과가 없는 경우 `null` 반환
         if (results.isEmpty()) {
-            return null; // 결과가 없는 경우 `null` 반환
+            return null;
         }
-        List<SchedulesModel> list = mapTuples(results);
 
-        return list.get(0);
+        return  mapTuples(results).get(0);
     }
-
+    
+    // 회원 아이디로 일정 목록 조회
     @Override
     public Page<SchedulesModel> findAllByUserId(String userId, Pageable pageable) {
-        // 1) ID만 정확히 페이징
-        List<Long> pageIds = queryFactory
-                .select(qSchedules.id)
-                .from(qSchedules)
-                .join(qMember).on(qSchedules.memberId.eq(qMember.id))
-                .where(
-                        qMember.userId.eq(userId),
-                        qSchedules.isDeletedScheduled.eq(false)
-                )
-                .orderBy(qSchedules.id.desc())
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
-                .fetch();
 
-        if (pageIds.isEmpty()) {
-            Long total0 = Optional.ofNullable(
-                    queryFactory
-                            .select(qSchedules.count())
-                            .from(qSchedules)
-                            .join(qMember).on(qSchedules.memberId.eq(qMember.id))
-                            .where(
-                                    qMember.userId.eq(userId),
-                                    qSchedules.isDeletedScheduled.eq(false)
-                            )
-                            .fetchOne()
-            ).orElse(0L);
-            return new PageImpl<>(Collections.emptyList(), pageable, total0);
-        }
-
-        // 2) IN 조회 + LEFT JOIN(첨부)
         List<Tuple> results = queryFactory
                 .select(
                         qSchedules.id,
@@ -159,61 +135,33 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qAttach.id
                 )
                 .from(qSchedules)
-                .leftJoin(qAttach).on(
+                .leftJoin(qAttach)
+                .on(
                         qSchedules.id.eq(qAttach.scheduledId)
                 )
-                .where(qSchedules.id.in(pageIds),qAttach.isDeletedAttach.eq(false))
+                .where(qSchedules.id.in(
+                        JPAExpressions
+                                .select(qSchedules.id)
+                                .from(qSchedules)
+                                .join(qMember).on(qSchedules.memberId.eq(qMember.id))
+                                .where(
+                                        qMember.userId.eq(userId),
+                                        qSchedules.isDeletedScheduled.isFalse()
+                                )
+                                .orderBy(qSchedules.id.desc())
+                                .limit(pageable.getPageSize())
+                                .offset(pageable.getOffset())
+                ))
                 .fetch();
 
-        List<SchedulesModel> scheduleList = sortByIdOrder(mapTuples(results), pageIds);
+        Long total = countByUserId(userId);
 
-        Long total = Optional.ofNullable(
-                queryFactory
-                        .select(qSchedules.count())
-                        .from(qSchedules)
-                        .join(qMember).on(qSchedules.memberId.eq(qMember.id))
-                        .where(
-                                qMember.userId.eq(userId),
-                                qSchedules.isDeletedScheduled.eq(false)
-                        )
-                        .fetchOne()
-        ).orElse(0L);
-
-        return new PageImpl<>(scheduleList,pageable,total);
+        return new PageImpl<>(mapTuples(results),pageable,total);
     }
 
     @Override
     public Page<SchedulesModel> findAllByCategoryName(String categoryName, Pageable pageable) {
-        // 1) ID 페이징
-        List<Long> pageIds = queryFactory
-                .select(qSchedules.id)
-                .from(qSchedules)
-                .join(qCategory).on(qSchedules.categoryId.eq(qCategory.id))
-                .where(
-                        qCategory.name.eq(categoryName),
-                        qSchedules.isDeletedScheduled.eq(false)
-                )
-                .orderBy(qSchedules.id.desc())
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
-                .fetch();
 
-        if (pageIds.isEmpty()) {
-            Long total0 = Optional.ofNullable(
-                    queryFactory
-                            .select(qSchedules.count())
-                            .from(qSchedules)
-                            .join(qCategory).on(qSchedules.categoryId.eq(qCategory.id))
-                            .where(
-                                    qCategory.name.eq(categoryName),
-                                    qSchedules.isDeletedScheduled.eq(false)
-                            )
-                            .fetchOne()
-            ).orElse(0L);
-            return new PageImpl<>(Collections.emptyList(), pageable, total0);
-        }
-
-        // 2) 본 조회
         List<Tuple> results = queryFactory
                 .select(
                         qSchedules.id,
@@ -238,61 +186,27 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                 )
                 .from(qSchedules)
                 .leftJoin(qAttach).on(qSchedules.id.eq(qAttach.scheduledId))
-                .where(qSchedules.id.in(pageIds))
-                .fetch();
-
-        List<SchedulesModel> scheduleList = sortByIdOrder(mapTuples(results), pageIds);
-
-
-        Long total = Optional.ofNullable(
-                queryFactory
-                        .select(qSchedules.count())
+                .where(qSchedules.id.in(queryFactory
+                        .select(qSchedules.id)
                         .from(qSchedules)
                         .join(qCategory).on(qSchedules.categoryId.eq(qCategory.id))
                         .where(
                                 qCategory.name.eq(categoryName),
                                 qSchedules.isDeletedScheduled.eq(false)
                         )
-                        .fetchOne()
-        ).orElse(0L);
+                        .orderBy(qSchedules.id.desc())
+                        .offset(pageable.getOffset())
+                        .limit(pageable.getPageSize())))
+                .fetch();
 
-        return new PageImpl<>(scheduleList,pageable,total);
+        Long total = countByCategory(categoryName);
+
+        return new PageImpl<>(mapTuples(results),pageable,total);
     }
 
     @Override
     public Page<SchedulesModel> findAllByProgressStatus(String userId, String progressStatus, Pageable pageable) {
-        // 1) ID 페이징
-        List<Long> pageIds = queryFactory
-                .select(qSchedules.id)
-                .from(qSchedules)
-                .join(qMember).on(qSchedules.memberId.eq(qMember.id))
-                .where(
-                        qMember.userId.eq(userId),
-                        qSchedules.isDeletedScheduled.eq(false),
-                        qSchedules.progress_status.stringValue().eq(progressStatus)
-                )
-                .orderBy(qSchedules.id.desc())
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
-                .fetch();
 
-        if (pageIds.isEmpty()) {
-            Long total0 = Optional.ofNullable(
-                    queryFactory
-                            .select(qSchedules.count())
-                            .from(qSchedules)
-                            .join(qMember).on(qSchedules.memberId.eq(qMember.id))
-                            .where(
-                                    qMember.userId.eq(userId),
-                                    qSchedules.isDeletedScheduled.eq(false),
-                                    qSchedules.progress_status.stringValue().eq(progressStatus)
-                            )
-                            .fetchOne()
-            ).orElse(0L);
-            return new PageImpl<>(Collections.emptyList(), pageable, total0);
-        }
-
-        // 2) 본 조회
         List<Tuple> results = queryFactory
                 .select(
                         qSchedules.id,
@@ -320,12 +234,58 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                         qSchedules.id.eq(qAttach.scheduledId)
                                 .and(qAttach.isDeletedAttach.eq(false))
                 )
-                .where(qSchedules.id.in(pageIds))
+                .where(qSchedules.id.in(queryFactory
+                        .select(qSchedules.id)
+                        .from(qSchedules)
+                        .join(qMember).on(qSchedules.memberId.eq(qMember.id))
+                        .where(
+                                qMember.userId.eq(userId),
+                                qSchedules.isDeletedScheduled.eq(false),
+                                qSchedules.progress_status.stringValue().eq(progressStatus)
+                        )
+                        .orderBy(qSchedules.id.desc())
+                        .offset(pageable.getOffset())
+                        .limit(pageable.getPageSize())))
                 .fetch();
 
-        List<SchedulesModel> scheduleList = sortByIdOrder(mapTuples(results), pageIds);
+        Long total = countByPROGRESS_STATUS(progressStatus,userId);
 
-        Long total = Optional.ofNullable(
+        return new PageImpl<>(mapTuples(results),pageable,total);
+    }
+
+    //회원 아이디별 일정 목록 count
+    private Long countByUserId(String userId){
+        return Optional.ofNullable(
+                queryFactory
+                        .select(qSchedules.count())
+                        .from(qSchedules)
+                        .join(qMember).on(qSchedules.memberId.eq(qMember.id))
+                        .where(
+                                qMember.userId.eq(userId),
+                                qSchedules.isDeletedScheduled.eq(false)
+                        )
+                        .fetchOne()
+        ).orElse(0L);
+    }
+
+    //카테고리별 일정목록 갯수
+    private Long countByCategory(String categoryName) {
+        return Optional.ofNullable(
+                queryFactory
+                        .select(qSchedules.count())
+                        .from(qSchedules)
+                        .join(qCategory).on(qSchedules.categoryId.eq(qCategory.id))
+                        .where(
+                                qCategory.name.eq(categoryName),
+                                qSchedules.isDeletedScheduled.eq(false)
+                        )
+                        .fetchOne()
+        ).orElse(0L);
+    }
+
+    // 회원 일정상태별 일정목록 갯수
+    private Long countByPROGRESS_STATUS(String progressStatus,String userId){
+        return Optional.ofNullable(
                 queryFactory
                         .select(qSchedules.count())
                         .from(qSchedules)
@@ -334,8 +294,6 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                                 .and(qSchedules.progress_status.stringValue().eq(progressStatus)))
                         .fetchOne()
         ).orElse(0L);
-
-        return new PageImpl<>(scheduleList,pageable,total);
     }
 
     // 맵핑 로직
@@ -368,13 +326,6 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
                             group.stream().map(t -> t.get(qAttach.id)).filter(Objects::nonNull).distinct().toList()
                     );
                 }).toList();
-    }
-
-    private List<SchedulesModel> sortByIdOrder(List<SchedulesModel> list, List<Long> orderIds) {
-        Map<Long, Integer> order = new HashMap<>();
-        for (int i = 0; i < orderIds.size(); i++) order.put(orderIds.get(i), i);
-        list.sort(Comparator.comparingInt(m -> order.getOrDefault(m.getId(), Integer.MAX_VALUE)));
-        return list;
     }
 }
 

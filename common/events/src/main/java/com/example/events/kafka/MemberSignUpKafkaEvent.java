@@ -10,11 +10,16 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class MemberSignUpKafkaEvent {
     private Long receiverId;
+    private String eventId;
     private String username;
     private String email;
     private String message;
     private String notificationType;
     private LocalDateTime createdTime;
+
+    public void setEventId(String eventId) {
+        this.eventId = eventId;
+    }
 
     public static MemberSignUpKafkaEvent of(Long receiverId, String username, String email) {
         return MemberSignUpKafkaEvent

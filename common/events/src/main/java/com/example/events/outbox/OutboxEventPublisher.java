@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -31,6 +32,7 @@ public class OutboxEventPublisher {
     @Counted(value = "outbox.publish.count", description = "Outbox Kafka 발행 실행 횟수")
     @Scheduled(fixedDelay = 3000) //3초마다 실행
     @SchedulerLock(name = "OutboxPublisherLock", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
+    @Transactional
     public void publishOutboxEvents() {
         List<OutboxEventEntity> events = repository.findTop100BySentFalseOrderByCreatedAtAsc();
 
@@ -39,7 +41,18 @@ public class OutboxEventPublisher {
                 String topic = event.resolveTopic();
                 log.info(topic);
                 Object payload = objectMapper.readValue(event.getPayload(), resolveEventClass(event));
-                kafkaTemplate.send(topic, payload);
+                // eventId 에 따라 분기처리
+                if (payload instanceof NotificationEvents notificationEvent) {
+                    if (notificationEvent.getEventId() == null) { // Outbox PK → eventId
+                        notificationEvent.setEventId(event.getId());
+                    }
+                    kafkaTemplate.send(topic, notificationEvent);
+                } else if (payload instanceof MemberSignUpKafkaEvent signUpEvent) {
+                    if(signUpEvent.getEventId() == null) {
+                        signUpEvent.setEventId(event.getId()); // Outbox PK → eventId
+                    }
+                    kafkaTemplate.send(topic, signUpEvent);
+                }
                 event.markSent();
                 log.info("Kafka 발행 성공 - type={}, id={}", event.getEventType(), event.getAggregateId());
             } catch (Exception e) {

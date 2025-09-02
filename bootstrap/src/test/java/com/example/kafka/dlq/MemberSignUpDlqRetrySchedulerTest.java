@@ -1,4 +1,4 @@
-package com.example.inbound.consumer.member;
+package com.example.kafka.dlq;
 
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.logging.MDC.KafkaMDCUtil;
@@ -6,10 +6,11 @@ import com.example.notification.model.FailMessageModel;
 import com.example.notification.service.FailedMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.annotation.Timed;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.context.TestComponent;
 import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -18,18 +19,27 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Slf4j
+@Profile("test")
 @Component
-@AllArgsConstructor
-public class MemberSignUpDlqRetryScheduler {
+public class MemberSignUpDlqRetrySchedulerTest {
 
     private final FailedMessageService failedService;
-    @Qualifier("memberKafkaTemplate")
+
     private final KafkaTemplate<String, MemberSignUpKafkaEvent> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private static final int MAX_RETRY_COUNT = 5;
     public static int EXECUTION_COUNT = 0;
 
-    @Timed(value = "kafka.dlq.signup.retry.duration", description = "회원가입 DLQ 재처리 시간")
+    public MemberSignUpDlqRetrySchedulerTest(
+            FailedMessageService failedService,
+            @Qualifier("testMemberKafkaTemplate") KafkaTemplate<String, MemberSignUpKafkaEvent> kafkaTemplate,
+            ObjectMapper objectMapper
+    ) {
+        this.failedService = failedService;
+        this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
+    }
+
     @Scheduled(fixedDelay = 10 * 60 * 1000)
     @SchedulerLock(name = "retryMemberSignUpDlq", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
     public void retryMemberSignUps() {

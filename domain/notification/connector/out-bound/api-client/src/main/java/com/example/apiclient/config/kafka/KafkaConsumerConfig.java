@@ -5,6 +5,7 @@ import com.example.events.kafka.NotificationEvents;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +21,7 @@ import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
+
 
 @Configuration
 public class KafkaConsumerConfig {
@@ -79,7 +81,7 @@ public class KafkaConsumerConfig {
     // dlq 설정
     @Bean(name = "notificationKafkaListenerFactory")
     public ConcurrentKafkaListenerContainerFactory<String, NotificationEvents> notificationKafkaListenerFactory(
-            KafkaTemplate<String, NotificationEvents> kafkaTemplate
+            @Qualifier("notificationKafkaTemplate") KafkaTemplate<String, NotificationEvents> kafkaTemplate
     ) {
         ConcurrentKafkaListenerContainerFactory<String, NotificationEvents> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
@@ -100,7 +102,7 @@ public class KafkaConsumerConfig {
 
     @Bean(name = "memberKafkaListenerFactory")
     public ConcurrentKafkaListenerContainerFactory<String, MemberSignUpKafkaEvent> memberKafkaListenerFactory(
-            KafkaTemplate<String, MemberSignUpKafkaEvent> kafkaTemplate
+            @Qualifier("memberKafkaTemplate") KafkaTemplate<String, MemberSignUpKafkaEvent> kafkaTemplate
     ) {
         ConcurrentKafkaListenerContainerFactory<String, MemberSignUpKafkaEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();

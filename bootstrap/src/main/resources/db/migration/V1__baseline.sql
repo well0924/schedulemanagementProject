@@ -111,14 +111,15 @@ CREATE TABLE IF NOT EXISTS failed_message (
  id BIGINT AUTO_INCREMENT PRIMARY KEY,
  topic VARCHAR(255),
  message_type VARCHAR(255),
- payload VARCHAR(2000) UNIQUE,
+ payload VARCHAR(2000),
  retry_count INT,
  resolved BOOLEAN DEFAULT FALSE,
  dead BOOLEAN DEFAULT FALSE,
  exception_message VARCHAR(2000),
  last_tried_at TIMESTAMP,
  resolved_at TIMESTAMP,
- created_at TIMESTAMP
+ created_at TIMESTAMP,
+ UNIQUE KEY uk_failed_message_payload (payload(255))
 );
 
 -- ===================== FAILED_THUMBNAIL =====================

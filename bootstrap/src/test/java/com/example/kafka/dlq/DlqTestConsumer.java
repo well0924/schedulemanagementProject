@@ -6,6 +6,7 @@ import com.example.notification.model.FailMessageModel;
 import com.example.notification.service.FailedMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
+import org.springframework.boot.test.context.TestComponent;
 import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -29,7 +30,7 @@ public class DlqTestConsumer {
 
     @KafkaListener(topics = "member-signup-events.DLQ",
             groupId ="test-member-signup-group",
-            containerFactory = "memberKafkaListenerFactory")
+            containerFactory = "testMemberKafkaListenerFactory")
     public void consumeDlq(MemberSignUpKafkaEvent event) {
 
         MemberDlqMessages.add(event);
@@ -56,7 +57,7 @@ public class DlqTestConsumer {
 
     @KafkaListener(topics = "notification-events.DLQ",
             groupId = "test-notification-group",
-            containerFactory = "notificationKafkaListenerFactory")
+            containerFactory = "testNotificationKafkaListenerFactory")
     public void consumeDlq(NotificationEvents event) {
 
         NotificationDlqMessage.add(event);

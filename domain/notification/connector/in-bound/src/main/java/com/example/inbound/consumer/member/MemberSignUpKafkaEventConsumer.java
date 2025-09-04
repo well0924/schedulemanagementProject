@@ -1,6 +1,9 @@
 package com.example.inbound.consumer.member;
 
 import com.example.events.kafka.MemberSignUpKafkaEvent;
+import com.example.events.process.ProcessedEventService;
+import com.example.exception.dto.ErrorCode;
+import com.example.exception.global.CustomExceptionHandler;
 import com.example.interfaces.notification.kafka.KafkaEventConsumer;
 import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.NotificationType;
@@ -13,6 +16,7 @@ import io.micrometer.core.annotation.Counted;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
@@ -27,6 +31,8 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
     private final EmailService emailService;
 
     private final NotificationService notificationService;
+
+    private final ProcessedEventService processedEventService;
 
     private final SimpMessagingTemplate simpMessagingTemplate;
 
@@ -43,6 +49,12 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
     public void handle(MemberSignUpKafkaEvent event) {
         try {
             KafkaMDCUtil.initMDC(event);
+
+            if (processedEventService.isAlreadyProcessed(event.getEventId())) {
+                log.info("⚠️ 이미 처리된 이벤트 무시: {}", event.getEventId());
+                throw new CustomExceptionHandler("중복 이벤트 처리됨: " + event.getEventId(),
+                        ErrorCode.EVENT_DUPLICATE);
+            }
             // 1. 이메일 발송 (실패해도 서비스 진행은 계속)
             try {
                 emailService.sendHtmlEmail(
@@ -62,11 +74,17 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
                     .convertAndSend("/topic/memberSignUp/" +
                             event.getReceiverId(),
                     message);
+            // 이벤트 저장
+            processedEventService.saveProcessedEvent(event.getEventId());
+        } catch (CustomExceptionHandler ex) {
+            // 재처리 불필요 → 여기서 끝
+            log.warn("[Kafka Non-Retry Error] code={}, msg={}",
+                    ex.getErrorCode(), ex.getMessage());
         } catch(JsonProcessingException e) {
             log.error("Kafka 메시지 직렬화 오류: {}", e.getMessage());
+            throw new CustomExceptionHandler("이벤트 직렬화 실패: " + event.getEventId(), ErrorCode.EVENT_SERIALIZATION_ERROR);
         } catch (Exception e) {
-            // DLQ 전송을 위해 RuntimeException 으로 감싸서 throw
-            throw new RuntimeException("Kafka Consumer 실패 → DLQ로 전송", e);
+            log.error("WebSocket 전송 실패 (DLQ 안 보냄)", e);
         } finally {
             KafkaMDCUtil.clear();
         }

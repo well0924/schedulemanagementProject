@@ -13,6 +13,8 @@ public class KafkaMDCUtil {
             MDC.put("receiverId", String.valueOf(event.getReceiverId()));
         if (event.getNotificationType() != null)
             MDC.put("notificationType", event.getNotificationType().name());
+        if (event.getEventId() != null)
+            MDC.put("eventId", event.getEventId());
         MDC.put("requestId", UUID.randomUUID().toString());
     }
 
@@ -21,6 +23,8 @@ public class KafkaMDCUtil {
             MDC.put("receiverId", String.valueOf(event.getReceiverId()));
         if (event.getEmail() != null)
             MDC.put("email", event.getEmail());
+        if (event.getEventId() != null)
+            MDC.put("eventId", event.getEventId());
         MDC.put("requestId", UUID.randomUUID().toString());
     }
 

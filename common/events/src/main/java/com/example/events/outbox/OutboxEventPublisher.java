@@ -1,5 +1,6 @@
 package com.example.events.outbox;
 
+import com.example.events.kafka.BaseKafkaEvent;
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.events.kafka.NotificationEvents;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,7 +13,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 
 @Slf4j
@@ -36,19 +39,82 @@ public class OutboxEventPublisher {
 
         for (OutboxEventEntity event : events) {
             try {
-                String topic = event.resolveTopic();
-                log.info(topic);
-                Object payload = objectMapper.readValue(event.getPayload(), resolveEventClass(event));
-                kafkaTemplate.send(topic, payload);
-                event.markSent();
-                log.info("Kafka 발행 성공 - type={}, id={}", event.getEventType(), event.getAggregateId());
+                publishSingleEvent(event);
             } catch (Exception e) {
                 event.increaseRetryCount();
                 log.error("Kafka 발행 실패 - id={}, error={}", event.getId(), e.getMessage());
                 // 실패하면 그대로 두면 됨 → 재시도됨
             }
         }
-        repository.saveAll(events); // 전송 상태 반영
+        updateEvents(events); // 전송 상태 반영
+    }
+
+    // 이벤트를 Kafka로 발행한다.
+    private void publishSingleEvent(OutboxEventEntity event) throws IOException {
+        String topic = event.resolveTopic();
+        Object payload = objectMapper.readValue(event.getPayload(), resolveEventClass(event));
+
+        // eventId 주입 (Outbox PK → Kafka eventId)
+        if (payload instanceof BaseKafkaEvent baseEvent && baseEvent.getEventId() == null) {
+            baseEvent.setEventId(event.getId());
+        }
+
+        kafkaTemplate.send(topic, payload)
+                .whenComplete((result, ex) -> {
+            if (ex == null) {
+                // sent를 true로 변경
+                event.markSent();
+                log.info("Kafka 발행 성공 - topic={}, partition={}, offset={}, eventId={}",
+                        result.getRecordMetadata().topic(),
+                        result.getRecordMetadata().partition(),
+                        result.getRecordMetadata().offset(),
+                        event.getId());
+            } else {
+                // 재시도 횟수 증가
+                event.increaseRetryCount();
+                log.error("Kafka 발행 실패 - topic={}, eventId={}, error={}",
+                        topic, event.getId(), ex.getMessage(), ex);
+            }
+        });
+    }
+
+    // Outbox 이벤트 상태를 DB에 반영한다.
+    // 5회 이상 실패를 하면 sent=false → DLQ 토픽으로 이동
+    // DLQ 전송 성공 시 Outbox에서 삭제하여 중복 발행 방지
+    @Transactional
+    public void updateEvents(List<OutboxEventEntity> events) {
+        for (OutboxEventEntity event : events) {
+            if (event.getRetryCount() > 5 && !event.getSent()) {
+                try {
+                    // DLQ 토픽 이름 결정
+                    String dlqTopic = resolveDlqTopic(event);
+                    // 원래 payload 그대로 DLQ 토픽으로 전송 (비동기 callback 처리)
+                    kafkaTemplate.send(dlqTopic, event.getId().toString(), event.getPayload())
+                            .whenComplete((result, ex) -> {
+                                if (ex == null) {
+                                    log.warn("DLQ 전송 성공 - eventId={}, type={}, dlqTopic={}",
+                                            event.getId(), event.getEventType(), dlqTopic);
+                                } else {
+                                    log.error("DLQ 전송 실패 - eventId={}, dlqTopic={}, error={}",
+                                            event.getId(), dlqTopic, ex.getMessage(), ex);
+                                }
+                            });
+                    // Outbox에서는 삭제해서 중복 발행 방지
+                    repository.delete(event);
+                } catch (Exception e) {
+                    log.error("DLQ 처리 중 예외 발생 - eventId={}, error={}", event.getId(), e.getMessage(), e);
+                }
+            }
+        }
+        repository.saveAll(events);
+    }
+
+    private String resolveDlqTopic(OutboxEventEntity event) {
+        return switch (event.getAggregateType()) {
+            case "MEMBER" -> "member-signup-events.DLQ";
+            case "SCHEDULE" -> "notification-events.DLQ";
+            default -> throw new IllegalArgumentException("지원하지 않는 AggregateType: " + event.getAggregateType());
+        };
     }
 
     private Class<?> resolveEventClass(OutboxEventEntity event) {

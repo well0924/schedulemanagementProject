@@ -10,9 +10,11 @@ import com.example.events.kafka.NotificationEvents;
 import com.example.events.outbox.OutboxEventPublisher;
 import com.example.events.outbox.OutboxEventRepository;
 import com.example.events.outbox.OutboxEventService;
-import com.example.inbound.consumer.member.MemberSignUpDlqRetryScheduler;
-import com.example.inbound.consumer.schedule.NotificationDlqRetryScheduler;
+import com.example.events.process.ProcessedEventRepository;
+import com.example.events.process.ProcessedEventService;
 import com.example.kafka.dlq.DlqTestConsumer;
+import com.example.kafka.dlq.MemberSignUpDlqRetryTestScheduler;
+import com.example.kafka.dlq.NotificationDlqRetryTestScheduler;
 import com.example.model.member.MemberModel;
 import com.example.notification.model.NotificationSettingModel;
 import com.example.notification.service.FailedMessageService;
@@ -20,8 +22,6 @@ import com.example.notification.service.NotificationService;
 import com.example.notification.service.NotificationSettingService;
 import com.example.notification.NotificationType;
 import com.example.notification.model.NotificationModel;
-import com.example.notification.service.FailedMessageService;
-import com.example.notification.service.NotificationService;
 import com.example.notification.service.ReminderNotificationService;
 import com.example.outbound.notification.NotificationOutConnector;
 import com.example.service.member.MemberService;
@@ -42,14 +42,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.util.backoff.FixedBackOff;
@@ -63,13 +67,16 @@ import org.testcontainers.utility.DockerImageName;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(KafkaIntegrationTest.KafkaTestConfig.class)
+@ContextConfiguration(classes = {KafkaIntegrationTest.KafkaTestConfig.class})
 @Testcontainers
 public class KafkaIntegrationTest {
 
@@ -96,9 +103,11 @@ public class KafkaIntegrationTest {
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
     }
 
+    @Qualifier("testMemberKafkaTemplate")
     @Autowired
     KafkaTemplate<String, MemberSignUpKafkaEvent> kafkaTemplate;
 
+    @Qualifier("testNotificationKafkaTemplate")
     @Autowired
     KafkaTemplate<String, NotificationEvents> scheduleTemplate;
 
@@ -135,14 +144,20 @@ public class KafkaIntegrationTest {
     @Autowired
     DlqTestConsumer dlqTestConsumer;
 
-    @Autowired
-    MemberSignUpDlqRetryScheduler retryScheduler;
+    @SpyBean
+    NotificationDlqRetryTestScheduler notificationDlqRetryScheduler;
 
-    @Autowired
-    NotificationDlqRetryScheduler notificationDlqRetryScheduler;
+    @SpyBean
+    MemberSignUpDlqRetryTestScheduler retryScheduler;
 
     @Autowired
     FailedMessageService failedMessageService;
+
+    @Autowired
+    ProcessedEventService processedEventService;
+
+    @Autowired
+    ProcessedEventRepository processedEventRepository;
 
     @TestConfiguration
     static class KafkaTestConfig {
@@ -153,12 +168,12 @@ public class KafkaIntegrationTest {
             Map<String, Object> config = new HashMap<>();
             config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
             config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-            config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, org.springframework.kafka.support.serializer.JsonSerializer.class);
-            config.put(org.springframework.kafka.support.serializer.JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+            config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+            config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
             return new DefaultKafkaProducerFactory<>(config);
         }
 
-        @Bean
+        @Bean(name = "testMemberKafkaTemplate")
         @Primary
         public KafkaTemplate<String, MemberSignUpKafkaEvent> memberKafkaTemplate(
                 ProducerFactory<String, MemberSignUpKafkaEvent> pf) {
@@ -166,14 +181,14 @@ public class KafkaIntegrationTest {
         }
 
         @Bean
-        public DefaultErrorHandler errorHandler(KafkaTemplate<String,MemberSignUpKafkaEvent> template) {
+        public DefaultErrorHandler errorHandler(@Qualifier("testMemberKafkaTemplate") KafkaTemplate<String,MemberSignUpKafkaEvent> template) {
             var recovered = new DeadLetterPublishingRecoverer(template,
                     (record, ex) -> new TopicPartition(record.topic() + ".DLQ", record.partition()));
             var backoff = new FixedBackOff(1000L, 1); // 즉시 재시도 1회
             return new DefaultErrorHandler(recovered, backoff);
         }
 
-        @Bean(name = "memberKafkaListenerFactory")
+        @Bean(name = "testMemberKafkaListenerFactory")
         @Primary
         public ConcurrentKafkaListenerContainerFactory<String, MemberSignUpKafkaEvent> memberKafkaListenerFactory() {
             Map<String, Object> props = new HashMap<>();
@@ -204,12 +219,12 @@ public class KafkaIntegrationTest {
             Map<String, Object> config = new HashMap<>();
             config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
             config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-            config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, org.springframework.kafka.support.serializer.JsonSerializer.class);
-            config.put(org.springframework.kafka.support.serializer.JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+            config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+            config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
             return new DefaultKafkaProducerFactory<>(config);
         }
 
-        @Bean
+        @Bean(name = "testNotificationKafkaTemplate")
         public KafkaTemplate<String,NotificationEvents> notificationKafkaTemplate(
                 @Qualifier("notificationEventsProducerFactory")
                 ProducerFactory<String,NotificationEvents> pf) {
@@ -217,14 +232,14 @@ public class KafkaIntegrationTest {
         }
 
         @Bean
-        public DefaultErrorHandler notificationErrorHandler(KafkaTemplate<String, NotificationEvents> template) {
-            var recoverer = new DeadLetterPublishingRecoverer(template,
+        public DefaultErrorHandler notificationErrorHandler(@Qualifier("testNotificationKafkaTemplate") KafkaTemplate<String, NotificationEvents> template) {
+            var recover = new DeadLetterPublishingRecoverer(template,
                     (record, ex) -> new TopicPartition(record.topic() + ".DLQ", record.partition()));
             var backoff = new FixedBackOff(1000L, 1);
-            return new DefaultErrorHandler(recoverer, backoff);
+            return new DefaultErrorHandler(recover, backoff);
         }
 
-        @Bean(name = "notificationKafkaListenerFactory")
+        @Bean(name = "testNotificationKafkaListenerFactory")
         public ConcurrentKafkaListenerContainerFactory<String, NotificationEvents> notificationKafkaListenerFactory() {
             Map<String, Object> props = new HashMap<>();
             props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
@@ -245,6 +260,17 @@ public class KafkaIntegrationTest {
             factory.setConsumerFactory(cf);
             factory.setCommonErrorHandler(notificationErrorHandler(notificationKafkaTemplate(notificationEventsProducerFactory())));
             return factory;
+        }
+
+        // outbox 전용.
+        @Bean(name = "testObjectKafkaTemplate")
+        public KafkaTemplate<String, Object> objectKafkaTemplate() {
+            Map<String, Object> config = new HashMap<>();
+            config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+            config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+            config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+            config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, true); // Outbox 이벤트 직렬화 위해 필요
+            return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(config));
         }
     }
 
@@ -344,6 +370,9 @@ public class KafkaIntegrationTest {
         // 3. 수동으로 재처리 (스케줄러 직접 호출)
         retryScheduler.retryMemberSignUps();
 
+        //스파이를 통해 호출 여부 검증
+        verify(retryScheduler, times(1)).retryMemberSignUps();
+
         // 4. RetryTopicConsumer → 원래 토픽으로 재전송됐는지 확인
         await().atMost(10, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
@@ -426,6 +455,8 @@ public class KafkaIntegrationTest {
         // 3. 재처리 호출
         notificationDlqRetryScheduler.retryNotifications();
 
+        verify(notificationDlqRetryScheduler, times(1)).retryNotifications();
+
         // 4. 재처리된 결과 확인 (알림 DB에 저장되었는지)
         await().atMost(10, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
@@ -455,10 +486,13 @@ public class KafkaIntegrationTest {
         outboxEventPublisher.publishOutboxEvents();
 
         // 4. Outbox 상태 확인
-        var events = outboxEventRepository.findAll();
-        assertThat(events).isNotEmpty();
-        assertThat(events.get(0).getSent()).isTrue();
-        assertThat(events.get(0).getSentAt()).isNotNull();
+        await().atMost(10, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    var events = outboxEventRepository.findAll();
+                    assertThat(events).isNotEmpty();
+                    assertThat(events.get(0).getSent()).isTrue();
+                });
 
         // 5. 알림 저장 확인
         await().atMost(15, TimeUnit.SECONDS)
@@ -494,10 +528,14 @@ public class KafkaIntegrationTest {
         outboxEventPublisher.publishOutboxEvents();
 
         // 4. Outbox 상태 확인
-        var events = outboxEventRepository.findAll();
-        assertThat(events).isNotEmpty();
-        assertThat(events.get(0).getSent()).isTrue();
-        assertThat(events.get(0).getSentAt()).isNotNull();
+        await().atMost(10,TimeUnit.SECONDS)
+                .pollInterval(300, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    var events = outboxEventRepository.findAll();
+                    assertThat(events).isNotEmpty();
+                    assertThat(events.get(0).getSent()).isTrue();
+                    assertThat(events.get(0).getSentAt()).isNotNull();
+                });
 
         // 5. 알림 저장 확인
         await().atMost(10, TimeUnit.SECONDS)
@@ -517,7 +555,7 @@ public class KafkaIntegrationTest {
 
         // 알림 설정을 false로 강제로 저장 (WEB 비활성화)
         notificationSettingService.updateSetting(NotificationSettingModel.builder()
-                .id(userId)
+                .userId(userId)
                 .webEnabled(false)
                 .emailEnabled(false)
                 .pushEnabled(false)
@@ -571,10 +609,14 @@ public class KafkaIntegrationTest {
         outboxEventPublisher.publishOutboxEvents();
 
         // 4. Outbox 상태 확인
-        var events = outboxEventRepository.findAll();
-        assertThat(events).isNotEmpty();
-        assertThat(events.get(0).getSent()).isTrue();
-        assertThat(events.get(0).getSentAt()).isNotNull();
+        await().atMost(10,TimeUnit.SECONDS)
+                .pollInterval(300, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    var events = outboxEventRepository.findAll();
+                    assertThat(events).isNotEmpty();
+                    assertThat(events.get(0).getSent()).isTrue();
+                    assertThat(events.get(0).getSentAt()).isNotNull();
+                });
 
         // 5. Consumer 발송 결과로 알림 저장이 되어있는지 확인
         await().atMost(15, TimeUnit.SECONDS)
@@ -632,10 +674,86 @@ public class KafkaIntegrationTest {
                             .findFirst()
                             .orElseThrow();
 
-                    System.out.println(resultList.stream().collect(Collectors.toList()));
                     boolean sentWrongly = resultList.stream()
                             .anyMatch(n -> n.getMessage().contains("❌") && n.isSent());
                     assertThat(sentWrongly).isFalse();
                 });
     }
+
+    @Test
+    @DisplayName("NotificationEvents 중복 이벤트는 무시되어야 한다")
+    void notificationEventsDuplicateEventShouldBeIgnored() {
+        String eventId = UUID.randomUUID().toString();
+
+        NotificationEvents event1 = NotificationEvents.builder()
+                .receiverId(1000L)
+                .message("중복 이벤트 테스트")
+                .notificationType(ScheduleActionType.SCHEDULE_CREATED)
+                .notificationChannel(NotificationChannel.WEB)
+                .createdTime(LocalDateTime.now())
+                .build();
+
+        event1.setEventId(eventId);
+
+        NotificationEvents event2 = NotificationEvents.builder()
+                .receiverId(1000L)
+                .message("중복 이벤트 테스트")
+                .notificationType(ScheduleActionType.SCHEDULE_CREATED)
+                .notificationChannel(NotificationChannel.WEB)
+                .createdTime(LocalDateTime.now())
+                .build();
+
+        event2.setEventId(eventId);
+
+        // 동일 이벤트 2번 발행
+        scheduleTemplate.send("notification-events", event1);
+        scheduleTemplate.send("notification-events", event2);
+
+        await().atMost(10, TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    var result = notificationService.getNotificationsByUserId(1000L);
+                    assertThat(result).hasSize(1); // 중복 저장 금지
+                    assertThat(result.get(0).getMessage()).contains("중복 이벤트 테스트");
+                });
+    }
+
+    @Test
+    @DisplayName("MemberSignUp 이벤트 중복은 무시되어야 한다")
+    void memberSignUpDuplicateEventShouldBeIgnored() {
+        String eventId = UUID.randomUUID().toString();
+
+        MemberSignUpKafkaEvent event1 = MemberSignUpKafkaEvent.builder()
+                .receiverId(2000L)
+                .username("dupUser")
+                .email("dup@test.com")
+                .message("🎉 환영합니다, dupUser님! 회원가입이 완료되었습니다.")
+                .notificationType("SIGN_UP")
+                .createdTime(LocalDateTime.now())
+                .build();
+
+        event1.setEventId(eventId);
+
+        MemberSignUpKafkaEvent event2 = MemberSignUpKafkaEvent.builder()
+                .receiverId(2000L)
+                .username("dupUser")
+                .email("dup@test.com")
+                .message("🎉 환영합니다, dupUser님! 회원가입이 완료되었습니다.")
+                .notificationType("SIGN_UP")
+                .createdTime(LocalDateTime.now())
+                .build();
+
+        event2.setEventId(eventId);
+
+        kafkaTemplate.send("member-signup-events", event1);
+        kafkaTemplate.send("member-signup-events", event2);
+
+        await().atMost(10, TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    var result = notificationService.getNotificationsByUserId(2000L);
+                    assertThat(result).hasSize(1); // 중복 insert 차단
+                    assertThat(result.get(0).getMessage()).contains("🎉 환영합니다, dupUser님! 회원가입이 완료되었습니다.");
+                });
+    }
+
+
 }

@@ -8,12 +8,12 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MemberSignUpKafkaEvent {
+public class MemberSignUpKafkaEvent extends BaseKafkaEvent {
     private Long receiverId;
     private String username;
     private String email;
     private String message;
-    private String notificationType;
+    private String notificationType;// SIGN_UP
     private LocalDateTime createdTime;
 
     public static MemberSignUpKafkaEvent of(Long receiverId, String username, String email) {

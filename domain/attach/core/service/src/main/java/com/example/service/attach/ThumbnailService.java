@@ -27,7 +27,7 @@ import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
-@Service
+@Service("attachFailedThumbnailService")
 @Transactional
 @RequiredArgsConstructor
 public class ThumbnailService {

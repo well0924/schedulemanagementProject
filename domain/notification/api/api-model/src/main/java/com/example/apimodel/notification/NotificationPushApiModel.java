@@ -1,6 +1,7 @@
 package com.example.apimodel.notification;
 
 import lombok.Builder;
+import org.springframework.cglib.core.Local;
 
 import java.time.LocalDateTime;
 
@@ -22,7 +23,7 @@ public class NotificationPushApiModel {
             String endpoint,
             String p256dh,
             String auth,
-            Long expirationTime, // millis nullable
+            LocalDateTime expirationTime, // millis nullable
             String userAgent,
             boolean active,
             LocalDateTime createdAt,

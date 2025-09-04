@@ -47,8 +47,7 @@ public class NotificationDlqRetryScheduler {
 
             if(entity.getRetryCount() >= MAX_RETRY_COUNT) {
                 log.warn("재시도 초과 - id={}, payload={}", entity.getId(), entity.getPayload());
-                entity.setDead();
-                entity.setLastTriedAt();
+                entity.markAsDead();
                 failedMessageService.updateFailMessage(entity);
                 continue;
             }
@@ -61,15 +60,10 @@ public class NotificationDlqRetryScheduler {
                 kafkaTemplate.send(retryTopic, event);
                 log.info("재시도 메시지 전송: retryCount={}, topic={}", entity.getRetryCount(), retryTopic);
                 // resolved를 true로 변환
-                entity.setResolved();
-                entity.setLastTriedAt();// dlq처리한 일자
-                entity.setMessageType(event.getNotificationType().name()); //message Type
-                entity.setResolvedAt();
+                entity.resolveSuccess(event.getNotificationType().name());
                 log.info("DLQ 재처리 성공 - notification: id={}", entity.getId());
             } catch (Exception ex) {
-                entity.setIncresementRetryCount();
-                entity.setLastTriedAt();
-                entity.setExceptionMessage(ex.getMessage());
+                entity.resolveFailure(ex);
                 log.warn("DLQ 재처리 실패 - notification: id={}, reason={}", entity.getId(), ex.getMessage());
             } finally {
                 KafkaMDCUtil.clear();

@@ -12,20 +12,15 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class NotificationEvents {
+public class NotificationEvents extends BaseKafkaEvent{
     private Long receiverId; // memberId 회원 번호
     private Long scheduleId; //일정 번호
-    private String eventId; // outbox 의 pk
     private String message;
-    private ScheduleActionType notificationType;
+    private ScheduleActionType notificationType;// 일정 유형
     private NotificationChannel notificationChannel;
     private boolean forceSend; // dlq 적용시 강제 적용.
     private LocalDateTime scheduleAt;
     private LocalDateTime createdTime;
-
-    public void setEventId(String eventId) {
-        this.eventId = eventId;
-    }
 
     public void setForceSend(boolean forceSend) {
         this.forceSend = forceSend;

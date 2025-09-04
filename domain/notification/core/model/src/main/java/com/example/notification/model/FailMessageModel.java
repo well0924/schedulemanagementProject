@@ -35,28 +35,29 @@ public class FailMessageModel {
 
     private LocalDateTime createdAt;
 
-
-    public void setResolved(){
+    public void resolveSuccess() {
         this.resolved = true;
+        this.retryCount = this.retryCount; // 그대로
+        this.lastTriedAt = LocalDateTime.now();
+        this.resolvedAt = LocalDateTime.now();
     }
 
-    public void setIncresementRetryCount(){
-        this.retryCount++;;
+    public void resolveSuccess(String messageType) {
+        this.resolved = true;
+        this.messageType = messageType;
+        this.lastTriedAt = LocalDateTime.now();
+        this.resolvedAt = LocalDateTime.now();
     }
 
-    public void setDead() {
+    public void resolveFailure(Exception ex) {
+        this.retryCount++;
+        this.lastTriedAt = LocalDateTime.now();
+        this.exceptionMessage = ex.getMessage();
+    }
+
+    public void markAsDead() {
+        this.resolved = false;
         this.dead = true;
-    }
-
-    public void setLastTriedAt() {
         this.lastTriedAt = LocalDateTime.now();
     }
-
-    public void setResolvedAt() {this.resolvedAt = LocalDateTime.now();}
-
-    public void setExceptionMessage(String exceptionMessage){
-        this.exceptionMessage = exceptionMessage;
-    }
-
-    public void setMessageType(String messageType) {this.messageType = messageType;}
 }

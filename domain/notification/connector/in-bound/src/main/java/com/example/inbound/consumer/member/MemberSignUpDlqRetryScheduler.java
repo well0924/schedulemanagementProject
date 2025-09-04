@@ -10,7 +10,6 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -45,8 +44,7 @@ public class MemberSignUpDlqRetryScheduler {
 
             if(entity.getRetryCount() >= MAX_RETRY_COUNT) {
                 log.warn("재시도 초과 - id={}, payload={}", entity.getId(), entity.getPayload());
-                entity.setDead();
-                entity.setLastTriedAt();
+                entity.markAsDead();
                 failedService.updateFailMessage(entity);
                 continue;
             }
@@ -56,12 +54,10 @@ public class MemberSignUpDlqRetryScheduler {
                 KafkaMDCUtil.initMDC(event);
                 String retryTopic = getRetryTopicByCountForMember(entity.getRetryCount());
                 kafkaTemplate.send(retryTopic, event);
-                entity.setResolved();
+                entity.resolveSuccess(event.getNotificationType());
                 log.info(" DLQ 재처리 성공 - member signup: id={}", entity.getId());
             } catch (Exception ex) {
-                entity.setIncresementRetryCount();
-                entity.setLastTriedAt();
-                entity.setExceptionMessage(ex.getMessage());
+                entity.resolveFailure(ex);
                 log.warn(" DLQ 재처리 실패 - member signup: id={}, reason={}", entity.getId(), ex.getMessage());
             } finally {
                 KafkaMDCUtil.clear();

@@ -17,7 +17,7 @@ public class PushSubscriptionModel {
     private String endpoint;
     private String p256dh;
     private String auth;
-    private Long expirationTime; // millis nullable
+    private LocalDateTime expirationTime; // millis nullable
     private String userAgent;
     private boolean active;
     private LocalDateTime createdAt;

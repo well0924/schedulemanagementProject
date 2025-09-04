@@ -30,7 +30,7 @@ public class PushSubscription {
     @Column(nullable = false, length = 255)
     private String auth;
 
-    private Long expirationTime;  // nullable
+    private LocalDateTime expirationTime;  // nullable
 
     private String userAgent;
 

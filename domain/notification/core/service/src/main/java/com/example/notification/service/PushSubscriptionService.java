@@ -42,6 +42,7 @@ public class PushSubscriptionService {
     }
 
     // 웹 푸시 구독 활성
+    @Transactional(readOnly = true)
     public List<PushSubscriptionModel> getActiveSubscriptions(Long memberId) {
         return pushSubscriptionOutConnector.findByMemberIdAndActiveTrue(memberId);
     }

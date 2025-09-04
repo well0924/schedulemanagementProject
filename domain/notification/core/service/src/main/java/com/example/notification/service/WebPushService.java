@@ -23,32 +23,35 @@ public class WebPushService {
     private final ObjectMapper objectMapper;
 
     public void sendPush(Long memberId, NotificationEvents event) {
+
+        List<PushSubscriptionModel> subs = subscriptionService.getActiveSubscriptions(memberId);
+
+        if (subs.isEmpty()) {
+            log.warn("⚠️ No active webpush subscriptions found for memberId={}", memberId);
+            return;
+        }
+
+        String payload;
         try {
-            List<PushSubscriptionModel> subs = subscriptionService.getActiveSubscriptions(memberId);
-
-            if (subs.isEmpty()) {
-                log.warn("⚠️ No active webpush subscriptions found for memberId={}", memberId);
-                return;
-            }
-
-            String payload = objectMapper.writeValueAsString(event);
-
-            for (PushSubscriptionModel sub : subs) {
-                try {
-                    Notification notification = new Notification(
-                            sub.getEndpoint(),
-                            sub.getP256dh(),
-                            sub.getAuth(),
-                            payload
-                    );
-                    pushService.send(notification);
-                    log.info(" WebPush 발송 성공 - endpoint={}", sub.getEndpoint());
-                } catch (Exception e) {
-                    log.error(" WebPush 발송 실패 - endpoint={}", sub.getEndpoint(), e);
-                }
-            }
+            payload = objectMapper.writeValueAsString(event);
         } catch (Exception e) {
             log.error("WebPushService error - memberId={}", memberId, e);
+            return;
+        }
+
+        for (PushSubscriptionModel sub : subs) {
+            try {
+                Notification notification = new Notification(
+                        sub.getEndpoint(),
+                        sub.getP256dh(),
+                        sub.getAuth(),
+                        payload
+                );
+                pushService.send(notification);
+                log.info(" WebPush 발송 성공 - endpoint={}", sub.getEndpoint());
+            } catch (Exception e) {
+                log.error(" WebPush 발송 실패 - endpoint={}", sub.getEndpoint(), e);
+            }
         }
     }
 

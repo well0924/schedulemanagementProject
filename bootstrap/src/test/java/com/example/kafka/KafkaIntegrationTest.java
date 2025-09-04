@@ -13,8 +13,8 @@ import com.example.events.outbox.OutboxEventService;
 import com.example.events.process.ProcessedEventRepository;
 import com.example.events.process.ProcessedEventService;
 import com.example.kafka.dlq.DlqTestConsumer;
-import com.example.kafka.dlq.MemberSignUpDlqRetrySchedulerTest;
-import com.example.kafka.dlq.NotificationDlqRetrySchedulerTest;
+import com.example.kafka.dlq.MemberSignUpDlqRetryTestScheduler;
+import com.example.kafka.dlq.NotificationDlqRetryTestScheduler;
 import com.example.model.member.MemberModel;
 import com.example.notification.model.NotificationSettingModel;
 import com.example.notification.service.FailedMessageService;
@@ -42,6 +42,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -69,6 +70,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -141,11 +144,11 @@ public class KafkaIntegrationTest {
     @Autowired
     DlqTestConsumer dlqTestConsumer;
 
-    @Autowired
-    NotificationDlqRetrySchedulerTest notificationDlqRetryScheduler;
+    @SpyBean
+    NotificationDlqRetryTestScheduler notificationDlqRetryScheduler;
 
-    @Autowired
-    MemberSignUpDlqRetrySchedulerTest retryScheduler;
+    @SpyBean
+    MemberSignUpDlqRetryTestScheduler retryScheduler;
 
     @Autowired
     FailedMessageService failedMessageService;
@@ -367,6 +370,9 @@ public class KafkaIntegrationTest {
         // 3. 수동으로 재처리 (스케줄러 직접 호출)
         retryScheduler.retryMemberSignUps();
 
+        //스파이를 통해 호출 여부 검증
+        verify(retryScheduler, times(1)).retryMemberSignUps();
+
         // 4. RetryTopicConsumer → 원래 토픽으로 재전송됐는지 확인
         await().atMost(10, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
@@ -448,6 +454,8 @@ public class KafkaIntegrationTest {
 
         // 3. 재처리 호출
         notificationDlqRetryScheduler.retryNotifications();
+
+        verify(notificationDlqRetryScheduler, times(1)).retryNotifications();
 
         // 4. 재처리된 결과 확인 (알림 DB에 저장되었는지)
         await().atMost(10, TimeUnit.SECONDS)
@@ -678,7 +686,6 @@ public class KafkaIntegrationTest {
         String eventId = UUID.randomUUID().toString();
 
         NotificationEvents event1 = NotificationEvents.builder()
-                .eventId(eventId)
                 .receiverId(1000L)
                 .message("중복 이벤트 테스트")
                 .notificationType(ScheduleActionType.SCHEDULE_CREATED)
@@ -686,14 +693,17 @@ public class KafkaIntegrationTest {
                 .createdTime(LocalDateTime.now())
                 .build();
 
+        event1.setEventId(eventId);
+
         NotificationEvents event2 = NotificationEvents.builder()
-                .eventId(eventId) // 같은 eventId
                 .receiverId(1000L)
                 .message("중복 이벤트 테스트")
                 .notificationType(ScheduleActionType.SCHEDULE_CREATED)
                 .notificationChannel(NotificationChannel.WEB)
                 .createdTime(LocalDateTime.now())
                 .build();
+
+        event2.setEventId(eventId);
 
         // 동일 이벤트 2번 발행
         scheduleTemplate.send("notification-events", event1);
@@ -713,7 +723,6 @@ public class KafkaIntegrationTest {
         String eventId = UUID.randomUUID().toString();
 
         MemberSignUpKafkaEvent event1 = MemberSignUpKafkaEvent.builder()
-                .eventId(eventId)
                 .receiverId(2000L)
                 .username("dupUser")
                 .email("dup@test.com")
@@ -722,8 +731,9 @@ public class KafkaIntegrationTest {
                 .createdTime(LocalDateTime.now())
                 .build();
 
+        event1.setEventId(eventId);
+
         MemberSignUpKafkaEvent event2 = MemberSignUpKafkaEvent.builder()
-                .eventId(eventId)
                 .receiverId(2000L)
                 .username("dupUser")
                 .email("dup@test.com")
@@ -731,6 +741,8 @@ public class KafkaIntegrationTest {
                 .notificationType("SIGN_UP")
                 .createdTime(LocalDateTime.now())
                 .build();
+
+        event2.setEventId(eventId);
 
         kafkaTemplate.send("member-signup-events", event1);
         kafkaTemplate.send("member-signup-events", event2);

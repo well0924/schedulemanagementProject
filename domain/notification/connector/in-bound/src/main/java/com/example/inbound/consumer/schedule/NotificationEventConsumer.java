@@ -7,6 +7,7 @@ import com.example.notification.NotificationType;
 import com.example.notification.model.NotificationModel;
 import com.example.notification.service.NotificationService;
 import com.example.notification.service.NotificationSettingService;
+import com.example.notification.service.WebPushService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.annotation.Counted;
@@ -24,6 +25,8 @@ import java.util.Optional;
 public class NotificationEventConsumer {
 
     private final NotificationService notificationService;
+
+    private final WebPushService webPushService;
 
     private final NotificationSettingService notificationSettingService;
 
@@ -44,41 +47,34 @@ public class NotificationEventConsumer {
                 .orElse(NotificationChannel.WEB);
 
         try {
-            log.info("📩 Kafka 알림 수신: userId={}, type={}, channel={}",
-                    event.getReceiverId(), event.getNotificationType(), channel);
-            // dlq 처리시 조건 추가.
-            if (!event.isForceSend() && !notificationSettingService.isEnabled(
-                    event.getReceiverId(),
-                    channel)
-            ) {
-                log.info("🔕 사용자 설정에 따라 알림 차단됨: userId={}, type={}, channel={}",
-                        event.getReceiverId(), event.getNotificationType(), event.getNotificationChannel());
-                return;
-            }
-
             switch (channel) {
                 case WEB -> {
+                    log.info("📩 Kafka 알림 수신: memberId={}, type={}, channel={}",
+                            event.getReceiverId(), event.getNotificationType(), channel);
+                    // dlq 처리시 조건 추가 (알림 구독여부)
+                    boolean result = notificationSettingService.isEnabled(event.getReceiverId(), channel);
+                    log.info("알림구독 여부:"+result);
+                    if (!event.isForceSend() && !result) {
+                        log.info("🔕 사용자 설정에 따라 알림 차단됨: userId={}, type={}, channel={}",
+                                event.getReceiverId(), event.getNotificationType(), event.getNotificationChannel());
+                        return;
+                    }
                     //알림 내역 저장
                     handleWebNotification(event);
                     String message = objectMapper.writeValueAsString(event);
                     //알림 발송
-                    simpMessagingTemplate.convertAndSend(
-                            "/topic/notifications/" + event.getReceiverId(),
-                            message
-                    );
+                    simpMessagingTemplate.convertAndSend("/topic/notifications/" + event.getReceiverId(), message);
                 }
+
                 case PUSH -> {
-                    //알림 내역 저장
+                    log.info("📩 Kafka 알림 수신: memberId={}, type={}, channel={}",
+                            event.getReceiverId(), event.getNotificationType(), channel);
+                    //푸시 알림 내역 저장
                     handlePushNotification(event);
-                    String message = objectMapper.writeValueAsString(event);
-                    //알림 발송
-                    simpMessagingTemplate.convertAndSend(
-                            "/topic/notifications/" + event.getReceiverId(),
-                            message
-                    );
+                    //푸시 알림 발송
+                    webPushService.sendPush(event.getReceiverId(), event);
                 }
             }
-
         } catch (JsonProcessingException e) {
             log.error("Kafka 메시지 직렬화 오류: {}", e.getMessage());
         } catch (Exception e) {
@@ -100,7 +96,9 @@ public class NotificationEventConsumer {
     }
 
     private void handlePushNotification(NotificationEvents event) {
-        // 추후 구현 예정
+        NotificationModel model = toNotificationModel(event);
+        model.markAsSent();
+        notificationService.createNotification(model);
     }
 
     private NotificationModel toNotificationModel(NotificationEvents event) {

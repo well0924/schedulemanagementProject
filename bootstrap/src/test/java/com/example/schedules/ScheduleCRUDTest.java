@@ -4,6 +4,7 @@ import com.example.enumerate.schedules.DeleteType;
 import com.example.enumerate.schedules.RepeatType;
 import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.enumerate.schedules.ScheduleType;
+import com.example.events.enums.NotificationChannel;
 import com.example.events.enums.ScheduleActionType;
 import com.example.model.schedules.SchedulesModel;
 import com.example.outbound.schedule.ScheduleOutConnector;
@@ -24,7 +25,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.access.AccessDeniedException;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -96,7 +96,7 @@ public class ScheduleCRUDTest {
             assertThat(result.getScheduleType()).isEqualTo(ScheduleType.SINGLE_DAY);
             verify(out).validateScheduleConflict(any(SchedulesModel.class));
             verify(out).saveSchedule(any(SchedulesModel.class));
-            verify(events).publishScheduleEvent(saved, ScheduleActionType.SCHEDULE_CREATED);
+            verify(events).publishScheduleEvent(saved, ScheduleActionType.SCHEDULE_CREATED, NotificationChannel.WEB);
             verify(attach, never()).bindToSchedule(anyList(), anyLong()); }
     }
 
@@ -159,7 +159,7 @@ public class ScheduleCRUDTest {
             // 3건 저장 호출 확인
             verify(out, times(3)).saveSchedule(any(SchedulesModel.class));
             // 이벤트 1회(최초 스케줄 기준) 발행 확인
-            verify(events).publishScheduleEvent(firstSaved, ScheduleActionType.SCHEDULE_CREATED);
+            verify(events).publishScheduleEvent(firstSaved, ScheduleActionType.SCHEDULE_CREATED,NotificationChannel.WEB);
         }
     }
 
@@ -191,7 +191,7 @@ public class ScheduleCRUDTest {
             assertThat(saved.getScheduleType()).isEqualTo(ScheduleType.ALL_DAY);
             assertThat(saved.getMemberId()).isEqualTo(777L);
 
-            verify(events).publishScheduleEvent(saved, ScheduleActionType.SCHEDULE_CREATED);
+            verify(events).publishScheduleEvent(saved, ScheduleActionType.SCHEDULE_CREATED,NotificationChannel.WEB);
         }
     }
 
@@ -214,7 +214,7 @@ public class ScheduleCRUDTest {
             // then
             verify(repeatDelete).dispatch(DeleteType.SINGLE, target);
             verify(out).deleteSchedule(10L);
-            verify(events).publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE);
+            verify(events).publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE,NotificationChannel.WEB);
         }
     }
 
@@ -244,7 +244,7 @@ public class ScheduleCRUDTest {
             // then
             verify(repeatDelete).dispatch(DeleteType.ALL_REPEAT, target);
             verify(out).markAsDeletedByRepeatGroupId("RG");
-            verify(events).publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE);
+            verify(events).publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE,NotificationChannel.WEB);
         }
     }
 
@@ -271,7 +271,7 @@ public class ScheduleCRUDTest {
 
             verify(repeatDelete).dispatch(DeleteType.AFTER_THIS, target);
             verify(out).markAsDeletedAfter("GRP", st);
-            verify(events).publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE);
+            verify(events).publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE,NotificationChannel.WEB);
         }
     }
 

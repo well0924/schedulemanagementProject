@@ -2,6 +2,9 @@ package com.example.inbound.consumer.schedule;
 
 import com.example.events.enums.NotificationChannel;
 import com.example.events.kafka.NotificationEvents;
+import com.example.events.process.ProcessedEventService;
+import com.example.exception.dto.ErrorCode;
+import com.example.exception.global.CustomExceptionHandler;
 import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.NotificationType;
 import com.example.notification.model.NotificationModel;
@@ -30,6 +33,8 @@ public class NotificationEventConsumer {
 
     private final NotificationSettingService notificationSettingService;
 
+    private final ProcessedEventService processedEventService;
+
     private final SimpMessagingTemplate simpMessagingTemplate;
 
     private final ObjectMapper objectMapper;
@@ -42,11 +47,29 @@ public class NotificationEventConsumer {
             containerFactory = "notificationKafkaListenerFactory")
     public void consume(NotificationEvents event) {
 
-        KafkaMDCUtil.initMDC(event);
-        NotificationChannel channel = Optional.ofNullable(event.getNotificationChannel())
-                .orElse(NotificationChannel.WEB);
-
         try {
+            KafkaMDCUtil.initMDC(event);
+            NotificationChannel channel = Optional.ofNullable(event.getNotificationChannel())
+                    .orElse(NotificationChannel.WEB);
+
+            // EOS 중복 체크
+            if (processedEventService.isAlreadyProcessed(event.getEventId())) {
+                log.info("⚠️ 이미 처리된 이벤트 무시: {}", event.getEventId());
+                throw new CustomExceptionHandler("중복 이벤트 처리됨: " + event.getEventId(),
+                        ErrorCode.EVENT_DUPLICATE);
+            }
+            log.info("📩 Kafka 알림 수신: userId={}, type={}, channel={}",
+                    event.getReceiverId(), event.getNotificationType(), channel);
+            // dlq 처리시 조건 추가.
+            if (!event.isForceSend() && !notificationSettingService.isEnabled(
+                    event.getReceiverId(),
+                    channel)
+            ) {
+                log.info("🔕 사용자 설정에 따라 알림 차단됨: userId={}, type={}, channel={}",
+                        event.getReceiverId(), event.getNotificationType(), event.getNotificationChannel());
+                return;
+            }
+          
             switch (channel) {
                 case WEB -> {
                     log.info("📩 Kafka 알림 수신: memberId={}, type={}, channel={}",
@@ -75,11 +98,17 @@ public class NotificationEventConsumer {
                     webPushService.sendPush(event.getReceiverId(), event);
                 }
             }
+            // 처리 완료후 이벤트 저장
+            processedEventService.saveProcessedEvent(event.getEventId());
+        } catch (CustomExceptionHandler ex) {
+            // 재처리 불필요 → 여기서 끝
+            log.warn("[Kafka Non-Retry Error] code={}, msg={}",
+                    ex.getErrorCode(), ex.getMessage());
         } catch (JsonProcessingException e) {
             log.error("Kafka 메시지 직렬화 오류: {}", e.getMessage());
+            throw new CustomExceptionHandler("이벤트 직렬화 실패: " + event.getEventId(), ErrorCode.EVENT_SERIALIZATION_ERROR);
         } catch (Exception e) {
             log.error("WebSocket 전송 실패", e);
-            throw new RuntimeException("WebSocket send failed", e); // DLQ 트리거
         } finally {
             KafkaMDCUtil.clear();
         }

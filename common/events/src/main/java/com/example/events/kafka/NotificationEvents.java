@@ -12,11 +12,11 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class NotificationEvents {
-    private Long receiverId;
-    private Long scheduleId;
+public class NotificationEvents extends BaseKafkaEvent{
+    private Long receiverId; // memberId 회원 번호
+    private Long scheduleId; //일정 번호
     private String message;
-    private ScheduleActionType notificationType;
+    private ScheduleActionType notificationType;// 일정 유형
     private NotificationChannel notificationChannel;
     private boolean forceSend; // dlq 적용시 강제 적용.
     private LocalDateTime scheduleAt;

@@ -5,6 +5,8 @@ import com.example.logging.MDC.KafkaMDCUtil;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Component;
 @AllArgsConstructor
 public class MemberSignUpRetryTopicConsumer {
 
+    @Qualifier("memberKafkaTemplate")
     private final KafkaTemplate<String, MemberSignUpKafkaEvent> kafkaTemplate;
 
     private final MeterRegistry meterRegistry;

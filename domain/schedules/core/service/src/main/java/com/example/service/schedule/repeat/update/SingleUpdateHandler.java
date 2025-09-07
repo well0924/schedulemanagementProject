@@ -1,6 +1,7 @@
 package com.example.service.schedule.repeat.update;
 
 import com.example.enumerate.schedules.RepeatUpdateType;
+import com.example.events.enums.NotificationChannel;
 import com.example.events.enums.ScheduleActionType;
 import com.example.model.schedules.SchedulesModel;
 import com.example.outbound.schedule.ScheduleOutConnector;
@@ -34,7 +35,8 @@ public class SingleUpdateHandler implements RepeatUpdateHandler {
         updated = attachBinder.handleAttachUpdate(existing,updated);
         updated.updateProgressStatus();
         SchedulesModel result = scheduleOutConnector.updateSchedule(existing.getId(), updated);
-        domainEventPublisher.publishScheduleEvent(result, ScheduleActionType.SCHEDULE_UPDATE);
+        NotificationChannel channel = domainEventPublisher.resolveChannel(updated.getMemberId());
+        domainEventPublisher.publishScheduleEvent(result, ScheduleActionType.SCHEDULE_UPDATE,channel);
         return null;
     }
 

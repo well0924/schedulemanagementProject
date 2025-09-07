@@ -17,11 +17,11 @@ import java.time.LocalDateTime;
         name = "schedules",
         indexes = {
                 // 일정 충돌 인덱스
-                @Index(name = "idx_schedules_user_time", columnList = "userId, startTime, endTime"),
+                @Index(name = "idx_schedules_user_time", columnList = "memberId, startTime, endTime"),
                 // [반복/그룹 조작] repeat_group_id + user_id (+ start_time >= ?)
-                @Index(name = "idx_sched_group_user_start", columnList = "repeat_group_id, user_id, start_time"),
+                @Index(name = "idx_sched_group_user_start", columnList = "repeatGroupId, memberId, startTime"),
                 // [상태별 조회]
-                @Index(name = "idx_sched_user_status", columnList = "user_id, progress_status")
+                @Index(name = "idx_sched_user_status", columnList = "memberId, progressStatus")
         }
 )
 @NoArgsConstructor

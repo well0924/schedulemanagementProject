@@ -27,7 +27,7 @@ public class QPushSubscription extends EntityPathBase<PushSubscription> {
 
     public final StringPath endpoint = createString("endpoint");
 
-    public final NumberPath<Long> expirationTime = createNumber("expirationTime", Long.class);
+    public final DateTimePath<java.time.LocalDateTime> expirationTime = createDateTime("expirationTime", java.time.LocalDateTime.class);
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 

@@ -7,4 +7,8 @@ import lombok.Setter;
 @Setter
 public abstract class BaseKafkaEvent {
     private String eventId;
+
+    public BaseKafkaEvent() {
+        this.eventId = java.util.UUID.randomUUID().toString();
+    }
 }

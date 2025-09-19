@@ -55,8 +55,11 @@ public class OutboxEventPublisher {
         Object payload = objectMapper.readValue(event.getPayload(), resolveEventClass(event));
 
         // eventId 주입 (Outbox PK → Kafka eventId)
-        if (payload instanceof BaseKafkaEvent baseEvent && baseEvent.getEventId() == null) {
-            baseEvent.setEventId(event.getId());
+        if (payload instanceof BaseKafkaEvent baseEvent) {
+            if(baseEvent.getEventId() == null || baseEvent.getEventId().isBlank()) {
+                baseEvent.setEventId(event.getId());
+                log.info("eventId setting:"+baseEvent.getEventId());
+            }
         }
 
         kafkaTemplate.send(topic, payload)

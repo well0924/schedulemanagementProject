@@ -1,20 +1,18 @@
 package com.example.attach.exception;
 
 import com.example.attach.dto.AttachErrorCode;
+import com.example.exception.BaseCustomException;
+import com.example.exception.BaseErrorCode;
 import lombok.Getter;
 
 @Getter
-public class AttachCustomExceptionHandler extends RuntimeException {
+public class AttachCustomExceptionHandler extends BaseCustomException {
 
-    private final AttachErrorCode attachErrorCode;
-
-    public AttachCustomExceptionHandler(String message, AttachErrorCode attachErrorCode) {
-        super(message);
-        this.attachErrorCode = attachErrorCode;
+    public AttachCustomExceptionHandler(AttachErrorCode errorCode, String customMessage) {
+        super(errorCode, customMessage);
     }
 
-    public AttachCustomExceptionHandler(AttachErrorCode attachErrorCode) {
-        super(attachErrorCode.getMessage());
-        this.attachErrorCode = attachErrorCode;
+    public AttachCustomExceptionHandler(BaseErrorCode errorCode) {
+        super(errorCode);
     }
 }

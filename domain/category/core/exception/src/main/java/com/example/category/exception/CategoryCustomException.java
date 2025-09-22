@@ -1,22 +1,19 @@
 package com.example.category.exception;
 
 import com.example.category.dto.CategoryErrorCode;
+import com.example.exception.BaseCustomException;
 import lombok.Getter;
 
 @Getter
-public class CategoryCustomException extends RuntimeException {
+public class CategoryCustomException extends BaseCustomException {
 
-    private final CategoryErrorCode categoryErrorCode;
-
-    public CategoryCustomException(CategoryErrorCode categoryErrorCode, Object ...args) {
-        super(categoryErrorCode.formatMessage(args));
-        this.categoryErrorCode = categoryErrorCode;
+    // 동적 메시지용
+    public CategoryCustomException(CategoryErrorCode errorCode, Object... args) {
+        super(errorCode, errorCode.formatMessage(args));
     }
 
-    public CategoryCustomException(CategoryErrorCode categoryErrorCode) {
-        super(categoryErrorCode.getMessage());
-        this.categoryErrorCode = categoryErrorCode;
+    // 기본 메시지용
+    public CategoryCustomException(CategoryErrorCode errorCode) {
+        super(errorCode);
     }
-
-    public CategoryErrorCode getCategoryErrorCode() { return categoryErrorCode; }
 }

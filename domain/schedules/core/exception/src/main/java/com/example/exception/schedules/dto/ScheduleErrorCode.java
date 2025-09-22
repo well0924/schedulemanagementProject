@@ -15,7 +15,8 @@ public enum ScheduleErrorCode {
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, 40023, "해당 일정'%s'을 찾을 수 없습니다."),
     SCHEDULE_TIME_CONFLICT(HttpStatus.CONFLICT, 40024, "해당 일정은 기존의 일정과 충돌이 납니다."),
     INVALID_TIME_RANGE(HttpStatus.BAD_REQUEST, 40025, "유효하지 않은 시간범위입니다."),
-
+    // DB 제약조건 위반 → 409로 매핑
+    DB_CONSTRAINT_VIOLATION(HttpStatus.CONFLICT, 40901, "DB 제약 조건 위반: 중복된 데이터 또는 무결성 오류입니다."),
     // 서버 에러
     SCHEDULE_CREATED_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, 50020, "일정 생성에 실패했습니다."),
     NOT_START_TIME_AND_END_TIME(HttpStatus.INTERNAL_SERVER_ERROR, 50021, "시작 시간과 종료 시간이 설정되지 않았습니다."),

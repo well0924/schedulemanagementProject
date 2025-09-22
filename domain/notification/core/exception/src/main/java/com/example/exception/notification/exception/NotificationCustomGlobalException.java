@@ -1,22 +1,20 @@
 package com.example.exception.notification.exception;
 
-import com.example.exception.notification.dto.NotificationErrorDto;
-import org.springframework.http.HttpStatus;
+import com.example.exception.dto.ErrorDto;
+import com.example.exception.notification.dto.NotificationErrorCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.example.notification")
 public class NotificationCustomGlobalException {
 
     @ExceptionHandler(value = NotificationCustomException.class)
-    protected ResponseEntity<NotificationErrorDto> HandlerCustomException(NotificationCustomException ex){
-        return new ResponseEntity<>(
-                NotificationErrorDto
-                        .builder()
-                        .errorCode(ex.getNotificationErrorCode().getStatus())
-                        .message(ex.getMessage())
-                        .build(), HttpStatus.valueOf(ex.getErrorCode().getStatus())
-        );
+    protected ResponseEntity<ErrorDto> HandlerCustomException(NotificationCustomException ex){
+        NotificationErrorCode errorCode = (NotificationErrorCode)ex.getErrorCode();
+        return ResponseEntity
+                .status(errorCode.getHttpStatus())
+                .body(new ErrorDto(errorCode.getCode(), errorCode.getMessage()));
+
     }
 }

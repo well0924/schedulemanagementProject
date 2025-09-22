@@ -1,27 +1,36 @@
 package com.example.exception.global;
 
+import com.example.exception.BaseCustomException;
 import com.example.exception.dto.ErrorDto;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@Order(1)
+// 도메인 Advice보다 우선순위 낮게
+@Order(2)
 @RestControllerAdvice
 public class CustomGlobalExceptionHandler {
 
-    @ExceptionHandler(value= Exception.class)
-    public ResponseEntity<?>IllegalArgumentException(Exception e){
-        return new ResponseEntity<>(e.getMessage(), HttpStatusCode.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value()));
+    // 나머지 도메인 모듈 400 처리 부분
+    @ExceptionHandler({BaseCustomException.class})
+    protected ResponseEntity<ErrorDto> HandleCustomException(BaseCustomException ex) {
+        return ResponseEntity
+                .status(ex.getErrorCode().getHttpStatus())
+                .body(new ErrorDto(ex.getErrorCode().getCode(), ex.getMessage()));
     }
 
-    @ExceptionHandler({CustomExceptionHandler.class})
-    protected ResponseEntity<ErrorDto> HandleCustomException(CustomExceptionHandler ex) {
-        return new ResponseEntity<>(
-                new ErrorDto(ex.getErrorCode().getStatus(), ex.getErrorCode().getMessage()), HttpStatus.valueOf(ex.getErrorCode().getStatus()));
+    // 예상 못 한 런타임 (500)
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorDto> handleUnexpected(RuntimeException ex) {
+        // 로그는 꼭 찍어야 함
+        ex.printStackTrace(); // 실제로는 Logger.error()로
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(
+                new ErrorDto(HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        "서버 내부 오류가 발생했습니다.")
+        );
     }
-
-
 }

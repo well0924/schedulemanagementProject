@@ -1,24 +1,18 @@
 package com.example.exception.exception;
 
+import com.example.exception.BaseCustomException;
+import com.example.exception.BaseErrorCode;
 import com.example.exception.dto.MemberErrorCode;
 import lombok.Getter;
 
 @Getter
-public class MemberCustomException extends RuntimeException {
-
-    private final MemberErrorCode memberErrorCode;
+public class MemberCustomException extends BaseCustomException {
 
     public MemberCustomException(String message, MemberErrorCode errorCode) {
-        super(message);
-        this.memberErrorCode = errorCode;
+        super(errorCode, message);
     }
 
-    public MemberCustomException(MemberErrorCode errorCode) {
-        super(errorCode.getMessage());
-        this.memberErrorCode = errorCode;
-    }
-
-    public MemberErrorCode getMemberErrorCode() {
-        return memberErrorCode;
+    public MemberCustomException(BaseErrorCode errorCode) {
+        super(errorCode);
     }
 }

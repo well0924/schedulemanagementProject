@@ -1,22 +1,18 @@
 package com.example.category.exception;
 
-import com.example.category.dto.CategoryErrorDto;
-import org.springframework.http.HttpStatus;
+import com.example.category.dto.CategoryErrorCode;
+import com.example.exception.dto.ErrorDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.example.service.category")
 public class CategoryGlobalCustomException {
 
     @ExceptionHandler(value = CategoryCustomException.class)
-    protected ResponseEntity<CategoryErrorDto> HandleCustomException(CategoryCustomException ex) {
-        return new ResponseEntity<>(
-                CategoryErrorDto
-                        .builder()
-                        .errorCode(ex.getCategoryErrorCode().getStatus())
-                        .message(ex.getMessage())
-                        .build(),
-                HttpStatus.valueOf(ex.getCategoryErrorCode().getStatus()));
+    protected ResponseEntity<ErrorDto> HandleCustomException(CategoryCustomException ex) {
+        CategoryErrorCode errorCode = (CategoryErrorCode)ex.getErrorCode();
+        return ResponseEntity.status(errorCode.getHttpStatus())
+                .body(new ErrorDto(ex.getErrorCode().getCode(), ex.getMessage()));
     }
 }

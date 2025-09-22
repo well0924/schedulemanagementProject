@@ -7,6 +7,7 @@ buildscript {
 dependencies {
     implementation project(':common:redis')
     implementation project(':common:jpa')
+    implementation project(':common:exception')
     implementation project(':domain:category:core:exception')
     implementation project(':domain:category:core:model')
     implementation project(':domain:category:infrastructure:rdb')

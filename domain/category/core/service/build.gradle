@@ -1,5 +1,6 @@
 dependencies {
     implementation project(':common:redis')
+    implementation project(':common:exception')
     implementation project(':domain:category:core:exception')
     implementation project(':domain:category:core:model')
     implementation project(':domain:category:connector')

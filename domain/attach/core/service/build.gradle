@@ -4,6 +4,7 @@ dependencies {
     implementation project(':domain:attach:core:model')
     implementation project(':domain:attach:core:exception')
     implementation project(':common:s3')
+    implementation project(':common:exception')
     //thumbnail
     implementation group: 'net.coobird', name: 'thumbnailator', version: '0.4.20'
     implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'

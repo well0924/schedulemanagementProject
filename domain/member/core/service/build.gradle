@@ -1,6 +1,7 @@
 dependencies {
     implementation project(':common:redis')
     implementation project(':common:events')
+    implementation project(':common:exception')
     implementation project(':domain:member:core:model')
     implementation project(':domain:member:core:enumerate')
     implementation project(':domain:member:connector')

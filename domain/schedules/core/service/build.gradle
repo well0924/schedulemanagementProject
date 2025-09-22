@@ -2,6 +2,7 @@ dependencies {
     implementation project(':common:jpa')
     implementation project(':common:events')
     implementation project(':common:redis')
+    implementation project(':common:exception')
     implementation project(':domain:schedules:core:model')
     implementation project(':domain:schedules:core:enumerate')
     implementation project(':domain:schedules:core:exception')

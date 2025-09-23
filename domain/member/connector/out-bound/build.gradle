@@ -5,6 +5,7 @@ buildscript {
 }
 
 dependencies {
+    implementation project(':common:exception')
     implementation project(':domain:member:core:model')
     implementation project(':domain:member:core:enumerate')
     implementation project(':domain:member:core:exception')

@@ -12,18 +12,6 @@ public class NotificationSettingOutConnector {
 
     private final NotificationSettingRepository notificationSettingRepository;
 
-    public NotificationSettingModel findByUserId(Long userId) {
-        return toModel(notificationSettingRepository
-                .findByUserId(userId)
-                .orElseThrow());
-    }
-
-    public NotificationSettingModel findById(Long id) {
-        return toModel(notificationSettingRepository
-                .findById(id)
-                .orElseThrow());
-    }
-
     //사용자 알림 설정 조회 또는 생성
     public NotificationSettingModel getOrCreate(Long userId) {
         return notificationSettingRepository.findByUserId(userId)

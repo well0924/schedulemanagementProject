@@ -1,12 +1,12 @@
 package com.example.inbound.consumer.member;
 
+import com.example.inbound.consumer.slack.SlackNotifier;
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.logging.MDC.KafkaMDCUtil;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -20,6 +20,8 @@ public class MemberSignUpRetryTopicConsumer {
     private final KafkaTemplate<String, MemberSignUpKafkaEvent> kafkaTemplate;
 
     private final MeterRegistry meterRegistry;
+
+    private final SlackNotifier slackNotifier;
 
     @KafkaListener(topics = "member-signup.retry.5s", groupId = "member-retry-5s")
     public void retry5s(MemberSignUpKafkaEvent event) {
@@ -73,8 +75,11 @@ public class MemberSignUpRetryTopicConsumer {
     public void retryFinal(MemberSignUpKafkaEvent event) {
         try {
             KafkaMDCUtil.initMDC(event);
+            String test = String.format("- EventId: %s%n- Topic: %s%n- Exception: %s",
+                    event.getEventId(),event.getNotificationType(),event.getMessage());
             // 최종 실패 → Slack 알림처리하기.(추후 구현)
             meterRegistry.counter("kafka.retry.signup.failure.final").increment();
+            slackNotifier.send("Dlq_Notification",test);
             log.warn(" 회원가입 최종 재시도 실패: {}", event.getEmail());
         } finally {
             KafkaMDCUtil.clear();

@@ -1,5 +1,6 @@
 dependencies {
     implementation project(':common:events')
+    implementation project(':common:exception')
     implementation project(':domain:member:core:service')
     implementation project(':domain:member:core:model')
     implementation project(':domain:schedules:core:model')

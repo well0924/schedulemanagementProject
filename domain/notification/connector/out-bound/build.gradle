@@ -1,7 +1,7 @@
 dependencies {
     implementation project(':common:jpa')
     implementation project(':common:events')
-    //implementation project(':domain:schedules:core:service')
+    implementation project(':common:exception')
     implementation project(":domain:notification:infrastructure:rdb")
     implementation project(":domain:notification:core:model")
     implementation project(":domain:notification:core:enumerate")

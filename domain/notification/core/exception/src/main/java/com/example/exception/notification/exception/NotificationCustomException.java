@@ -1,19 +1,18 @@
 package com.example.exception.notification.exception;
 
+import com.example.exception.BaseCustomException;
+import com.example.exception.BaseErrorCode;
 import com.example.exception.notification.dto.NotificationErrorCode;
 import lombok.Getter;
 
 @Getter
-public class NotificationCustomException extends RuntimeException {
+public class NotificationCustomException extends BaseCustomException {
 
-    private NotificationErrorCode notificationErrorCode;
-
-    public  NotificationCustomException(NotificationErrorCode notificationErrorCode) {
-        super(notificationErrorCode.getMessage());
-        this.notificationErrorCode = notificationErrorCode;
+    public  NotificationCustomException(NotificationErrorCode notificationErrorCode,String message) {
+        super(notificationErrorCode,message);
     }
 
-    public NotificationErrorCode getErrorCode(){
-        return notificationErrorCode;
+    public  NotificationCustomException(BaseErrorCode notificationErrorCode) {
+        super(notificationErrorCode);
     }
 }

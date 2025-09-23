@@ -29,6 +29,7 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
         WHERE 
             s.memberId = :userId
         AND s.scheduleType = 'SINGLE_DAY'
+        AND s.isDeletedScheduled = false
         AND (:startTime < s.endTime AND :endTime > s.startTime)
         AND (:excludeId IS NULL OR s.id != :excludeId)
     """)

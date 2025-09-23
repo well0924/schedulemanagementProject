@@ -141,7 +141,8 @@ jib {
 				'SECRET_KEY' : findProperty("SECRET_KEY") ?: "",
 				'OPENAI_BASE_URL' : findProperty("OPENAI_BASE_URL") ?: "",
 				'OPENAI_SECRET_KEY' : findProperty("OPENAI_SECRET_KEY") ?: "",
-				'MODEL' : findProperty("MODEL") ?: ""
+				'MODEL' : findProperty("MODEL") ?: "",
+				'SLACK_WEB_HOOK' : findProperty("SLACK_WEB_HOOK") ?: ""
 		]
 	}
 	// 캐시 비활성화 → 불필요한 레이어 줄이기

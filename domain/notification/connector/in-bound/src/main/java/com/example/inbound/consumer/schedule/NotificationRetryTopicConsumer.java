@@ -1,5 +1,6 @@
 package com.example.inbound.consumer.schedule;
 
+import com.example.inbound.consumer.slack.SlackNotifier;
 import com.example.events.kafka.NotificationEvents;
 import com.example.logging.MDC.KafkaMDCUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -23,6 +24,9 @@ public class NotificationRetryTopicConsumer {
     private final KafkaTemplate<String, NotificationEvents> kafkaTemplate;
 
     private final ObjectMapper objectMapper;
+
+    //슬랙 추가하기.
+    private final SlackNotifier slackNotifier;
 
     //수동 측정하기.
     private final MeterRegistry meterRegistry;
@@ -99,7 +103,11 @@ public class NotificationRetryTopicConsumer {
             KafkaMDCUtil.initMDC(event);
             // 마지막 실패 → 슬랙으로 연동하기.(추후 구현)
             meterRegistry.counter("kafka.retry.notification.failure.final").increment();
-            log.warn("최종 재전송 도달 - 후속조치 필요: {}", event);
+            String text = String.format(
+                    "- EventId: %s%n- Topic: %s%n- Exception: %s",
+                    event.getEventId(), event.getNotificationType(), event.getMessage());
+            slackNotifier.send("Dlq_Notification", event.getMessage());
+            log.warn("최종 재전송 도달 - 후속조치 필요: {}", text);
         } catch (JsonProcessingException e) {
             log.error("Kafka DLQ 재처리 - 역직렬화 실패: {}", message, e);
         } finally {

@@ -3,7 +3,7 @@ server:
   port: 8082
 spring:
   profiles:
-    include: upload, oauth2, s3, openai, email, kafka, push
+    include: upload, oauth2, s3, openai, email, kafka, push, slack
     active: prod
 
 

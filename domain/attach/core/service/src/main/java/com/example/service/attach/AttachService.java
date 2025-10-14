@@ -2,12 +2,12 @@ package com.example.service.attach;
 
 import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.example.attach.dto.AttachErrorCode;
 import com.example.attach.exception.AttachCustomExceptionHandler;
 import com.example.model.attach.AttachModel;
-import com.example.outbound.attach.AttachOutConnector;
+import com.example.service.port.AmazonS3Port;
+import com.example.service.port.AttachRepositoryPort;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,6 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -37,11 +36,11 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class AttachService {
 
-    private final AmazonS3Service amazonS3Service;
+    private final AmazonS3Port amazonS3Port;
 
     private final ThumbnailService thumbnailService;
 
-    private final AttachOutConnector attachOutConnector;
+    private final AttachRepositoryPort attachRepositoryPort;
 
     private final AmazonS3 amazonS3;
 
@@ -56,27 +55,27 @@ public class AttachService {
 
     @Transactional(readOnly = true)
     public List<AttachModel> findAll() {
-        return attachOutConnector.findAll();
+        return attachRepositoryPort.findAll();
     }
 
     @Transactional(readOnly = true)
     public AttachModel findById(Long attachId) {
-        return attachOutConnector.findById(attachId);
+        return attachRepositoryPort.findById(attachId);
     }
 
     @Transactional(readOnly = true)
     public List<AttachModel> findByIds(List<Long>attachIds) {
-        return attachOutConnector.findByIdIn(attachIds);
+        return attachRepositoryPort.findByIdIn(attachIds);
     }
 
     @Transactional(readOnly = true)
     public AttachModel findByOriginFileName(String originFileName) {
-        return attachOutConnector.findByOriginFileName(originFileName);
+        return attachRepositoryPort.findByOriginFileName(originFileName);
     }
 
     @Transactional(readOnly = true)
     public AttachModel findByStoredFileName(String storedFileName) {
-        return attachOutConnector.findByStoredFileName(storedFileName);
+        return attachRepositoryPort.findByStoredFileName(storedFileName);
     }
 
     // S3 presingedurl적용.
@@ -85,7 +84,7 @@ public class AttachService {
         List<String> urls = new ArrayList<>();
         for (String fileName : fileNames) {
             String key = "temp/" + fileName;
-            URL url = amazonS3Service.generatePresignedUrl(key,HttpMethod.PUT,1000*60*20L);
+            URL url = amazonS3Port.generatePresignedUrl(key,HttpMethod.PUT,1000*60*20L);
             urls.add(url.toString());
         }
         return urls;
@@ -93,20 +92,14 @@ public class AttachService {
 
     @Transactional(readOnly = true)
     public String generateDownloadPreSignedUrl(String fileName) {
-        Date expiration = new Date();
-        expiration.setTime(expiration.getTime() + 1000 * 60 * 30); // 30분 유효
-
-        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
-        String contentDisposition = "attachment; filename*=UTF-8''" + encodedFileName;
-
-        GeneratePresignedUrlRequest generatePresignedUrlRequest =
-                new GeneratePresignedUrlRequest(bucketName, fileName)
-                        .withMethod(HttpMethod.GET)  // 다운로드용은 GET
-                        .withExpiration(expiration);
-        //첨부파일 다운로드
-        generatePresignedUrlRequest.addRequestParameter("response-content-disposition", contentDisposition);
-        URL url = amazonS3.generatePresignedUrl(generatePresignedUrlRequest);
-        return url.toString();
+        try {
+            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
+            //첨부파일 다운로드
+            URL url = amazonS3Port.generateDownloadPresignedUrl(bucketName,encodedFileName,1000 * 60 * 30L);
+            return url.toString();
+        } catch (Exception e) {
+            throw new AttachCustomExceptionHandler(AttachErrorCode.S3_OPERATION_FAIL);
+        }
     }
 
     //업로드 완료 후 Attach 등록 + 썸네일 생성
@@ -121,14 +114,14 @@ public class AttachService {
                 String finalStoredFileName = tempStoredFileName.replaceFirst("^temp/", "final/");
 
                 // 1. temp → final 복사
-                amazonS3Service.copy(tempStoredFileName,finalStoredFileName);
+                amazonS3Port.copy(tempStoredFileName,finalStoredFileName);
 
                 // 2. temp 삭제
-                amazonS3Service.delete(tempStoredFileName);
+                amazonS3Port.delete(tempStoredFileName);
 
-                String fileUrl = amazonS3Service.getFileUrl(finalStoredFileName);
+                String fileUrl = amazonS3Port.getFileUrl(finalStoredFileName);
 
-                long fileSize = amazonS3Service.fileSize(finalStoredFileName);
+                long fileSize = amazonS3Port.fileSize(finalStoredFileName);
 
                 AttachModel attachModel = AttachModel.builder()
                         .originFileName(finalStoredFileName)
@@ -137,7 +130,7 @@ public class AttachService {
                         .fileSize(fileSize)
                         .build();
 
-                AttachModel savedAttach = attachOutConnector.createAttach(attachModel);
+                AttachModel savedAttach = attachRepositoryPort.createAttach(attachModel);
                 savedAttachModels.add(savedAttach);
                 // 로깅
                 MDC.put("flow", "presigned-complete");
@@ -170,11 +163,11 @@ public class AttachService {
     @Transactional
     public void deleteFileFromS3(String storedFileName) {
         try {
-            amazonS3Service.delete(storedFileName);
+            amazonS3Port.delete(storedFileName);
             log.info("[S3 파일 삭제 완료] 원본: {}", storedFileName);
 
             String thumbnailFileName = "thumb_" + storedFileName;
-            amazonS3Service.delete(thumbnailFileName);
+            amazonS3Port.delete(thumbnailFileName);
             log.info("[S3 썸네일 삭제 완료] 썸네일: {}", thumbnailFileName);
 
         } catch (Exception e) {
@@ -186,19 +179,19 @@ public class AttachService {
     // Attach + 파일 삭제
     @Transactional
     public void deleteAttachAndFile(Long attachId) {
-        AttachModel attachModel = attachOutConnector.findById(attachId);
+        AttachModel attachModel = attachRepositoryPort.findById(attachId);
 
         // S3에서 파일 삭제
         deleteFileFromS3(attachModel.getStoredFileName());
 
         // DB에서 Attach 삭제
-        attachOutConnector.deleteAttach(attachId);
+        attachRepositoryPort.deleteAttach(attachId);
 
         log.info("[Attach 삭제 완료] attachId = {}", attachId);
     }
 
     public void updateScheduleId(List<Long> fileIds, Long scheduleId) {
-        attachOutConnector.updateScheduleId(fileIds, scheduleId);
+        attachRepositoryPort.updateScheduleId(fileIds, scheduleId);
     }
 
     //일반적인 S3 업로드 histogram = true를 설정하면 Grafana에서 평균/최댓값/퍼센타일까지 확인 가능
@@ -219,8 +212,8 @@ public class AttachService {
                 metadata.setContentLength(file.getSize());
                 metadata.setContentType(file.getContentType());
 
-                amazonS3.putObject(bucketName, storedFileName, file.getInputStream(), metadata);
-                String fileUrl = amazonS3.getUrl(bucketName, storedFileName).toString();
+                amazonS3Port.upload(storedFileName,file.getInputStream(),metadata);
+                String fileUrl = amazonS3Port.getFileUrl(storedFileName);
 
                 // 2. 썸네일 동기 생성
                 ByteArrayOutputStream thumbOut = new ByteArrayOutputStream();
@@ -239,8 +232,8 @@ public class AttachService {
                 thumbMetadata.setContentType("image/jpeg");
 
                 String thumbFileName = "thumb_" + storedFileName;
-                amazonS3.putObject(bucketName, thumbFileName, thumbIn, thumbMetadata);
-                String thumbnailUrl = amazonS3.getUrl(bucketName, thumbFileName).toString();
+                amazonS3Port.upload(thumbFileName,thumbIn,metadata);
+                String thumbnailUrl = amazonS3Port.getFileUrl(thumbFileName);
 
                 // 3. DB 저장
                 AttachModel attachModel = AttachModel.builder()
@@ -251,7 +244,7 @@ public class AttachService {
                         .thumbnailFilePath(thumbnailUrl)
                         .build();
 
-                AttachModel saved = attachOutConnector.createAttach(attachModel);
+                AttachModel saved = attachRepositoryPort.createAttach(attachModel);
                 savedModels.add(saved);
                 log.info("[업로드 완료] {} ({} bytes)", originalFileName, file.getSize());
             } finally {

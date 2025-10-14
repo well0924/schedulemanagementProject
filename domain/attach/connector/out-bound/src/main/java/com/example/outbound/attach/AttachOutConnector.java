@@ -6,6 +6,7 @@ import com.example.model.attach.AttachModel;
 import com.example.rdb.Attach;
 import com.example.rdb.AttachRepository;
 import com.example.rdbrepository.ScheduleRepository;
+import com.example.service.port.AttachRepositoryPort;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
 @Getter
 @Component
 @RequiredArgsConstructor
-public class AttachOutConnector {
+public class AttachOutConnector implements AttachRepositoryPort {
 
     private final AttachRepository attachRepository;
 

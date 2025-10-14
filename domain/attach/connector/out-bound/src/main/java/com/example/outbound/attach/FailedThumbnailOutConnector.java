@@ -3,6 +3,7 @@ package com.example.outbound.attach;
 import com.example.model.attach.FailedThumbnailModel;
 import com.example.rdb.FailedThumbnail;
 import com.example.rdb.FailedThumbnailRepository;
+import com.example.service.port.FailedThumbnailPort;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
@@ -13,7 +14,7 @@ import java.util.stream.Collectors;
 
 @Component
 @AllArgsConstructor
-public class FailedThumbnailOutConnector {
+public class FailedThumbnailOutConnector implements FailedThumbnailPort {
 
     private final FailedThumbnailRepository failedThumbnailRepository;
 

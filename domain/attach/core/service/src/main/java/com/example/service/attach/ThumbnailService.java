@@ -1,15 +1,14 @@
 package com.example.service.attach;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
 import com.example.attach.dto.AttachErrorCode;
 import com.example.attach.exception.AttachCustomExceptionHandler;
 import com.example.model.attach.AttachModel;
 import com.example.model.attach.FailedThumbnailModel;
-import com.example.outbound.attach.AttachOutConnector;
 import com.example.s3.utile.FileUtile;
-import com.example.service.failthumbnail.FailedThumbnailService;
+import com.example.service.port.AmazonS3Port;
+import com.example.service.port.AttachRepositoryPort;
+import com.example.service.port.FailedThumbnailPort;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,16 +31,11 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class ThumbnailService {
 
-    private final AmazonS3 amazonS3;
+    private final AmazonS3Port amazonS3Port;
 
-    private final AmazonS3Service amazonS3Service;
+    private final AttachRepositoryPort attachRepositoryPort;
 
-    private final AttachOutConnector attachOutConnector;
-
-    private final FailedThumbnailService failedThumbnailService;
-
-    @Value("${cloud.aws.s3.bucket}")
-    private String bucketName;
+    private final FailedThumbnailPort failedThumbnailPort;
 
     @Value("${server.file.thumbnail-width:200}")
     private int thumbnailWidth;
@@ -64,8 +58,7 @@ public class ThumbnailService {
 
             log.info("[썸네일 생성 시작] {}", attachModel.getStoredFileName());
 
-            S3Object s3Object = amazonS3.getObject(bucketName, attachModel.getStoredFileName());
-            InputStream inputStream = s3Object.getObjectContent();
+            InputStream inputStream = amazonS3Port.getObjectInputStream(fileName);
 
             if (!FileUtile.isSupportedImageExtension(lower)) {
                 log.info("[섬네일 건너뜀] MIME 타입으로 확인한 결과 이미지 아님: {}", lower);
@@ -94,12 +87,13 @@ public class ThumbnailService {
             metadata.setContentType("image/jpeg");
 
             String thumbnailFileName = "thumb_" + attachModel.getStoredFileName();
-            amazonS3.putObject(bucketName, thumbnailFileName, thumbnailInputStream, metadata);
 
-            String thumbnailUrl = amazonS3Service.getFileUrl(thumbnailFileName);
+            amazonS3Port.upload(thumbnailFileName, thumbnailInputStream, metadata);
+
+            String thumbnailUrl = amazonS3Port.getFileUrl(thumbnailFileName);
 
             attachModel.setThumbnailFilePath(thumbnailUrl);
-            attachOutConnector.updateAttach(attachModel.getId(), attachModel);
+            attachRepositoryPort.updateAttach(attachModel.getId(), attachModel);
 
             log.info("[썸네일 업로드 완료] {}", thumbnailUrl);
 
@@ -116,7 +110,7 @@ public class ThumbnailService {
                     .reason(e.getMessage())
                     .resolved(false)
                     .build();
-            failedThumbnailService.save(model);
+            failedThumbnailPort.save(model);
             throw new AttachCustomExceptionHandler(AttachErrorCode.THUMBNAIL_CREATE_FAIL);
         }
     }

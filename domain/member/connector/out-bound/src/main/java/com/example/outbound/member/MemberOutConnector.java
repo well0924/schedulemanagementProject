@@ -4,10 +4,10 @@ import com.example.enumerate.member.Roles;
 import com.example.enumerate.member.SearchType;
 import com.example.exception.dto.MemberErrorCode;
 import com.example.exception.exception.MemberCustomException;
+import com.example.interfaces.member.MemberRepositoryPort;
 import com.example.model.member.MemberModel;
 import com.example.rdb.member.Member;
 import com.example.rdb.member.MemberRepository;
-import com.example.rdb.member.MemberRepositoryImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,11 +17,9 @@ import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
-public class MemberOutConnector {
+public class MemberOutConnector implements MemberRepositoryPort {
 
     private final MemberRepository memberRepository;
-
-    private final MemberRepositoryImpl customMemberRepository;
 
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
@@ -38,7 +36,7 @@ public class MemberOutConnector {
     }
 
     public Page<MemberModel> findAllMemberSearch(String keyword, SearchType searchType, Pageable pageable) {
-        return customMemberRepository
+        return memberRepository
                 .searchAll(keyword,searchType,pageable)
                 .map(this::toEntity);
     }

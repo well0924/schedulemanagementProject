@@ -4,7 +4,7 @@ dependencies {
     implementation project(':common:exception')
     implementation project(':domain:member:core:model')
     implementation project(':domain:member:core:enumerate')
-    implementation project(':domain:member:connector')
+    implementation project(':domain:member:connector:interfaces')
     implementation project(':domain:member:connector:out-bound')
     //jwt
     implementation('io.jsonwebtoken:jjwt-root:0.11.5')

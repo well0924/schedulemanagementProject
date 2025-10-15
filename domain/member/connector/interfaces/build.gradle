@@ -1,6 +1,7 @@
 dependencies {
     implementation project(':domain:member:api:api-model')
     implementation project(':domain:member:core:enumerate')
+    implementation project(':domain:member:core:model')
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter'
     compileOnly 'org.projectlombok:lombok'

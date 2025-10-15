@@ -1,4 +1,4 @@
-package com.example.service.port;
+package com.example.interfaces.attach;
 
 import com.example.model.attach.FailedThumbnailModel;
 

@@ -1,6 +1,7 @@
 dependencies {
     implementation project(':common:redis')
-    //implementation project(':domain:attach:connector:out-bound')
+    implementation project(':domain:attach:connector:out-bound')
+    implementation project(':domain:attach:connector:interfaces')
     implementation project(':domain:attach:core:model')
     implementation project(':domain:attach:core:exception')
     implementation project(':common:s3')

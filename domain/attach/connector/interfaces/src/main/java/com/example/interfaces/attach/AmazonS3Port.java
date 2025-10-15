@@ -1,8 +1,7 @@
-package com.example.service.port;
+package com.example.interfaces.attach;
 
 import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-
 import java.io.InputStream;
 import java.net.URL;
 

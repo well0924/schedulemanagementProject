@@ -2,19 +2,17 @@ package com.example.outbound.attach;
 
 import com.example.attach.dto.AttachErrorCode;
 import com.example.attach.exception.AttachCustomExceptionHandler;
+import com.example.interfaces.attach.AttachRepositoryPort;
 import com.example.model.attach.AttachModel;
 import com.example.rdb.Attach;
 import com.example.rdb.AttachRepository;
 import com.example.rdbrepository.ScheduleRepository;
-import com.example.service.port.AttachRepositoryPort;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Getter
 @Component
 @RequiredArgsConstructor
 public class AttachOutConnector implements AttachRepositoryPort {

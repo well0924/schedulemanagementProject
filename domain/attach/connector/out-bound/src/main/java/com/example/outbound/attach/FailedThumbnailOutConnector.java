@@ -1,9 +1,9 @@
 package com.example.outbound.attach;
 
+import com.example.interfaces.attach.FailedThumbnailPort;
 import com.example.model.attach.FailedThumbnailModel;
 import com.example.rdb.FailedThumbnail;
 import com.example.rdb.FailedThumbnailRepository;
-import com.example.service.port.FailedThumbnailPort;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;

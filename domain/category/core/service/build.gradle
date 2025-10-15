@@ -3,7 +3,7 @@ dependencies {
     implementation project(':common:exception')
     implementation project(':domain:category:core:exception')
     implementation project(':domain:category:core:model')
-    implementation project(':domain:category:connector')
+    implementation project(':domain:category:connector:interface')
     implementation project(':domain:category:connector:out-bound')
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'

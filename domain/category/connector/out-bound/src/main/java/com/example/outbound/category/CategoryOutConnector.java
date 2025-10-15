@@ -2,18 +2,19 @@ package com.example.outbound.category;
 
 import com.example.category.dto.CategoryErrorCode;
 import com.example.category.exception.CategoryCustomException;
+import com.example.interfaces.category.CategoryRepositoryPort;
 import com.example.model.category.CategoryModel;
 import com.example.rdb.Category;
 import com.example.rdb.CategoryRepository;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
-@AllArgsConstructor
-public class CategoryOutConnector {
+@RequiredArgsConstructor
+public class CategoryOutConnector implements CategoryRepositoryPort {
 
     private final CategoryRepository categoryRepository;
 

@@ -1,15 +1,13 @@
 package com.example.service.schedule;
 
 import com.example.enumerate.schedules.PROGRESS_STATUS;
-import com.example.exception.dto.MemberErrorCode;
-import com.example.exception.exception.MemberCustomException;
+import com.example.inbound.schedules.ScheduleRepositoryPort;
+import com.example.interfaces.auth.AuthInterface;
 import com.example.model.schedules.SchedulesModel;
 import com.example.outbound.openai.config.OpenAiWebClient;
 import com.example.outbound.openai.dto.OpenAiRequest;
 import com.example.outbound.openai.dto.ScheduleRecommendationDto;
 import com.example.outbound.openai.dto.TimeSlot;
-import com.example.rdb.member.MemberRepository;
-import com.example.rdbrepository.ScheduleRepository;
 import com.example.rdbrepository.Schedules;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -20,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,9 +29,9 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class ScheduleRecommendationService {
 
-    private final ScheduleRepository schedulesRepository;
+    private final ScheduleRepositoryPort scheduleRepositoryPort;
 
-    private final MemberRepository memberRepository;
+    private final AuthInterface authInterface;
 
     private final ScheduleRecommendCacheService recommendCacheService;
 
@@ -45,13 +42,11 @@ public class ScheduleRecommendationService {
     @CircuitBreaker(name = "openAiClient", fallbackMethod = "fallbackRecommendSchedules")
     public Mono<List<SchedulesModel>> recommendSchedules(String userId, Pageable pageable) {
         //회원 번호 추출
-        Long memberId = memberRepository.findByUserId(userId)
-                .orElseThrow(() -> new MemberCustomException(MemberErrorCode.NOT_USER))
-                .getId();
+        Long memberId = authInterface.currentUserId(userId);
         log.info("memberId::"+memberId);
 
         String cacheKey = "schedule:recommend:" + userId + ":" + LocalDate.now();
-        List<SchedulesModel> schedulesSize = schedulesRepository.findAllByUserId(userId, pageable).getContent();
+        List<SchedulesModel> schedulesSize = scheduleRepositoryPort.findByUserId(userId, pageable).getContent();
         log.info("가져온 일정 수: {}", schedulesSize.size());
         // 일정 캐시 확인.
         Optional<List<SchedulesModel>> cached = recommendCacheService.get(cacheKey, new TypeReference<>() {
@@ -62,7 +57,7 @@ public class ScheduleRecommendationService {
             return Mono.just(cached.get());
         }
 
-        return Mono.just(schedulesRepository.findAllByUserId(userId, pageable).getContent())
+        return Mono.just(scheduleRepositoryPort.findByUserId(userId, pageable).getContent())
                 .map(this::mapToSchedules)
                 .doOnNext(schedules -> {
                     List<TimeSlot> conflictSlots = schedules.stream()
@@ -95,9 +90,7 @@ public class ScheduleRecommendationService {
     public Mono<List<SchedulesModel>> fallbackRecommendSchedules(String userId, Pageable pageable, Throwable t) {
         log.error("[OpenAI fallback 작동] userId={}, 이유: {}", userId, t.getMessage(), t);
 
-        Long memberId = memberRepository.findByUserId(userId)
-                .orElseThrow(() -> new MemberCustomException(MemberErrorCode.NOT_USER))
-                .getId();
+        Long memberId = authInterface.currentUserId(userId);
 
         SchedulesModel fallbackSchedule = SchedulesModel
                 .builder()
@@ -210,7 +203,6 @@ public class ScheduleRecommendationService {
             for (Schedules schedule : schedules) {
 
                 String contents = schedule.getContents() != null ? schedule.getContents() : "";
-                //LocalDate date = LocalDate.of(2025, schedule.getScheduleMonth(), schedule.getScheduleDay());
                 LocalDate date = schedule.getStartTime().toLocalDate();
                 log.info("ID: {}, Contents: '{}', Start: {}, End: {}", schedule.getId(), schedule.getContents(), schedule.getStartTime(), schedule.getEndTime());
                 prompt.append("- ")

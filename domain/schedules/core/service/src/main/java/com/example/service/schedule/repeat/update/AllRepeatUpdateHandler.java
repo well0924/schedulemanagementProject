@@ -3,9 +3,9 @@ package com.example.service.schedule.repeat.update;
 import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.events.enums.NotificationChannel;
 import com.example.events.enums.ScheduleActionType;
+import com.example.inbound.schedules.ScheduleRepositoryPort;
 import com.example.model.schedules.SchedulesModel;
-import com.example.outbound.schedule.ScheduleOutConnector;
-import com.example.service.auth.SecurityUtil;
+import com.example.security.config.SecurityUtil;
 import com.example.service.schedule.guard.ScheduleGuard;
 import com.example.service.schedule.support.AttachBinder;
 import com.example.service.schedule.support.DomainEventPublisher;
@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AllRepeatUpdateHandler implements RepeatUpdateHandler{
 
-    private final ScheduleOutConnector out;
+    private final ScheduleRepositoryPort out;
     private final ScheduleGuard guard;
     private final AttachBinder attachBinder;
     private final ScheduleClassifier classifier;

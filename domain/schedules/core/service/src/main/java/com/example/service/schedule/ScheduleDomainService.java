@@ -5,9 +5,9 @@ import com.example.events.enums.NotificationChannel;
 import com.example.events.enums.ScheduleActionType;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
+import com.example.inbound.schedules.ScheduleRepositoryPort;
 import com.example.model.schedules.SchedulesModel;
-import com.example.outbound.schedule.ScheduleOutConnector;
-import com.example.service.auth.SecurityUtil;
+import com.example.security.config.SecurityUtil;
 import com.example.service.schedule.repeat.create.RepeatScheduleFactory;
 import com.example.service.schedule.repeat.delete.RepeatDeleteRegistry;
 import com.example.service.schedule.repeat.update.RepeatUpdateRegistry;
@@ -33,7 +33,7 @@ import java.util.*;
 @AllArgsConstructor
 public class ScheduleDomainService {
 
-    private final ScheduleOutConnector scheduleOutConnector;
+    private final ScheduleRepositoryPort scheduleRepositoryPort;
 
     private final DomainEventPublisher domainEventPublisher;
 
@@ -50,41 +50,41 @@ public class ScheduleDomainService {
     private final RepeatScheduleFactory repeatScheduleFactory;
 
     public List<SchedulesModel> getAllSchedules() {
-        return scheduleOutConnector.findAllSchedules();
+        return scheduleRepositoryPort.findAllSchedules();
     }
 
     public List<SchedulesModel> getAllDeletedSchedules() {
-        return scheduleOutConnector.findAllByIsDeletedScheduled();
+        return scheduleRepositoryPort.findAllByIsDeletedScheduled();
     }
 
     //회원별 일정목록
     @Transactional(readOnly = true)
     public Page<SchedulesModel> getSchedulesByUserFilter(Pageable pageable) {
-        return scheduleOutConnector.findByUserId(SecurityUtil.currentUserName(),pageable);
+        return scheduleRepositoryPort.findByUserId(SecurityUtil.currentUserName(),pageable);
     }
 
     //카테고리별 일정목록
     @Transactional(readOnly = true)
     public Page<SchedulesModel> getSchedulesByCategoryFilter(String categoryId,Pageable pageable) {
-        return scheduleOutConnector.findByCategoryId(categoryId,pageable);
+        return scheduleRepositoryPort.findByCategoryId(categoryId,pageable);
     }
 
     //일정상태별 일정목록
     @Transactional(readOnly = true)
     public Page<SchedulesModel> getSchedulesByStatus(String status,Pageable pageable) {
-        return scheduleOutConnector.findAllByPROGRESS_STATUS(SecurityUtil.currentUserName(),status,pageable);
+        return scheduleRepositoryPort.findAllByPROGRESS_STATUS(SecurityUtil.currentUserName(),status,pageable);
     }
 
     //오늘의 일정 조회
     @Transactional(readOnly = true)
     public List<SchedulesModel> findByTodaySchedule(){
-        return scheduleOutConnector.findByTodaySchedule(SecurityUtil.currentUserId());
+        return scheduleRepositoryPort.findByTodaySchedule(SecurityUtil.currentUserId());
     }
 
     //일정 단일 조회
     @Transactional(readOnly = true)
     public SchedulesModel findById(Long scheduleId) {
-        return scheduleOutConnector.findById(scheduleId);
+        return scheduleRepositoryPort.findById(scheduleId);
     }
 
     //일정 등록
@@ -128,7 +128,7 @@ public class ScheduleDomainService {
     //일정 수정
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public SchedulesModel updateSchedule(Long scheduleId, SchedulesModel model,RepeatUpdateType updateType) {
-        SchedulesModel existing = scheduleOutConnector.findById(scheduleId);
+        SchedulesModel existing = scheduleRepositoryPort.findById(scheduleId);
         //사용자 인증
         scheduleGuard.assertOwnerOrAdmin(existing);
         log.info("수정 요청 들어옴. scheduleId = {}", scheduleId);
@@ -138,14 +138,14 @@ public class ScheduleDomainService {
     }
 
     public PROGRESS_STATUS updateProgressStatus(Long scheduleId, PROGRESS_STATUS newStatus) {
-        scheduleOutConnector.updateStatusOnly(scheduleId, newStatus);
+        scheduleRepositoryPort.updateStatusOnly(scheduleId, newStatus);
         return newStatus;
     }
 
     //일정 삭제 (논리 삭제)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deleteSchedule(Long scheduleId, DeleteType deleteType) {
-        SchedulesModel target = scheduleOutConnector.findById(scheduleId);
+        SchedulesModel target = scheduleRepositoryPort.findById(scheduleId);
         //삭제시 인증
         scheduleGuard.assertOwnerOrAdmin(target);
         //타입에 따른 일정 삭제
@@ -161,16 +161,16 @@ public class ScheduleDomainService {
         //사용자 인증
         Long me = SecurityUtil.currentUserId();
         log.info("memberId:"+me);
-        List<Long> owned = scheduleOutConnector.findOwnedIds(me,ids);
+        List<Long> owned = scheduleRepositoryPort.findOwnedIds(me,ids);
 
         if (owned.size() != ids.size()) {
             throw new ScheduleCustomException(ScheduleErrorCode.INVALID_OWNER_FOR_BULK);
         }
         // 일정 삭제
-        scheduleOutConnector.markAsDeletedByIds(ids);
+        scheduleRepositoryPort.markAsDeletedByIds(ids);
         // 각 일정마다 이벤트 발행
         for (Long id : ids) {
-            SchedulesModel model = scheduleOutConnector.findById(id); // 이벤트 정보용
+            SchedulesModel model = scheduleRepositoryPort.findById(id); // 이벤트 정보용
             NotificationChannel channel = domainEventPublisher.resolveChannel(model.getMemberId());
             domainEventPublisher.publishScheduleEvent(model,ScheduleActionType.SCHEDULE_DELETE,channel);
         }
@@ -180,7 +180,7 @@ public class ScheduleDomainService {
     @Scheduled(cron = "0 0 0 * * ?")
     public void deleteOldSchedules() {
         LocalDateTime thresholdDate = LocalDateTime.now().minusMonths(1);
-        scheduleOutConnector.deleteOldSchedules(thresholdDate);
+        scheduleRepositoryPort.deleteOldSchedules(thresholdDate);
     }
 
     private SchedulesModel saveSingleSchedule(SchedulesModel schedule, SchedulesModel originalModel, boolean isFirst) {
@@ -191,9 +191,9 @@ public class ScheduleDomainService {
                 .memberId(SecurityUtil.currentUserId())
                 .build();
         log.info(type.name());
-        scheduleOutConnector.validateScheduleConflict(schedule);
+        scheduleRepositoryPort.validateScheduleConflict(schedule);
 
-        SchedulesModel saved = scheduleOutConnector.saveSchedule(schedule);
+        SchedulesModel saved = scheduleRepositoryPort.saveSchedule(schedule);
 
         if (saved == null || saved.getId() == null) {
             throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_CREATED_FAIL);

@@ -3,8 +3,8 @@ package com.example.service.schedule.repeat.update;
 import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.events.enums.NotificationChannel;
 import com.example.events.enums.ScheduleActionType;
+import com.example.inbound.schedules.ScheduleRepositoryPort;
 import com.example.model.schedules.SchedulesModel;
-import com.example.outbound.schedule.ScheduleOutConnector;
 import com.example.service.schedule.support.AttachBinder;
 import com.example.service.schedule.support.DomainEventPublisher;
 import com.example.service.schedule.support.ScheduleClassifier;
@@ -19,7 +19,7 @@ public class SingleUpdateHandler implements RepeatUpdateHandler {
 
     private final ScheduleClassifier scheduleClassifier;
     private final AttachBinder attachBinder;
-    private final ScheduleOutConnector scheduleOutConnector;
+    private final ScheduleRepositoryPort scheduleOutConnector;
     private final DomainEventPublisher domainEventPublisher;
 
     @Override

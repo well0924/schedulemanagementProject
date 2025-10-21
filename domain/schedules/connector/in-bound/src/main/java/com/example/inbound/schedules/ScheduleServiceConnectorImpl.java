@@ -8,6 +8,7 @@ import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.inbound.attach.AttachInConnector;
 import com.example.model.schedules.SchedulesModel;
+import com.example.schedules.mapper.ScheduleMapper;
 import com.example.service.schedule.ScheduleDomainService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,8 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
     private final ScheduleDomainService scheduleDomainService;
 
     private final AttachInConnector attachInConnector;
+
+    private final ScheduleMapper scheduleMapper;
 
     @Override
     public List<ScheduleApiModel.responseSchedule> findAllDeletedSchedules() {
@@ -82,19 +85,23 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
 
     @Override
     public ScheduleApiModel.responseSchedule saveSchedule(ScheduleApiModel.requestSchedule requestSchedule){
-        SchedulesModel savedSchedule = scheduleDomainService.saveSchedule(toModel(requestSchedule));
+        SchedulesModel savedSchedule = scheduleDomainService.saveSchedule(scheduleMapper.toModel(requestSchedule));
         return toApiModelWithAttachments(savedSchedule);
     }
 
     @Override
     public ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId, ScheduleApiModel.updateSchedule updateSchedule, RepeatUpdateType repeatUpdateType) {
-        return toApiModelWithAttachments(scheduleDomainService.updateSchedule(scheduleId,toModel(updateSchedule),repeatUpdateType));
+        return toApiModelWithAttachments(scheduleDomainService.updateSchedule(scheduleId,scheduleMapper.toModel(updateSchedule),repeatUpdateType));
     }
 
     @Override
     public ScheduleApiModel.responseScheduleStatus updateScheduleStatus(Long scheduleId, PROGRESS_STATUS progressStatus) {
         PROGRESS_STATUS updated = scheduleDomainService.updateProgressStatus(scheduleId,progressStatus);
-        return toApiScheduleProgressStatus(scheduleId, PROGRESS_STATUS.valueOf(updated.getValue()));
+        return ScheduleApiModel.responseScheduleStatus
+                .builder()
+                .id(scheduleId)
+                .progressStatus(updated.getValue())
+                .build();
     }
 
     @Override
@@ -112,85 +119,13 @@ public class ScheduleServiceConnectorImpl implements ScheduleServiceConnector {
         scheduleDomainService.deleteSchedules(ids);
     }
 
-    public SchedulesModel toModel(ScheduleApiModel.requestSchedule request) {
-        return SchedulesModel.builder()
-                .contents(request.contents())
-                .scheduleDays(request.scheduleDays())
-                .scheduleMonth(request.scheduleMonth())
-                .startTime(request.startTime())
-                .endTime(request.endTime())
-                .memberId(request.userId())
-                .categoryId(request.categoryId())
-                .attachIds(request.attachIds())
-                .progressStatus(PROGRESS_STATUS.IN_COMPLETE) // 기본값 설정
-                .repeatType(request.repeatType())
-                .repeatCount(request.repeatCount())
-                .repeatInterval(request.repeatInterval())
-                .isDeletedScheduled(false) // 기본값 설정
-                .isAllDay(request.isAllDay())
-                .scheduleType(request.scheduleType())
-                .build();
-    }
-
-    //update 용
-    public SchedulesModel toModel(ScheduleApiModel.updateSchedule request) {
-        return SchedulesModel.builder()
-                .contents(request.contents())
-                .scheduleDays(request.scheduleDays())
-                .scheduleMonth(request.scheduleMonth())
-                .startTime(request.startTime())
-                .endTime(request.endTime())
-                .categoryId(request.categoryId())
-                .memberId(request.memberId())
-                .progressStatus(PROGRESS_STATUS.IN_COMPLETE) // 기본값 설정
-                .repeatType(request.repeatType())
-                .repeatCount(request.repeatCount())
-                .repeatInterval(request.repeatInterval())
-                .isAllDay(request.isAllDay())
-                .scheduleType(request.scheduleType())
-                .build();
-    }
-
     public ScheduleApiModel.responseSchedule toApiModelWithAttachments(SchedulesModel model) {
         List<AttachApiModel.AttachResponse> attachFiles;
 
-        System.out.println(model.getAttachIds());
         attachFiles = model.getAttachIds() != null && !model.getAttachIds().isEmpty()
                 ? attachInConnector.findByIds(model.getAttachIds())  // 첨부파일 정보 조회
                 : Collections.emptyList();
-        System.out.println("attachResult:::"+attachFiles);
 
-        return ScheduleApiModel.responseSchedule
-                .builder()
-                .id(model.getId())
-                .contents(model.getContents())
-                .scheduleDays(model.getScheduleDays())
-                .scheduleMonth(model.getScheduleMonth())
-                .startTime(model.getStartTime())
-                .endTime(model.getEndTime())
-                .memberId(model.getMemberId())
-                .categoryId(model.getCategoryId())
-                .progressStatus(model.getProgressStatus())
-                .repeatType(model.getRepeatType())
-                .repeatCount(model.getRepeatCount())
-                .repeatGroupId(model.getRepeatGroupId())
-                .repeatInterval(model.getRepeatInterval())
-                .isDeletedScheduled(model.isDeletedScheduled())
-                .isAllDay(model.isAllDay())
-                .scheduleType(model.getScheduleType())
-                .createdBy(model.getCreatedBy())
-                .createdTime(model.getCreatedTime())
-                .updatedBy(model.getUpdatedBy())
-                .updatedTime(model.getUpdatedTime())
-                .attachFiles(attachFiles) // 첨부파일 포함
-                .build();
-    }
-
-    private ScheduleApiModel.responseScheduleStatus toApiScheduleProgressStatus(Long scheduleId,PROGRESS_STATUS status) {
-        return ScheduleApiModel.responseScheduleStatus
-                .builder()
-                .id(scheduleId)
-                .progressStatus(status.getValue())
-                .build();
+        return scheduleMapper.toResponse(model,attachFiles);
     }
 }

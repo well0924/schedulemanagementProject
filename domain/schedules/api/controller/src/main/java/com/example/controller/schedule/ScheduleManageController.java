@@ -4,7 +4,7 @@ import com.example.apimodel.schedule.ScheduleApiModel;
 import com.example.enumerate.schedules.DeleteType;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.enumerate.schedules.RepeatUpdateType;
-import com.example.inbound.schedules.ScheduleServiceConnectorImpl;
+import com.example.inbound.schedules.ScheduleServiceConnector;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,6 +12,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -19,10 +21,10 @@ import java.util.List;
 @RequestMapping("/api/schedule")
 public class ScheduleManageController {
 
-    private final ScheduleServiceConnectorImpl scheduleServiceConnector;
+    private final ScheduleServiceConnector scheduleServiceConnector;
 
     @GetMapping("/")
-    public List<ScheduleApiModel.responseSchedule> findAll() {
+    public List<ScheduleApiModel.responseSchedule> findAll() throws IOException {
         return scheduleServiceConnector.findAll();
     }
 
@@ -32,19 +34,19 @@ public class ScheduleManageController {
     }
 
     @GetMapping("/user")
-    public Page<ScheduleApiModel.responseSchedule> findAllByUserId(@PageableDefault Pageable pageable) {
+    public Page<ScheduleApiModel.responseSchedule> findAllByUserId(@PageableDefault Pageable pageable) throws IOException {
         return scheduleServiceConnector.getSchedulesByUserId(pageable);
 
     }
 
     @GetMapping("/category/{category-name}")
-    public Page<ScheduleApiModel.responseSchedule> findAllByCategoryId(@PathVariable("category-name")String categoryName, Pageable pageable) {
+    public Page<ScheduleApiModel.responseSchedule> findAllByCategoryId(@PathVariable("category-name")String categoryName, Pageable pageable) throws IOException {
         return scheduleServiceConnector.getSchedulesByCategoryName(categoryName,pageable);
     }
 
     @GetMapping("/status")
     public Page<ScheduleApiModel.responseSchedule> findAllByPRGRESS_STATUS(@RequestParam("status") String progressStatus,
-                                                                           @PageableDefault(sort = "id",direction = Sort.Direction.DESC) Pageable pageable) {
+                                                                           @PageableDefault(sort = "id",direction = Sort.Direction.DESC) Pageable pageable) throws IOException {
         return scheduleServiceConnector.getSchedulesByStatus(progressStatus,pageable);
     }
 
@@ -54,20 +56,20 @@ public class ScheduleManageController {
     }
 
     @GetMapping("/{id}")
-    public ScheduleApiModel.responseSchedule findById(@PathVariable("id")Long scheduleId) {
+    public ScheduleApiModel.responseSchedule findById(@PathVariable("id")Long scheduleId) throws IOException {
         System.out.println(scheduleId);
         return scheduleServiceConnector.findById(scheduleId);
     }
 
     @PostMapping("/")
-    public ScheduleApiModel.responseSchedule createSchedule(@Validated @RequestBody ScheduleApiModel.requestSchedule requestSchedule) {
+    public ScheduleApiModel.responseSchedule createSchedule(@Validated @RequestBody ScheduleApiModel.requestSchedule requestSchedule) throws IOException {
         return scheduleServiceConnector.saveSchedule(requestSchedule);
     }
 
     @PatchMapping("/{id}")
     public ScheduleApiModel.responseSchedule updateSchedule(@PathVariable("id")Long scheduleId,
                                                             @RequestParam(name = "type", defaultValue = "SINGLE") RepeatUpdateType repeatUpdateType,
-                                                            @Validated @RequestBody ScheduleApiModel.updateSchedule updateSchedule) {
+                                                            @Validated @RequestBody ScheduleApiModel.updateSchedule updateSchedule) throws IOException {
         return scheduleServiceConnector.updateSchedule(scheduleId,updateSchedule,repeatUpdateType);
     }
 

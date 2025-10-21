@@ -3,21 +3,21 @@ package com.example.outbound.schedule;
 import com.example.category.dto.CategoryErrorCode;
 import com.example.category.exception.CategoryCustomException;
 import com.example.enumerate.schedules.PROGRESS_STATUS;
-import com.example.enumerate.schedules.RepeatType;
 import com.example.enumerate.schedules.ScheduleType;
 import com.example.exception.dto.MemberErrorCode;
 import com.example.exception.exception.MemberCustomException;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
+import com.example.inbound.schedules.ScheduleRepositoryPort;
 import com.example.model.schedules.SchedulesModel;
 import com.example.rdb.CategoryRepository;
 import com.example.rdb.member.MemberRepository;
 import com.example.rdbrepository.*;
+import com.example.schedules.mapper.ScheduleEntityMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,13 +29,15 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ScheduleOutConnector {
+public class ScheduleOutConnector implements ScheduleRepositoryPort {
 
     private final ScheduleRepository scheduleRepository;
 
     private final MemberRepository memberRepository;
 
     private final CategoryRepository categoryRepository;
+
+    private final ScheduleEntityMapper scheduleEntityMapper;
 
     //일정 전체목록
     public List<SchedulesModel> findAllSchedules(){
@@ -53,7 +55,7 @@ public class ScheduleOutConnector {
         List<SchedulesModel> result = scheduleRepository
                 .findAllByIsDeletedScheduled()
                 .stream()
-                .map(this::toModel)
+                .map(scheduleEntityMapper::toModel)
                 .collect(Collectors.toList());
         if(result.isEmpty()) {
             throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_EMPTY);
@@ -86,14 +88,14 @@ public class ScheduleOutConnector {
     public List<SchedulesModel> findByRepeatGroupId(String repeatGroupId) {
         return scheduleRepository.findByRepeatGroupId(repeatGroupId)
                 .stream()
-                .map(this::toModel)
+                .map(scheduleEntityMapper::toModel)
                 .collect(Collectors.toList());
     }
 
     public List<SchedulesModel> findAfterStartTime(String repeatGroupId,LocalDateTime startTime) {
         return scheduleRepository.findByRepeatGroupIdAndStartTimeAfter(repeatGroupId,startTime)
                 .stream()
-                .map(this::toModel)
+                .map(scheduleEntityMapper::toModel)
                 .collect(Collectors.toList());
     }
 
@@ -111,33 +113,15 @@ public class ScheduleOutConnector {
 
         return scheduleRepository.findTodayActiveSchedules(userId,today,statusList)
                 .stream()
-                .map(this::toModel)
+                .map(scheduleEntityMapper::toModel)
                 .collect(Collectors.toList());
     }
 
     //일정저장
     public SchedulesModel saveSchedule(SchedulesModel model) {
         validateScheduleData(model);
-
-        Schedules schedules = Schedules
-                .builder()
-                .contents(model.getContents())
-                .scheduleDay(model.getScheduleDays())
-                .scheduleMonth(model.getScheduleMonth())
-                .startTime(model.getStartTime())
-                .endTime(model.getEndTime())
-                .memberId(model.getMemberId())
-                .categoryId(model.getCategoryId())
-                .isDeletedScheduled(false)
-                .progress_status(String.valueOf(model.getProgressStatus()))
-                .repeatType(String.valueOf(model.getRepeatType()))
-                .repeatCount(model.getRepeatCount())
-                .repeatInterval(model.getRepeatInterval())
-                .repeatGroupId(model.getRepeatGroupId())
-                .isAllDay(model.isAllDay())
-                .scheduleType(String.valueOf(model.getScheduleType()))
-                .build();
-                return toModel(scheduleRepository.save(schedules));
+        return scheduleEntityMapper.toModel(
+                scheduleRepository.save(scheduleEntityMapper.toEntity(model)));
     }
 
     //일정 수정
@@ -146,7 +130,7 @@ public class ScheduleOutConnector {
         validateScheduleData(model);
         model.updateProgressStatus();
         schedules.updateSchedule(model);
-        return toModel(schedules);
+        return scheduleEntityMapper.toModel(schedules);
     }
     
     //일정상태 변경
@@ -239,28 +223,4 @@ public class ScheduleOutConnector {
                 .orElseThrow(() -> new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_NOT_FOUND));
     }
 
-    private SchedulesModel toModel(Schedules schedules) {
-        return SchedulesModel
-                .builder()
-                .id(schedules.getId())
-                .contents(schedules.getContents())
-                .scheduleDays(schedules.getScheduleDay())
-                .scheduleMonth(schedules.getScheduleMonth())
-                .progressStatus(PROGRESS_STATUS.valueOf(schedules.getProgress_status()))
-                .startTime(schedules.getStartTime())
-                .endTime(schedules.getEndTime())
-                .categoryId(schedules.getCategoryId())
-                .memberId(schedules.getMemberId())
-                .repeatType(RepeatType.valueOf(schedules.getRepeatType()))//일정 반복 유형
-                .repeatCount(schedules.getRepeatCount())//반복횟수
-                .repeatInterval(schedules.getRepeatInterval())
-                .repeatGroupId(schedules.getRepeatGroupId())
-                .isAllDay(schedules.getIsAllDay())
-                .scheduleType(ScheduleType.valueOf(schedules.getScheduleType()))
-                .createdBy(schedules.getCreatedBy())
-                .createdTime(schedules.getCreatedTime())
-                .updatedBy(schedules.getUpdatedBy())
-                .updatedTime(schedules.getUpdatedTime())
-                .build();
-    }
 }

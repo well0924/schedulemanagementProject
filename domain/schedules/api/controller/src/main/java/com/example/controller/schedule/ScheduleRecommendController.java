@@ -1,7 +1,7 @@
 package com.example.controller.schedule;
 
 import com.example.apimodel.schedule.ScheduleApiModel;
-import com.example.inbound.schedules.ScheduleRecommendationConnectorImpl;
+import com.example.inbound.schedules.ScheduleRecommendationConnector;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -17,10 +17,11 @@ import java.util.List;
 @AllArgsConstructor
 public class ScheduleRecommendController {
 
-    private final ScheduleRecommendationConnectorImpl scheduleRecommendationConnector;
+    private final ScheduleRecommendationConnector scheduleRecommendationConnector;
 
     @GetMapping("/recommend")
-    public List<ScheduleApiModel.responseSchedule> recommend(@RequestParam(name = "userId") String userId, @PageableDefault Pageable pageable) throws Exception {
+    public List<ScheduleApiModel.responseSchedule> recommend(@RequestParam(name = "userId") String userId,
+                                                             @PageableDefault Pageable pageable) {
         List<ScheduleApiModel.responseSchedule> result = scheduleRecommendationConnector.recommend(userId, pageable).block();
         return result;
     }

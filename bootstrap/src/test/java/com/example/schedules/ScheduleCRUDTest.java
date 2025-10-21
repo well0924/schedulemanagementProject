@@ -8,7 +8,7 @@ import com.example.events.enums.NotificationChannel;
 import com.example.events.enums.ScheduleActionType;
 import com.example.model.schedules.SchedulesModel;
 import com.example.outbound.schedule.ScheduleOutConnector;
-import com.example.service.auth.SecurityUtil;
+import com.example.security.config.SecurityUtil;
 import com.example.service.schedule.ScheduleDomainService;
 import com.example.service.schedule.guard.ScheduleGuard;
 import com.example.service.schedule.repeat.create.RepeatScheduleFactory;

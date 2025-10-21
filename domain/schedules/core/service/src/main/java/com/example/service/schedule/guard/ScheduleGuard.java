@@ -3,7 +3,7 @@ package com.example.service.schedule.guard;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
 import com.example.model.schedules.SchedulesModel;
-import com.example.service.auth.SecurityUtil;
+import com.example.security.config.SecurityUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;

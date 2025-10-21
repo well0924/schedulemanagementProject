@@ -1,6 +1,6 @@
 package com.example.service.schedule.support;
 
-import com.example.inbound.attach.AttachInConnector;
+import com.example.interfaces.attach.AttachInterfaces;
 import com.example.model.schedules.SchedulesModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +15,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AttachBinder {
 
-    private final AttachInConnector attachInConnector;
+    private final AttachInterfaces attachInConnector;
 
     public boolean hasAttachFiles(SchedulesModel model) {
         return model.getAttachIds() != null && !model.getAttachIds().isEmpty();

@@ -1,9 +1,9 @@
 package com.example.service.schedule.repeat.delete;
 
 import com.example.enumerate.schedules.DeleteType;
+import com.example.inbound.schedules.ScheduleRepositoryPort;
 import com.example.model.schedules.SchedulesModel;
-import com.example.outbound.schedule.ScheduleOutConnector;
-import com.example.service.auth.SecurityUtil;
+import com.example.security.config.SecurityUtil;
 import com.example.service.schedule.guard.ScheduleGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AfterThisDeleteHandler implements RepeatDeleteHandler {
 
     private final ScheduleGuard guard;
-    private final ScheduleOutConnector out;
+    private final ScheduleRepositoryPort out;
 
 
     @Override

@@ -20,17 +20,17 @@ public interface ScheduleServiceConnector {
 
     List<responseSchedule> findAllDeletedSchedules();
 
-    Page<responseSchedule> getSchedulesByUserId(Pageable pageable) throws IOException;
+    Page<responseSchedule> getSchedulesByUserId(Pageable pageable);
 
-    Page<responseSchedule> getSchedulesByCategoryName(String categoryId,Pageable pageable) throws IOException;
+    Page<responseSchedule> getSchedulesByCategoryName(String categoryId,Pageable pageable);
 
     List<responseSchedule> findByTodaySchedule();
 
-    ScheduleApiModel.responseSchedule findById(Long scheduleId) throws IOException;
+    ScheduleApiModel.responseSchedule findById(Long scheduleId);
 
-    ScheduleApiModel.responseSchedule saveSchedule(requestSchedule requestSchedule) throws IOException;
+    ScheduleApiModel.responseSchedule saveSchedule(requestSchedule requestSchedule);
 
-    ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId, updateSchedule updateSchedule, RepeatUpdateType repeatUpdateType) throws IOException;
+    ScheduleApiModel.responseSchedule updateSchedule(Long scheduleId, updateSchedule updateSchedule, RepeatUpdateType repeatUpdateType);
 
     ScheduleApiModel.responseScheduleStatus updateScheduleStatus(Long scheduleId, PROGRESS_STATUS progressStatus);
 
@@ -40,5 +40,5 @@ public interface ScheduleServiceConnector {
 
     void deleteSchedules(List<Long> ids);
 
-    Page<responseSchedule> getSchedulesByStatus(String status, Pageable pageable) throws IOException;
+    Page<responseSchedule> getSchedulesByStatus(String status, Pageable pageable);
 }

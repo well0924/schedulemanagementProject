@@ -1,6 +1,7 @@
 dependencies {
     implementation project(':common:logging')
     implementation project(':domain:member:core:service')
+    implementation project(':domain:member:core:model')
     implementation project(':domain:member:connector:out-bound')
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-security'

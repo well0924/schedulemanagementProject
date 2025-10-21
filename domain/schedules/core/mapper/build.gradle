@@ -1,0 +1,14 @@
+dependencies {
+    implementation project(':domain:schedules:api:api-model')
+    implementation project(':domain:schedules:core:model')
+    implementation project(':domain:schedules:core:enumerate')
+    implementation project(':domain:schedules:infrastructure:rdb')
+    implementation project(':domain:attach:api:api-model')
+    implementation project(':common:jpa')
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.12.4'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.4'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.12.4'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}

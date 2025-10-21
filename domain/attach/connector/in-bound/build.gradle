@@ -3,6 +3,7 @@ dependencies {
     implementation project(':domain:attach:api:api-model')
     implementation project(':domain:attach:connector:interfaces')
     implementation project(':domain:attach:core:service')
+    implementation project(':domain:attach:core:exception')
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

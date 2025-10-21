@@ -4,6 +4,8 @@ dependencies {
     implementation project(':domain:schedules:core:model')
     implementation project(':domain:schedules:core:enumerate')
     implementation project(':domain:schedules:core:exception')
+    implementation project(':domain:schedules:core:mapper')
+    implementation project(':domain:schedules:connector:interface')
     implementation project(':domain:schedules:infrastructure:rdb')
     implementation project(':domain:attach:infrastructure:rdb')
     implementation project(':domain:attach:core:exception')

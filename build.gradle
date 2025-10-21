@@ -33,12 +33,20 @@ subprojects {
         options.compilerArgs += ["-parameters"]
     }
 
-    tasks.bootJar {
-        enabled = false
-    }
-
     jar {
         enabled = true
+        // 모듈 간 의존성 누락 방지
+        archiveClassifier = 'plain'
+        archiveBaseName = project.path.replace(':', '-')
+        from sourceSets.main.output
+    }
+
+    if (project.name == "bootstrap") {
+        apply plugin: 'org.springframework.boot'
+        tasks.named("bootJar").configure { enabled = true }
+    } else {
+        // 나머지 모듈은 bootJar 비활성화
+        tasks.named("bootJar").configure { enabled = false }
     }
 
     dependencies {

@@ -7,8 +7,6 @@ import com.example.attach.exception.AttachCustomExceptionHandler;
 import com.example.interfaces.attach.AmazonS3Port;
 import com.example.interfaces.attach.AttachRepositoryPort;
 import com.example.model.attach.AttachModel;
-import com.example.outbound.attach.AmazonS3OutConnector;
-import com.example.outbound.attach.AttachOutConnector;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

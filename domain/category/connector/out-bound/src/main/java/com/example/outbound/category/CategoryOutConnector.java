@@ -2,6 +2,7 @@ package com.example.outbound.category;
 
 import com.example.category.dto.CategoryErrorCode;
 import com.example.category.exception.CategoryCustomException;
+import com.example.category.mapper.CategoryEntityMapper;
 import com.example.interfaces.category.CategoryRepositoryPort;
 import com.example.model.category.CategoryModel;
 import com.example.rdb.Category;
@@ -18,11 +19,13 @@ public class CategoryOutConnector implements CategoryRepositoryPort {
 
     private final CategoryRepository categoryRepository;
 
+    private final CategoryEntityMapper categoryEntityMapper;
+
     public List<CategoryModel> categoryList() {
         return categoryRepository
                 .findAllByIsDeletedCategory()
                 .stream()
-                .map(this::toEntity)
+                .map(categoryEntityMapper::toEntity)
                 .collect(Collectors.toList());
     }
 
@@ -33,7 +36,7 @@ public class CategoryOutConnector implements CategoryRepositoryPort {
     }
 
     public CategoryModel findById(Long categoryId) {
-        return toEntity(getCategoryById(categoryId));
+        return categoryEntityMapper.toEntity(getCategoryById(categoryId));
     }
 
     public CategoryModel createCategory(CategoryModel categoryModel) {
@@ -44,9 +47,9 @@ public class CategoryOutConnector implements CategoryRepositoryPort {
         Long depth = calculateCategoryDepth(categoryModel.getParentId());
 
         // 카테고리 저장
-        Category newCategory = buildCategory(categoryModel, depth);
+        Category newCategory = categoryEntityMapper.buildCategory(categoryModel, depth);
 
-        return toEntity(categoryRepository.save(newCategory));
+        return categoryEntityMapper.toEntity(categoryRepository.save(newCategory));
     }
 
     public CategoryModel updateCategory(Long categoryId,String name,Long parentId,Long depth) {
@@ -64,7 +67,7 @@ public class CategoryOutConnector implements CategoryRepositoryPort {
 
         category.update(name,parentId,depth);
 
-        return toEntity(categoryRepository.save(category));
+        return categoryEntityMapper.toEntity(categoryRepository.save(category));
     }
 
     public void deleteCategory(Long categoryId) {
@@ -100,26 +103,4 @@ public class CategoryOutConnector implements CategoryRepositoryPort {
                 .orElseThrow(() -> new CategoryCustomException(CategoryErrorCode.NOT_FOUND_CATEGORY,parentId)) + 1;
     }
 
-    private Category buildCategory(CategoryModel categoryModel, Long depth) {
-        return Category.builder()
-                .name(categoryModel.getName())
-                .parentId(categoryModel.getParentId())
-                .depth(depth)
-                .isDeletedCategory(false)
-                .build();
-    }
-
-    private CategoryModel toEntity(Category category) {
-        return CategoryModel
-                .builder()
-                .id(category.getId())
-                .parentId(category.getParentId())
-                .depth(category.getDepth())
-                .name(category.getName())
-                .createdBy(category.getCreatedBy())
-                .createdTime(category.getCreatedTime())
-                .updatedBy(category.getUpdatedBy())
-                .updatedTime(category.getCreatedTime())
-                .build();
-    }
 }

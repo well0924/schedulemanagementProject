@@ -1,0 +1,15 @@
+dependencies {
+    implementation project(':common:jpa')
+    implementation project(':common:events')
+    implementation project(':domain:notification:core:model')
+    implementation project(':domain:notification:core:enumerate')
+    implementation project(':domain:notification:api:api-model')
+    implementation project(':domain:notification:infrastructure:rdb')
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.12.4'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.4'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.12.4'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}

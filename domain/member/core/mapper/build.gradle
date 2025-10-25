@@ -1,12 +1,15 @@
 dependencies {
     implementation project(':domain:member:core:model')
-    implementation project(':domain:member:core:service')
     implementation project(':domain:member:core:enumerate')
-    implementation project(':domain:member:core:mapper')
-    implementation project(':domain:member:connector:interfaces')
     implementation project(':domain:member:api:api-model')
-    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation project(':domain:member:infrastructure:rdb')
+
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'org.springframework.boot:spring-boot-starter'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 }

@@ -1,5 +1,7 @@
 dependencies {
+
     implementation project(':domain:attach:core:model')
+    implementation project(':domain:attach:core:mapper')
     implementation project(':domain:attach:api:api-model')
     implementation project(':domain:attach:connector:interfaces')
     implementation project(':domain:attach:core:service')

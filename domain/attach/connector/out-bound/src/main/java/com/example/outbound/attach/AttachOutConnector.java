@@ -2,11 +2,11 @@ package com.example.outbound.attach;
 
 import com.example.attach.dto.AttachErrorCode;
 import com.example.attach.exception.AttachCustomExceptionHandler;
+import com.example.attach.mapper.AttachEntityMapper;
 import com.example.interfaces.attach.AttachRepositoryPort;
 import com.example.model.attach.AttachModel;
 import com.example.rdb.Attach;
 import com.example.rdb.AttachRepository;
-import com.example.rdbrepository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -19,13 +19,13 @@ public class AttachOutConnector implements AttachRepositoryPort {
 
     private final AttachRepository attachRepository;
 
-    private final ScheduleRepository scheduleRepository;
+    private final AttachEntityMapper attachEntityMapper;
 
     public List<AttachModel> findAll() {
         List<AttachModel> attachList = attachRepository
                 .findAllByIsDeletedAttach()
                 .stream()
-                .map(this::toModel)
+                .map(attachEntityMapper::toModel)
                 .collect(Collectors.toList());
 
         if(attachList.isEmpty()) {
@@ -39,31 +39,32 @@ public class AttachOutConnector implements AttachRepositoryPort {
     public List<AttachModel> findAllByScheduleId(Long scheduledId){
         return attachRepository.findAllByScheduledId(scheduledId)
                 .stream()
-                .map(this::toModel)
+                .map(attachEntityMapper::toModel)
                 .collect(Collectors.toList());
     }
 
     public List<AttachModel> findByIdIn(List<Long> attachIds) {
         return attachRepository.findByIdIn(attachIds)
                 .stream()
-                .map(this::toModel).collect(Collectors.toList());
+                .map(attachEntityMapper::toModel)
+                .collect(Collectors.toList());
     }
 
     public AttachModel findById(Long attachId) {
         return attachRepository.findById(attachId)
-                .map(this::toModel)
+                .map(attachEntityMapper::toModel)
                 .orElseThrow(()-> new AttachCustomExceptionHandler(AttachErrorCode.NOT_FOUND_ATTACH));
     }
 
     public AttachModel findByOriginFileName(String originFileName) {
         return attachRepository.findByOriginFileName(originFileName)
-                .map(this::toModel)
+                .map(attachEntityMapper::toModel)
                 .orElseThrow(()-> new AttachCustomExceptionHandler(AttachErrorCode.NOT_FOUND_ATTACH));
     }
 
     public AttachModel findByStoredFileName(String storedFileName) {
         return attachRepository.findByStoredFileName(storedFileName)
-                .map(this::toModel)
+                .map(attachEntityMapper::toModel)
                 .orElseThrow(()-> new AttachCustomExceptionHandler(AttachErrorCode.NOT_FOUND_ATTACH));
     }
 
@@ -80,13 +81,13 @@ public class AttachOutConnector implements AttachRepositoryPort {
                 .isDeletedAttach(false)
                 .build();
 
-        return toModel(attachRepository.save(attach));
+        return attachEntityMapper.toModel(attachRepository.save(attach));
     }
 
     public AttachModel updateAttach(Long attachId,AttachModel attachModel) {
         Attach attach = findByOne(attachId);
         attach.update(attachModel.getOriginFileName(), attachModel.getStoredFileName(), attachModel.getFileSize(), attachModel.getFilePath(), attachModel.getThumbnailFilePath());
-        return toModel(attach);
+        return attachEntityMapper.toModel(attach);
     }
 
     public void deleteAttach(Long attachId) {
@@ -104,22 +105,5 @@ public class AttachOutConnector implements AttachRepositoryPort {
         return attachRepository
                 .findById(attachId)
                 .orElseThrow(()->new AttachCustomExceptionHandler(AttachErrorCode.NOT_FOUND_ATTACH));
-    }
-
-    private AttachModel toModel(Attach attach) {
-        return AttachModel
-                .builder()
-                .id(attach.getId())
-                .fileSize(attach.getFileSize())
-                .originFileName(attach.getOriginFileName())
-                .storedFileName(attach.getStoredFileName())
-                .thumbnailFilePath(attach.getThumbnailFilePath())
-                .filePath(attach.getFilePath())
-                .scheduledId(attach.getScheduledId())
-                .createdBy(attach.getCreatedBy())
-                .createdTime(attach.getCreatedTime())
-                .updatedBy(attach.getUpdatedBy())
-                .updatedTime(attach.getUpdatedTime())
-                .build();
     }
 }

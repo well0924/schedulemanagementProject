@@ -5,6 +5,7 @@ import com.example.enumerate.member.SearchType;
 import com.example.exception.dto.MemberErrorCode;
 import com.example.exception.exception.MemberCustomException;
 import com.example.interfaces.member.MemberRepositoryPort;
+import com.example.member.mapper.MemberEntityMapper;
 import com.example.model.member.MemberModel;
 import com.example.rdb.member.Member;
 import com.example.rdb.member.MemberRepository;
@@ -23,10 +24,12 @@ public class MemberOutConnector implements MemberRepositoryPort {
 
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
+    private final MemberEntityMapper entityMapper;
+
     public Page<MemberModel> findAll(Pageable pageable) {
         Page<MemberModel> memberModelPage = memberRepository
                 .findAll(pageable)
-                .map(this::toEntity);
+                .map(entityMapper::toEntity);
 
         if(memberModelPage.isEmpty()) {
             throw new MemberCustomException(MemberErrorCode.NOT_USER);
@@ -38,7 +41,7 @@ public class MemberOutConnector implements MemberRepositoryPort {
     public Page<MemberModel> findAllMemberSearch(String keyword, SearchType searchType, Pageable pageable) {
         return memberRepository
                 .searchAll(keyword,searchType,pageable)
-                .map(this::toEntity);
+                .map(entityMapper::toEntity);
     }
 
     public MemberModel findById(Long id) {
@@ -46,7 +49,7 @@ public class MemberOutConnector implements MemberRepositoryPort {
                 .findById(id)
                 .orElseThrow(()-> new MemberCustomException(MemberErrorCode.NOT_USER));
 
-        return toEntity(memberEntity);
+        return entityMapper.toEntity(memberEntity);
     }
 
     public MemberModel createMember(MemberModel memberModel) {
@@ -65,7 +68,7 @@ public class MemberOutConnector implements MemberRepositoryPort {
                 .updatedTime(LocalDateTime.now())
                 .build();
 
-        return toEntity(memberRepository.save(memberEntity));
+        return entityMapper.toEntity(memberRepository.save(memberEntity));
     }
 
     public MemberModel updateMember(Long id, MemberModel memberModel) {
@@ -76,27 +79,11 @@ public class MemberOutConnector implements MemberRepositoryPort {
                 memberModel.getUserEmail(),
                 memberModel.getUserPhone());
 
-        return toEntity(memberRepository.save(memberEntity));
+        return entityMapper.toEntity(memberRepository.save(memberEntity));
     }
 
     public void deleteMember(Long id) {
         memberRepository.deleteById(id);
     }
 
-    //Entity -> Model
-    private MemberModel toEntity(Member memberEntity) {
-        return MemberModel.builder()
-                .id(memberEntity.getId())
-                .userId(memberEntity.getUserId())
-                .password(memberEntity.getPassword())
-                .userEmail(memberEntity.getUserEmail())
-                .userPhone(memberEntity.getUserPhone())
-                .userName(memberEntity.getUserName())
-                .roles(memberEntity.getRoles())
-                .createdBy(memberEntity.getCreatedBy())
-                .createdTime(memberEntity.getCreatedTime())
-                .updatedBy(memberEntity.getUpdatedBy())
-                .updatedTime(memberEntity.getUpdatedTime())
-                .build();
-    }
 }

@@ -8,7 +8,9 @@ dependencies {
     implementation project(':domain:notification:api:api-model')
     implementation project(':domain:notification:core:service')
     implementation project(':domain:notification:core:model')
+    implementation project(':domain:notification:core:mapper')
     implementation project(':domain:notification:core:enumerate')
+    implementation project(':domain:notification:infrastructure:rdb')
     implementation 'net.javacrumbs.shedlock:shedlock-spring:5.9.0'
     implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.9.0'
     implementation 'org.springframework.kafka:spring-kafka'

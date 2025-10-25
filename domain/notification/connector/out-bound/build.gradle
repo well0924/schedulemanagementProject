@@ -6,6 +6,7 @@ dependencies {
     implementation project(":domain:notification:core:model")
     implementation project(":domain:notification:core:enumerate")
     implementation project(":domain:notification:core:exception")
+    implementation project(":domain:notification:core:mapper")
     implementation project(":domain:notification:connector:interfaces")
     implementation project(":domain:notification:api:api-model")
     implementation project(':domain:member:core:service')

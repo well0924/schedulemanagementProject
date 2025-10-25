@@ -1,6 +1,8 @@
 package com.example.inbound.attach;
 
 import static com.example.apimodel.attach.AttachApiModel.AttachResponse;
+
+import com.example.attach.mapper.AttachModelMapper;
 import com.example.interfaces.attach.AttachInterfaces;
 import com.example.model.attach.AttachModel;
 import com.example.service.attach.AttachService;
@@ -18,29 +20,31 @@ public class AttachInConnector implements AttachInterfaces {
 
     private final AttachService attachService;
 
+    private final AttachModelMapper attachModelMapper;
+
     @Override
     public List<AttachResponse> findAll() {
         return attachService.findAll()
                 .stream()
-                .map(this::toApiModel)
+                .map(attachModelMapper::toApiModel)
                 .collect(Collectors.toList());
     }
 
     @Override
     public AttachResponse findById(Long attachId) {
-        return toApiModel(attachService.findById(attachId));
+        return attachModelMapper.toApiModel(attachService.findById(attachId));
     }
 
     @Override
     public AttachResponse findByOriginFileName(String originFileName) {
-        return toApiModel(attachService.findByOriginFileName(originFileName));
+        return attachModelMapper.toApiModel(attachService.findByOriginFileName(originFileName));
     }
 
     @Override
     public List<AttachResponse> findByIds(List<Long> attachIds) {
         return attachService.findByIds(attachIds)
                 .stream()
-                .map(this::toApiModel)
+                .map(attachModelMapper::toApiModel)
                 .collect(Collectors.toList());
     }
 
@@ -56,10 +60,10 @@ public class AttachInConnector implements AttachInterfaces {
 
     //업로드 + 섬네일 생성
     @Override
-    public List<AttachResponse> createdAttach(List<String> uploadedFileNames) throws IOException {
+    public List<AttachResponse> createdAttach(List<String> uploadedFileNames) {
         return attachService.createAttach(uploadedFileNames)
                 .stream()
-                .map(this::toApiModel)
+                .map(attachModelMapper::toApiModel)
                 .collect(Collectors.toList());
     }
 
@@ -76,19 +80,7 @@ public class AttachInConnector implements AttachInterfaces {
     @Override
     public List<AttachResponse> uploadDirect(List<MultipartFile> files) throws IOException {
         List<AttachModel> models = attachService.uploadDirectToS3WithThumbnail(files);
-        return models.stream().map(this::toApiModel).collect(Collectors.toList());
+        return models.stream().map(attachModelMapper::toApiModel).collect(Collectors.toList());
     }
 
-    //model <-> api model
-    private AttachResponse toApiModel(AttachModel attachModel) {
-        return AttachResponse.builder()
-                .id(attachModel.getId())
-                .originFileName(attachModel.getOriginFileName())
-                .storedFileName(attachModel.getStoredFileName())
-                .thumbnailFilePath(attachModel.getThumbnailFilePath())
-                .fileSize(attachModel.getFileSize())
-                .filePath(attachModel.getFilePath())
-                .isDeletedAttach(attachModel.isDeletedAttached())
-                .build();
-    }
 }

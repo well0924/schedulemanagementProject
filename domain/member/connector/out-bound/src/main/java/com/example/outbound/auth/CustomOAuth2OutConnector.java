@@ -2,6 +2,7 @@ package com.example.outbound.auth;
 
 import com.example.enumerate.member.LoginType;
 import com.example.enumerate.member.Roles;
+import com.example.member.mapper.MemberModelMapper;
 import com.example.model.auth.CustomMemberDetails;
 import com.example.model.auth.OAuth2UserInfo;
 import com.example.model.member.MemberModel;
@@ -21,6 +22,8 @@ import java.util.Map;
 public class CustomOAuth2OutConnector extends DefaultOAuth2UserService {
 
     private final MemberRepository memberRepository;
+
+    private final MemberModelMapper memberModelMapper;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -47,10 +50,11 @@ public class CustomOAuth2OutConnector extends DefaultOAuth2UserService {
                 });
 
         // 6. Member -> MemberModel 변환
-        MemberModel toModel = toMemberModel(member);
+        MemberModel toModel = memberModelMapper.toMemberModel(member);
 
         // 7. CustomMemberDetails로 리턴
-        return CustomMemberDetails.builder()
+        return CustomMemberDetails
+                .builder()
                 .memberModel(toModel)
                 .attributes(attributes)
                 .attributeKey("sub") // 구글 기준 subject (다른 플랫폼은 다를 수 있음)
@@ -58,21 +62,6 @@ public class CustomOAuth2OutConnector extends DefaultOAuth2UserService {
                 .build();
     }
 
-    private MemberModel toMemberModel(Member member){
-        return MemberModel.builder()
-                .id(member.getId())
-                .password(member.getPassword())
-                .userId(member.getUserId())
-                .userName(member.getUserName())
-                .userEmail(member.getUserEmail())
-                .userPhone(member.getUserPhone())
-                .roles(member.getRoles())
-                .createdBy(member.getCreatedBy())
-                .updatedBy(member.getUpdatedBy())
-                .createdTime(member.getCreatedTime())
-                .updatedTime(member.getUpdatedTime())
-                .build();
-    }
 }
 
 

@@ -9,6 +9,7 @@ dependencies {
     implementation project(':domain:member:core:model')
     implementation project(':domain:member:core:enumerate')
     implementation project(':domain:member:core:exception')
+    implementation project(':domain:member:core:mapper')
     implementation project(':domain:member:connector:interfaces')
     implementation project(':domain:member:infrastructure:rdb')
 

@@ -37,8 +37,8 @@ public class AuthInConnector implements AuthInterface {
         return authService.currentUserId(username);
     }
 
-    //TokenDto -> TokenResponse
-    private TokenResponse tokenResponse(TokenDto dto) {
+
+    public TokenResponse tokenResponse(TokenDto dto) {
         return TokenResponse
                 .builder()
                 .grantType(dto.getGrantType())

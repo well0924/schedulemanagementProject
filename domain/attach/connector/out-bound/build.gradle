@@ -5,6 +5,7 @@ dependencies {
     implementation project(':domain:schedules:infrastructure:rdb')
     implementation project(':domain:attach:core:exception')
     implementation project(':domain:attach:core:model')
+    implementation project(':domain:attach:core:mapper')
     implementation project(':domain:attach:connector:interfaces')
     implementation project(':domain:attach:infrastructure:rdb')
     implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'

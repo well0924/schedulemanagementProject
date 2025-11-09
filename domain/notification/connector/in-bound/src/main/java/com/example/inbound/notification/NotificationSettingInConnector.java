@@ -2,8 +2,8 @@ package com.example.inbound.notification;
 
 import com.example.apimodel.notification.NotificationSettingApiModel;
 import com.example.events.enums.NotificationChannel;
-import com.example.interfaces.notification.NotificationSettingInterfaces;
-import com.example.notification.model.NotificationSettingModel;
+import com.example.interfaces.notification.push.NotificationSettingInterfaces;
+import com.example.notification.mapper.NotificationMapper;
 import com.example.notification.service.NotificationSettingService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -14,9 +14,11 @@ public class NotificationSettingInConnector implements NotificationSettingInterf
 
     private final NotificationSettingService notificationSettingService;
 
+    private final NotificationMapper notificationMapper;
+
     @Override
     public NotificationSettingApiModel.NotificationSettingResponse updateAllChannels(Long userId, boolean enabled) {
-        return toModel(notificationSettingService.updateAllChannels(userId,enabled));
+        return notificationMapper.toModel(notificationSettingService.updateAllChannels(userId,enabled));
     }
 
     @Override
@@ -29,19 +31,4 @@ public class NotificationSettingInConnector implements NotificationSettingInterf
         return notificationSettingService.isEnabled(memberId,channel);
     }
 
-    private NotificationSettingApiModel.NotificationSettingResponse toModel(NotificationSettingModel model) {
-        return NotificationSettingApiModel
-                .NotificationSettingResponse
-                .builder()
-                .id(model.getId())
-                .userId(model.getUserId())
-                .webEnabled(model.isWebEnabled())
-                .emailEnabled(model.isEmailEnabled())
-                .pushEnabled(model.isPushEnabled())
-                .scheduleCreatedEnabled(model.isScheduleCreatedEnabled())
-                .scheduleUpdatedEnabled(model.isScheduleUpdatedEnabled())
-                .scheduleDeletedEnabled(model.isScheduleDeletedEnabled())
-                .scheduleRemindEnabled(model.isScheduleRemindEnabled())
-                .build();
-    }
 }

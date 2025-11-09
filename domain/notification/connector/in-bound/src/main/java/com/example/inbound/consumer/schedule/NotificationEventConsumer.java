@@ -5,6 +5,7 @@ import com.example.events.kafka.NotificationEvents;
 import com.example.events.process.ProcessedEventService;
 import com.example.exception.dto.ErrorCode;
 import com.example.exception.global.CustomExceptionHandler;
+import com.example.interfaces.notification.kafka.KafkaEventConsumer;
 import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.NotificationType;
 import com.example.notification.model.NotificationModel;
@@ -25,7 +26,7 @@ import java.util.Optional;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class NotificationEventConsumer {
+public class NotificationEventConsumer implements KafkaEventConsumer<NotificationEvents> {
 
     private final NotificationService notificationService;
 
@@ -45,7 +46,7 @@ public class NotificationEventConsumer {
             topics = "notification-events",
             groupId = "notification-group",
             containerFactory = "notificationKafkaListenerFactory")
-    public void consume(NotificationEvents event) {
+    public void handle(NotificationEvents event) {
 
         try {
             KafkaMDCUtil.initMDC(event);
@@ -102,8 +103,7 @@ public class NotificationEventConsumer {
             processedEventService.saveProcessedEvent(event.getEventId());
         } catch (CustomExceptionHandler ex) {
             // 재처리 불필요 → 여기서 끝
-            log.warn("[Kafka Non-Retry Error] code={}, msg={}",
-                    ex.getErrorCode(), ex.getMessage());
+            log.warn("[Kafka Non-Retry Error] code={}, msg={}", ex.getErrorCode(), ex.getMessage());
         } catch (JsonProcessingException e) {
             log.error("Kafka 메시지 직렬화 오류: {}", e.getMessage());
             throw new CustomExceptionHandler("이벤트 직렬화 실패: " + event.getEventId(), ErrorCode.EVENT_SERIALIZATION_ERROR);

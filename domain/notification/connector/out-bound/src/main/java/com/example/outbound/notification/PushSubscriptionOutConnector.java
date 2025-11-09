@@ -1,5 +1,8 @@
 package com.example.outbound.notification;
 
+import com.example.interfaces.notification.push.NotificationPushRepositoryPort;
+import com.example.notification.mapper.NotificationEntityMapper;
+import com.example.notification.mapper.NotificationMapper;
 import com.example.notification.model.PushSubscriptionModel;
 import com.example.rdbrepository.PushSubscription;
 import com.example.rdbrepository.PushSubscriptionRepository;
@@ -12,32 +15,26 @@ import java.util.stream.Collectors;
 
 @Component
 @AllArgsConstructor
-public class PushSubscriptionOutConnector {
+public class PushSubscriptionOutConnector implements NotificationPushRepositoryPort {
 
     private final PushSubscriptionRepository pushSubscriptionRepository;
+
+    private final NotificationMapper notificationMapper;
+
+    private final NotificationEntityMapper notificationEntityMapper;
 
     public List<PushSubscriptionModel> findByMemberIdAndActiveTrue(Long memberId) {
         return pushSubscriptionRepository
                 .findByMemberIdAndActiveTrue(memberId)
                 .stream()
-                .map(this::toModel)
+                .map(notificationMapper::toModel)
                 .collect(Collectors.toList());
     }
 
     public PushSubscriptionModel savePush(PushSubscriptionModel pushSubscriptionModel) {
-        PushSubscription pushSubscription = PushSubscription
-                .builder()
-                .active(pushSubscriptionModel.isActive())
-                .auth(pushSubscriptionModel.getAuth())
-                .endpoint(pushSubscriptionModel.getEndpoint())
-                .p256dh(pushSubscriptionModel.getP256dh())
-                .userAgent(pushSubscriptionModel.getUserAgent())
-                .memberId(pushSubscriptionModel.getMemberId())
-                .expirationTime(pushSubscriptionModel.getExpirationTime())
-                .createdAt(pushSubscriptionModel.getCreatedAt())
-                .revokedAt(pushSubscriptionModel.getRevokedAt())
-                .build();
-        return toModel(pushSubscriptionRepository.save(pushSubscription));
+        return notificationMapper
+                .toModel(pushSubscriptionRepository
+                        .save(notificationEntityMapper.toEntity(pushSubscriptionModel)));
     }
 
     public Optional<PushSubscriptionModel> findByUserIdAndEndpoint(Long memberId, String endpoint) {
@@ -45,7 +42,7 @@ public class PushSubscriptionOutConnector {
                 .findByMemberIdAndActiveTrue(memberId)
                 .stream()
                 .filter(sub -> sub.getEndpoint().equals(endpoint))
-                .map(this::toModel)
+                .map(notificationMapper::toModel)
                 .findFirst();
     }
 
@@ -59,21 +56,6 @@ public class PushSubscriptionOutConnector {
                 .stream()
                 .filter(s -> s.getEndpoint().equals(endpoint))
                 .forEach(PushSubscription::deactivate);
-    }
-
-    private PushSubscriptionModel toModel(PushSubscription pushSubscription) {
-        return PushSubscriptionModel
-                .builder()
-                .memberId(pushSubscription.getMemberId())
-                .auth(pushSubscription.getAuth())
-                .active(pushSubscription.isActive())
-                .p256dh(pushSubscription.getP256dh())
-                .endpoint(pushSubscription.getEndpoint())
-                .userAgent(pushSubscription.getUserAgent())
-                .createdAt(pushSubscription.getCreatedAt())
-                .expirationTime(pushSubscription.getExpirationTime())
-                .revokedAt(pushSubscription.getRevokedAt())
-                .build();
     }
 
 }

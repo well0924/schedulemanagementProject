@@ -1,4 +1,4 @@
-package com.example.interfaces.notification;
+package com.example.interfaces.notification.push;
 
 import com.example.apimodel.notification.NotificationPushApiModel;
 

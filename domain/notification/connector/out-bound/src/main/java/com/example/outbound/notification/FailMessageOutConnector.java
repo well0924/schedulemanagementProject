@@ -1,5 +1,7 @@
 package com.example.outbound.notification;
 
+import com.example.notification.mapper.NotificationEntityMapper;
+import com.example.notification.mapper.NotificationMapper;
 import com.example.notification.model.FailMessageModel;
 import com.example.rdbrepository.FailedMessage;
 import com.example.rdbrepository.FailedMessageRepository;
@@ -18,49 +20,29 @@ public class FailMessageOutConnector {
 
     private final FailedMessageRepository failedMessageRepository;
 
+    private final NotificationMapper notificationMapper;
+
+    private final NotificationEntityMapper notificationEntityMapper;
+
     public List<FailMessageModel> findByResolvedFalse (){
         return failedMessageRepository.findByResolvedFalse()
                 .stream()
-                .map(this::toModel)
+                .map(notificationMapper::toModel)
                 .collect(Collectors.toList());
     }
 
     public FailMessageModel createFailMessage(FailMessageModel failMessageModel) {
-        FailedMessage failedMessage = FailedMessage
-                .builder()
-                .id(failMessageModel.getId())
-                .messageType(failMessageModel.getMessageType())
-                .exceptionMessage(failMessageModel.getExceptionMessage())
-                .topic(failMessageModel.getTopic())
-                .payload(failMessageModel.getPayload())
-                .retryCount(failMessageModel.getRetryCount())
-                .resolved(failMessageModel.isResolved())
-                .createdAt(failMessageModel.getCreatedAt())
-                .resolvedAt(failMessageModel.getResolvedAt())
-                .lastTriedAt(failMessageModel.getLastTriedAt())
-                .build();
-
-        return toModel(failedMessageRepository.save(failedMessage));
+        FailedMessage failedMessage = notificationEntityMapper.toEntity(failMessageModel);
+        return notificationMapper.toModel(failedMessageRepository.save(failedMessage));
     }
 
     public FailMessageModel updateFailMessage(FailMessageModel model) {
         FailedMessage existing = failedMessageRepository.findById(model.getId())
                 .orElseThrow(() -> new IllegalArgumentException("FailMessage not found: id=" + model.getId()));
-
-        FailedMessage updated = FailedMessage.builder()
-                .id(model.getId())
-                .topic(model.getTopic())
-                .messageType(model.getMessageType())
-                .payload(model.getPayload())
-                .createdAt(model.getCreatedAt())
-                .resolved(model.isResolved())
-                .retryCount(model.getRetryCount())
-                .lastTriedAt(model.getLastTriedAt())
-                .resolvedAt(model.getResolvedAt())
-                .exceptionMessage(model.getExceptionMessage())
-                .build();
-
-        return toModel(failedMessageRepository.save(updated));
+        return notificationMapper
+                .toModel(failedMessageRepository
+                        .save(notificationEntityMapper
+                                .toEntity(model)));
     }
 
     public boolean findByPayload(String payload) {
@@ -71,18 +53,4 @@ public class FailMessageOutConnector {
         return failedMessageRepository.deleteByResolvedIsTrueAndResolvedAtBefore(threshold);
     }
 
-    private FailMessageModel toModel(FailedMessage failedMessage){
-        return FailMessageModel
-                .builder()
-                .id(failedMessage.getId())
-                .exceptionMessage(failedMessage.getExceptionMessage())
-                .topic(failedMessage.getTopic())
-                .payload(failedMessage.getPayload())
-                .resolved(failedMessage.isResolved())
-                .retryCount(failedMessage.getRetryCount())
-                .createdAt(failedMessage.getCreatedAt())
-                .resolvedAt(failedMessage.getResolvedAt())
-                .lastTriedAt(failedMessage.getLastTriedAt())
-                .build();
-    }
 }

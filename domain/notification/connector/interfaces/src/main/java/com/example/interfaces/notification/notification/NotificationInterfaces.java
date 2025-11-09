@@ -1,4 +1,4 @@
-package com.example.interfaces.notification;
+package com.example.interfaces.notification.notification;
 
 import com.example.apimodel.notification.NotificationApiModel;
 import com.example.model.schedules.SchedulesModel;

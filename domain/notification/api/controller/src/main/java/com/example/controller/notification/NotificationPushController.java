@@ -1,7 +1,7 @@
 package com.example.controller.notification;
 
 import com.example.apimodel.notification.NotificationPushApiModel;
-import com.example.inbound.notification.NotificationPushInConnector;
+import com.example.interfaces.notification.push.NotificationPushInterfaces;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +13,7 @@ import java.util.List;
 @RequestMapping("/api/push")
 public class NotificationPushController {
 
-    private final NotificationPushInConnector pushInConnector;
+    private final NotificationPushInterfaces pushInConnector;
 
     //알림 푸시 구독
     @PostMapping("/subscribe")

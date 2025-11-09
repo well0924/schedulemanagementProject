@@ -3,7 +3,6 @@ package com.example.notification.service;
 import com.example.notification.model.NotificationModel;
 import com.example.outbound.notification.NotificationOutConnector;
 import lombok.AllArgsConstructor;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,13 +51,8 @@ public class NotificationService {
         notificationOutConnector.markAsRead(id); // 다시 저장 (업데이트)
     }
 
-    @Transactional
     public void markAsSent(Long id) {
         notificationOutConnector.markAsSent(id);
-    }
-
-    public NotificationModel findByMessageAndUserId(String message,Long userId) {
-        return notificationOutConnector.findByMessageAndUserId(message, userId);
     }
 
 }

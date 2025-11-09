@@ -1,8 +1,8 @@
 package com.example.inbound.notification;
 
 import com.example.apimodel.notification.NotificationPushApiModel;
-import com.example.interfaces.notification.NotificationPushInterfaces;
-import com.example.notification.model.PushSubscriptionModel;
+import com.example.interfaces.notification.push.NotificationPushInterfaces;
+import com.example.notification.mapper.NotificationMapper;
 import com.example.notification.service.PushSubscriptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -16,9 +16,11 @@ public class NotificationPushInConnector implements NotificationPushInterfaces {
 
     private final PushSubscriptionService pushSubscriptionService;
 
+    private final NotificationMapper notificationMapper;
+
     @Override
     public NotificationPushApiModel.NotificationPushResponse subscribe(NotificationPushApiModel.NotificationPushRequest request) {
-        return toApiModel(pushSubscriptionService
+        return notificationMapper.toApiModel(pushSubscriptionService
                 .saveSubscription(request.memberId(),
                         request.endpoint(),
                         request.p256dh(),
@@ -30,7 +32,7 @@ public class NotificationPushInConnector implements NotificationPushInterfaces {
     public List<NotificationPushApiModel.NotificationPushResponse> getActiveSubscriptions(Long memberId) {
         return pushSubscriptionService.getActiveSubscriptions(memberId)
                 .stream()
-                .map(this::toApiModel)
+                .map(notificationMapper::toApiModel)
                 .collect(Collectors.toList());
     }
 
@@ -42,22 +44,6 @@ public class NotificationPushInConnector implements NotificationPushInterfaces {
     @Override
     public void deactivateByEndpoint(Long memberId, String endpoint) {
         pushSubscriptionService.deactivateByEndpoint(memberId, endpoint);
-    }
-
-    private NotificationPushApiModel.NotificationPushResponse toApiModel(PushSubscriptionModel pushSubscriptionModel) {
-        return NotificationPushApiModel.NotificationPushResponse
-                .builder()
-                .id(pushSubscriptionModel.getId())
-                .auth(pushSubscriptionModel.getAuth())
-                .active(pushSubscriptionModel.isActive())
-                .p256dh(pushSubscriptionModel.getP256dh())
-                .endpoint(pushSubscriptionModel.getEndpoint())
-                .userAgent(pushSubscriptionModel.getUserAgent())
-                .memberId(pushSubscriptionModel.getMemberId())
-                .createdAt(pushSubscriptionModel.getCreatedAt())
-                .expirationTime(pushSubscriptionModel.getExpirationTime())
-                .revokedAt(pushSubscriptionModel.getRevokedAt())
-                .build();
     }
 
 }

@@ -1,7 +1,7 @@
 package com.example.controller.notification;
 
 import com.example.apimodel.notification.NotificationSettingApiModel;
-import com.example.inbound.notification.NotificationSettingInConnector;
+import com.example.interfaces.notification.push.NotificationSettingInterfaces;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 @AllArgsConstructor
 public class NotificationSettingController {
 
-    private final NotificationSettingInConnector notificationSettingInConnector;
+    private final NotificationSettingInterfaces notificationSettingInConnector;
 
     // 알림 설정 on/off
     @PutMapping("/me/all")
@@ -19,7 +19,7 @@ public class NotificationSettingController {
     }
 
     // 알림설정 초기화
-    @PostMapping("/me/reset")
+    @PostMapping("/me/reset/{id}")
     public void resetToDefault(@PathVariable("id")Long userId) {
         notificationSettingInConnector.resetToDefault(userId);
     }

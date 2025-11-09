@@ -2,7 +2,7 @@ package com.example.controller.notification;
 
 
 import com.example.apimodel.notification.NotificationApiModel;
-import com.example.inbound.notification.NotificationInConnector;
+import com.example.interfaces.notification.notification.NotificationInterfaces;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +14,7 @@ import java.util.List;
 @RequestMapping("/api/notice")
 public class NotificationController {
 
-    private final NotificationInConnector notification;
+    private final NotificationInterfaces notification;
 
     //알림 전체 목록(최신순)
     @GetMapping("/{id}")

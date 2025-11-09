@@ -1,5 +1,8 @@
 package com.example.outbound.notification;
 
+import com.example.interfaces.notification.push.NotificationSettingRepositoryPort;
+import com.example.notification.mapper.NotificationEntityMapper;
+import com.example.notification.mapper.NotificationMapper;
 import com.example.notification.model.NotificationSettingModel;
 import com.example.rdbrepository.NotificationSetting;
 import com.example.rdbrepository.NotificationSettingRepository;
@@ -8,48 +11,34 @@ import org.springframework.stereotype.Component;
 
 @Component
 @AllArgsConstructor
-public class NotificationSettingOutConnector {
+public class NotificationSettingOutConnector implements NotificationSettingRepositoryPort {
 
     private final NotificationSettingRepository notificationSettingRepository;
+
+    private final NotificationEntityMapper notificationEntityMapper;
+
+    private final NotificationMapper notificationMapper;
 
     //사용자 알림 설정 조회 또는 생성
     public NotificationSettingModel getOrCreate(Long userId) {
         return notificationSettingRepository.findByUserId(userId)
-                .map(this::toModel)
+                .map(notificationMapper::toModel)
                 .orElseGet(() -> {
-                    NotificationSetting newSetting = NotificationSetting.builder()
+                    NotificationSetting newSetting = NotificationSetting
+                            .builder()
                             .userId(userId)
                             .webEnabled(true)
                             .emailEnabled(false)
                             .pushEnabled(false)
                             .build();
-                    return toModel(notificationSettingRepository.save(newSetting));
+                    return notificationMapper.toModel(notificationSettingRepository.save(newSetting));
                 });
     }
 
     //전체 설정 저장
     public void updateSetting(NotificationSettingModel notificationSettingModel) {
-        notificationSettingRepository.save(toEntity(notificationSettingModel));
+        notificationSettingRepository.save(notificationEntityMapper
+                .toEntity(notificationSettingModel));
     }
 
-    private NotificationSettingModel toModel(NotificationSetting entity) {
-        return NotificationSettingModel.builder()
-                .id(entity.getId())
-                .userId(entity.getUserId())
-                .webEnabled(entity.isWebEnabled())
-                .emailEnabled(entity.isEmailEnabled())
-                .pushEnabled(entity.isPushEnabled())
-                .build();
-    }
-
-    private NotificationSetting toEntity(NotificationSettingModel model) {
-        return NotificationSetting
-                .builder()
-                .id(model.getId())
-                .userId(model.getUserId())
-                .webEnabled(model.isWebEnabled())
-                .emailEnabled(model.isEmailEnabled())
-                .pushEnabled(model.isPushEnabled())
-                .build();
-    }
 }

@@ -1,8 +1,12 @@
 package com.example.service.schedule;
 
 import com.example.enumerate.schedules.*;
+import com.example.events.enums.AggregateType;
 import com.example.events.enums.NotificationChannel;
 import com.example.events.enums.ScheduleActionType;
+import com.example.events.kafka.NotificationEvents;
+import com.example.events.outbox.OutboxEventService;
+import com.example.events.spring.ScheduleEvents;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
 import com.example.inbound.schedules.ScheduleRepositoryPort;
@@ -48,6 +52,8 @@ public class ScheduleDomainService {
     private final RepeatDeleteRegistry repeatDeleteRegistry;
 
     private final RepeatScheduleFactory repeatScheduleFactory;
+
+    private final OutboxEventService outboxEventService;
 
     public List<SchedulesModel> getAllSchedules() {
         return scheduleRepositoryPort.findAllSchedules();
@@ -120,7 +126,22 @@ public class ScheduleDomainService {
         // 이벤트 발행.
         NotificationChannel channel = domainEventPublisher.resolveChannel(firstSchedule.getMemberId());
         log.info(channel.toString());
-        domainEventPublisher.publishScheduleEvent(firstSchedule,ScheduleActionType.SCHEDULE_CREATED,channel);
+
+        NotificationEvents notificationEvents =
+                NotificationEvents.of(ScheduleEvents
+                        .builder()
+                                .scheduleId(firstSchedule.getId())
+                                .startTime(firstSchedule.getStartTime())
+                                .contents(firstSchedule.getContents())
+                                .userId(firstSchedule.getMemberId())
+                                .notificationChannel(channel)
+                                .notificationType(ScheduleActionType.SCHEDULE_CREATED)
+                                .createdTime(firstSchedule.getCreatedTime())
+                        .build());
+        // 아웃 박스 저장
+        outboxEventService.saveEvent(notificationEvents,
+                AggregateType.SCHEDULE.name(),firstSchedule.getId().toString(),notificationEvents.getNotificationType().name());
+
 
         return firstSchedule;
     }
@@ -134,7 +155,29 @@ public class ScheduleDomainService {
         log.info("수정 요청 들어옴. scheduleId = {}", scheduleId);
         RepeatUpdateType t = Optional.ofNullable(updateType).orElse(RepeatUpdateType.SINGLE);
         // RepeatUpdateType에 따른 일정 수정
-        return repeatUpdateRegistry.dispatch(t, existing, model);
+        List<SchedulesModel> result = repeatUpdateRegistry.dispatch(t, existing, model);
+        //아웃 박스 전송
+        for (SchedulesModel updated : result) {
+            NotificationChannel channel = domainEventPublisher.resolveChannel(updated.getMemberId());
+            NotificationEvents events = NotificationEvents
+                    .of(ScheduleEvents
+                            .builder()
+                            .scheduleId(updated.getId())
+                            .startTime(updated.getStartTime())
+                            .contents(updated.getContents())
+                            .userId(updated.getMemberId())
+                            .notificationChannel(channel)
+                            .notificationType(ScheduleActionType.SCHEDULE_UPDATE)
+                            .createdTime(updated.getCreatedTime())
+                            .build());
+            outboxEventService.saveEvent(
+                    events,
+                    AggregateType.SCHEDULE.name(),
+                    updated.getId().toString(),
+                    events.getNotificationType().name()
+            );
+        }
+        return result.get(0);
     }
 
     public PROGRESS_STATUS updateProgressStatus(Long scheduleId, PROGRESS_STATUS newStatus) {
@@ -152,7 +195,18 @@ public class ScheduleDomainService {
         repeatDeleteRegistry.dispatch(deleteType,target);
         //삭제후 이벤트 발행.
         NotificationChannel channel = domainEventPublisher.resolveChannel(target.getMemberId());
-        domainEventPublisher.publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE,channel);
+        NotificationEvents notificationEvents =
+                NotificationEvents.of(ScheduleEvents
+                        .builder()
+                        .scheduleId(target.getId())
+                        .startTime(target.getStartTime())
+                        .contents(target.getContents())
+                        .userId(target.getMemberId())
+                        .notificationChannel(channel)
+                        .notificationType(ScheduleActionType.SCHEDULE_DELETE)
+                        .createdTime(target.getCreatedTime())
+                        .build());
+        outboxEventService.saveEvent(notificationEvents,AggregateType.SCHEDULE.name(),target.getId().toString(),notificationEvents.getNotificationType().name());
     }
 
     //선택 삭제
@@ -172,7 +226,18 @@ public class ScheduleDomainService {
         for (Long id : ids) {
             SchedulesModel model = scheduleRepositoryPort.findById(id); // 이벤트 정보용
             NotificationChannel channel = domainEventPublisher.resolveChannel(model.getMemberId());
-            domainEventPublisher.publishScheduleEvent(model,ScheduleActionType.SCHEDULE_DELETE,channel);
+            NotificationEvents notificationEvents =
+                    NotificationEvents.of(ScheduleEvents
+                            .builder()
+                            .scheduleId(model.getId())
+                            .startTime(model.getStartTime())
+                            .contents(model.getContents())
+                            .userId(model.getMemberId())
+                            .notificationChannel(channel)
+                            .notificationType(ScheduleActionType.SCHEDULE_DELETE)
+                            .createdTime(model.getCreatedTime())
+                            .build());
+            outboxEventService.saveEvent(notificationEvents,AggregateType.SCHEDULE.name(),model.getId().toString(),notificationEvents.getNotificationType().name());
         }
     }
 
@@ -194,6 +259,7 @@ public class ScheduleDomainService {
         scheduleRepositoryPort.validateScheduleConflict(schedule);
 
         SchedulesModel saved = scheduleRepositoryPort.saveSchedule(schedule);
+
 
         if (saved == null || saved.getId() == null) {
             throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_CREATED_FAIL);

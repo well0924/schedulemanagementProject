@@ -1,13 +1,15 @@
 package com.example.service.member;
 
 import com.example.enumerate.member.SearchType;
-import com.example.events.spring.MemberSignUpEvent;
+import com.example.events.enums.AggregateType;
+import com.example.events.enums.EventType;
+import com.example.events.kafka.MemberSignUpKafkaEvent;
+import com.example.events.outbox.OutboxEventService;
 import com.example.interfaces.member.MemberRepositoryPort;
 import com.example.model.member.MemberModel;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,7 +24,7 @@ public class MemberService {
 
     private final MemberRepositoryPort memberRepositoryPort;
 
-    private final ApplicationEventPublisher applicationEventPublisher;
+    private final OutboxEventService outboxEventService;
 
     private static final Logger logger = LoggerFactory.getLogger(MemberService.class);
 
@@ -55,12 +57,17 @@ public class MemberService {
         MemberModel createdResult = memberRepositoryPort.createMember(memberModel);
         logger.debug("createdResult::"+createdResult);
 
-        applicationEventPublisher.publishEvent(MemberSignUpEvent
-                .builder()
-                        .memberId(createdResult.getId())
-                        .email(createdResult.getUserEmail())
-                        .username(createdResult.getUserId())
-                .build());
+        MemberSignUpKafkaEvent event = MemberSignUpKafkaEvent.of(
+                createdResult.getId(),
+                createdResult.getUserId(),
+                createdResult.getUserEmail()
+        );
+
+        outboxEventService.saveEvent(
+                event,
+                AggregateType.MEMBER.name(),
+                createdResult.getId().toString(),
+                EventType.SIGNED_UP_WELCOME.name());
         logger.info("event???");
         return createdResult;
     }

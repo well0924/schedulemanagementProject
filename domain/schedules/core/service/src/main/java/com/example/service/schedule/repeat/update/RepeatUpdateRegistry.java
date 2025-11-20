@@ -26,7 +26,7 @@ public class RepeatUpdateRegistry {
         }
     }
 
-    public SchedulesModel dispatch(RepeatUpdateType type, SchedulesModel existing, SchedulesModel patch) {
+    public List<SchedulesModel> dispatch(RepeatUpdateType type, SchedulesModel existing, SchedulesModel patch) {
         RepeatUpdateHandler h = map.get(type);
         if (h == null) throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_UPDATED_FAIL, "No handler for " + type);
         return h.handle(existing, patch);

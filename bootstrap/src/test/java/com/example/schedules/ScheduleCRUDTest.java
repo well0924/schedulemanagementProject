@@ -5,7 +5,8 @@ import com.example.enumerate.schedules.RepeatType;
 import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.enumerate.schedules.ScheduleType;
 import com.example.events.enums.NotificationChannel;
-import com.example.events.enums.ScheduleActionType;
+import com.example.events.kafka.NotificationEvents;
+import com.example.events.outbox.OutboxEventService;
 import com.example.model.schedules.SchedulesModel;
 import com.example.outbound.schedule.ScheduleOutConnector;
 import com.example.security.config.SecurityUtil;
@@ -43,6 +44,8 @@ public class ScheduleCRUDTest {
     @MockBean
     DomainEventPublisher events;
     @MockBean
+    OutboxEventService outboxEventService;
+    @MockBean
     AttachBinder attach;
     @MockBean
     ScheduleGuard guard;
@@ -63,9 +66,9 @@ public class ScheduleCRUDTest {
             mocked.when(SecurityUtil::currentUserId).thenReturn(100L);
             mocked.when(SecurityUtil::currentUserName).thenReturn("userA");
 
-            LocalDateTime start = LocalDateTime.of(2025, 8, 20, 9, 0);
-            LocalDateTime end = LocalDateTime.of(2025, 8, 20, 10, 0);
-
+            LocalDateTime start = t(2025,8,20,9,0);
+            LocalDateTime end = t(2025,8,20,10,0);
+            //일정 요청
             SchedulesModel req = SchedulesModel
                     .builder()
                     .contents("회의")
@@ -73,11 +76,13 @@ public class ScheduleCRUDTest {
                     .endTime(end)
                     .isAllDay(false)
                     .repeatType(RepeatType.NONE) .build();
+
             when(classifier.classify(any())).thenReturn(ScheduleType.SINGLE_DAY);
             when(attach.hasAttachFiles(req)).thenReturn(false);
 
             // save 전 검증 호출만 하고
             doNothing().when(out).validateScheduleConflict(any());
+
             // save 결과 리턴
             SchedulesModel saved = req
                     .toBuilder()
@@ -86,8 +91,9 @@ public class ScheduleCRUDTest {
                     .scheduleType(ScheduleType.SINGLE_DAY)
                     .build();
 
-            when(out.saveSchedule(any())).thenReturn(saved);
             // when
+            when(events.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
+            when(out.saveSchedule(any())).thenReturn(saved);
             SchedulesModel result = svc.saveSchedule(req);
 
             // then
@@ -96,8 +102,14 @@ public class ScheduleCRUDTest {
             assertThat(result.getScheduleType()).isEqualTo(ScheduleType.SINGLE_DAY);
             verify(out).validateScheduleConflict(any(SchedulesModel.class));
             verify(out).saveSchedule(any(SchedulesModel.class));
-            verify(events).publishScheduleEvent(saved, ScheduleActionType.SCHEDULE_CREATED, NotificationChannel.WEB);
-            verify(attach, never()).bindToSchedule(anyList(), anyLong()); }
+            verify(attach, never()).bindToSchedule(anyList(), anyLong());
+            verify(outboxEventService, times(1)).saveEvent(
+                    any(NotificationEvents.class),
+                    eq("SCHEDULE"),
+                    eq("999"),
+                    eq("SCHEDULE_CREATED")
+            );
+        }
     }
 
     @Test
@@ -107,7 +119,12 @@ public class ScheduleCRUDTest {
             // SecurityUtil이 인증 예외를 던지도록
             mocked.when(SecurityUtil::currentUserId)
                     .thenThrow(new AccessDeniedException("인증 필요"));
-            SchedulesModel req = baseSingle(null, "회의", t(2025,8,20,9,0), t(2025,8,20,10,0));
+            SchedulesModel req = baseSingle(
+                    null,
+                    "회의",
+                    t(2025,8,20,9,0),
+                    t(2025,8,20,10,0)
+            );
 
             assertThatThrownBy(() -> svc.saveSchedule(req))
                     .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
@@ -121,7 +138,9 @@ public class ScheduleCRUDTest {
             mocked.when(SecurityUtil::currentUserId).thenReturn(100L);
             mocked.when(SecurityUtil::currentUserName).thenReturn("userA");
             // 요청: 주간 반복 3회
-            SchedulesModel base = baseSingle(100L, "스터디", t(2025,8,20,20,0), t(2025,8,20,21,0))
+            SchedulesModel base = baseSingle(100L, "스터디",
+                    t(2025,8,20,20,0),
+                    t(2025,8,20,21,0))
                     .toBuilder()
                     .repeatType(RepeatType.WEEKLY)
                     .repeatCount(3)
@@ -150,8 +169,9 @@ public class ScheduleCRUDTest {
                     .scheduleType(ScheduleType.SINGLE_DAY)
                     .build();
                     });
-            when(attach.hasAttachFiles(any())).thenReturn(false);
             // when
+            when(attach.hasAttachFiles(any())).thenReturn(false);
+            when(events.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
             SchedulesModel firstSaved = svc.saveSchedule(base);
             // then
             assertThat(firstSaved.getId()).isEqualTo(1L);
@@ -159,7 +179,12 @@ public class ScheduleCRUDTest {
             // 3건 저장 호출 확인
             verify(out, times(3)).saveSchedule(any(SchedulesModel.class));
             // 이벤트 1회(최초 스케줄 기준) 발행 확인
-            verify(events).publishScheduleEvent(firstSaved, ScheduleActionType.SCHEDULE_CREATED,NotificationChannel.WEB);
+            verify(outboxEventService, times(1)).saveEvent(
+                    any(NotificationEvents.class),
+                    eq("SCHEDULE"),
+                    eq("1"),
+                    eq("SCHEDULE_CREATED")
+            );
         }
     }
 
@@ -184,14 +209,13 @@ public class ScheduleCRUDTest {
                     .toBuilder().id(500L).memberId(777L).scheduleType(ScheduleType.ALL_DAY).build());
 
             when(attach.hasAttachFiles(req)).thenReturn(false);
-
+            when(events.resolveChannel(777L)).thenReturn(NotificationChannel.WEB);
             SchedulesModel saved = svc.saveSchedule(req);
 
             assertThat(saved.getId()).isEqualTo(500L);
             assertThat(saved.getScheduleType()).isEqualTo(ScheduleType.ALL_DAY);
             assertThat(saved.getMemberId()).isEqualTo(777L);
 
-            verify(events).publishScheduleEvent(saved, ScheduleActionType.SCHEDULE_CREATED,NotificationChannel.WEB);
         }
     }
 
@@ -200,8 +224,14 @@ public class ScheduleCRUDTest {
     public void deleteSchedule_success_Single(){
         try (MockedStatic<SecurityUtil> mocked = Mockito.mockStatic(SecurityUtil.class)) {
             mocked.when(SecurityUtil::currentUserId).thenReturn(100L);
+            LocalDateTime day = t(2025,8,30,0,0);
             SchedulesModel target = SchedulesModel
-                    .builder().id(10L).memberId(100L).build();
+                    .builder()
+                    .id(10L)
+                    .startTime(day)
+                    .endTime(day)
+                    .memberId(100L)
+                    .build();
 
             when(out.findById(10L)).thenReturn(target);
             doNothing().when(guard).assertOwnerOrAdmin(target);
@@ -210,11 +240,17 @@ public class ScheduleCRUDTest {
             doAnswer(inv -> { out.deleteSchedule(10L); return null; })
                     .when(repeatDelete).dispatch(eq(DeleteType.SINGLE), eq(target));
             // when
+            when(events.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
             svc.deleteSchedule(10L, DeleteType.SINGLE);
             // then
             verify(repeatDelete).dispatch(DeleteType.SINGLE, target);
             verify(out).deleteSchedule(10L);
-            verify(events).publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE,NotificationChannel.WEB);
+            verify(outboxEventService, times(1)).saveEvent(
+                    any(NotificationEvents.class),
+                    eq("SCHEDULE"),
+                    eq("10"),
+                    eq("SCHEDULE_DELETE")
+            );
         }
     }
 
@@ -222,12 +258,14 @@ public class ScheduleCRUDTest {
     @DisplayName("일정 전체 삭제 성공")
     public void deleteSchedule_success_ALL_REPEAT(){
         try (MockedStatic<SecurityUtil> mocked = Mockito.mockStatic(SecurityUtil.class)) {
-            mocked.when(SecurityUtil::currentUserId).thenReturn(200L);
             // given
+            mocked.when(SecurityUtil::currentUserId).thenReturn(200L);
+            LocalDateTime day = t(2025,8,30,0,0);
             SchedulesModel target = SchedulesModel
                     .builder()
                     .id(20L)
                     .memberId(200L)
+                    .startTime(day)
                     .repeatGroupId("RG")
                     .build();
 
@@ -239,12 +277,18 @@ public class ScheduleCRUDTest {
                     .when(repeatDelete).dispatch(eq(DeleteType.ALL_REPEAT), eq(target));
 
             // when
+            when(events.resolveChannel(200L)).thenReturn(NotificationChannel.WEB);
             svc.deleteSchedule(20L, DeleteType.ALL_REPEAT);
 
             // then
             verify(repeatDelete).dispatch(DeleteType.ALL_REPEAT, target);
             verify(out).markAsDeletedByRepeatGroupId("RG");
-            verify(events).publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE,NotificationChannel.WEB);
+            verify(outboxEventService, times(1)).saveEvent(
+                    any(NotificationEvents.class),
+                    eq("SCHEDULE"),
+                    eq("20"),
+                    eq("SCHEDULE_DELETE")
+            );
         }
     }
 
@@ -266,12 +310,17 @@ public class ScheduleCRUDTest {
             doNothing().when(guard).assertOwnerOrAdmin(target);
             doAnswer(inv -> { out.markAsDeletedAfter("GRP", st); return null; })
                     .when(repeatDelete).dispatch(eq(DeleteType.AFTER_THIS), eq(target));
-
+            when(events.resolveChannel(300L)).thenReturn(NotificationChannel.WEB);
             svc.deleteSchedule(30L, DeleteType.AFTER_THIS);
 
             verify(repeatDelete).dispatch(DeleteType.AFTER_THIS, target);
             verify(out).markAsDeletedAfter("GRP", st);
-            verify(events).publishScheduleEvent(target, ScheduleActionType.SCHEDULE_DELETE,NotificationChannel.WEB);
+            verify(outboxEventService, times(1)).saveEvent(
+                    any(NotificationEvents.class),
+                    eq("SCHEDULE"),
+                    eq("30"),
+                    eq("SCHEDULE_DELETE")
+            );
         }
     }
 
@@ -298,12 +347,16 @@ public class ScheduleCRUDTest {
             SchedulesModel updated = existing.toBuilder().contents("new").build();
 
             when(repeatUpdate.dispatch(eq(RepeatUpdateType.SINGLE), eq(existing), eq(patch)))
-                    .thenReturn(updated);
-
+                    .thenReturn(List.of(updated));
+            when(events.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
             SchedulesModel result = svc.updateSchedule(1L, patch, RepeatUpdateType.SINGLE);
 
             assertThat(result.getContents()).isEqualTo("new");
             verify(repeatUpdate).dispatch(RepeatUpdateType.SINGLE, existing, patch);
+            verify(outboxEventService).saveEvent(any(NotificationEvents.class),
+                    eq("SCHEDULE"),
+                    eq("1"),
+                    eq("SCHEDULE_UPDATE"));
         }
     }
 
@@ -328,12 +381,16 @@ public class ScheduleCRUDTest {
         SchedulesModel updated = existing.toBuilder().contents("p").build();
 
         when(repeatUpdate.dispatch(eq(RepeatUpdateType.AFTER_THIS), eq(existing), eq(patch)))
-                .thenReturn(updated);
-
+                .thenReturn(List.of(updated));
+        when(events.resolveChannel(9L)).thenReturn(NotificationChannel.WEB);
         SchedulesModel result = svc.updateSchedule(2L, patch, RepeatUpdateType.AFTER_THIS);
 
         assertThat(result.getContents()).isEqualTo("p");
         verify(repeatUpdate).dispatch(RepeatUpdateType.AFTER_THIS, existing, patch);
+        verify(outboxEventService).saveEvent(any(NotificationEvents.class),
+                eq("SCHEDULE"),
+                eq("2"),
+                eq("SCHEDULE_UPDATE"));
     }
 
     @Test
@@ -357,8 +414,8 @@ public class ScheduleCRUDTest {
         SchedulesModel updated = existing.toBuilder().contents("ALL").build();
 
         when(repeatUpdate.dispatch(eq(RepeatUpdateType.ALL), eq(existing), eq(patch)))
-                .thenReturn(updated);
-
+                .thenReturn(List.of(updated));
+        when(events.resolveChannel(9L)).thenReturn(NotificationChannel.WEB);
         SchedulesModel result = svc.updateSchedule(3L, patch, RepeatUpdateType.ALL);
 
         assertThat(result.getContents()).isEqualTo("ALL");

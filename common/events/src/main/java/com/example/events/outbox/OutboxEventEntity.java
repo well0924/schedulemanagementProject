@@ -33,6 +33,10 @@ public class OutboxEventEntity {
     @Column(nullable = false)
     private Boolean sent = false; // Kafka 발행 여부
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OutboxStatus outboxStatus = OutboxStatus.PENDING;
+
     @Column(nullable = false)
     private Integer retryCount = 0;
 
@@ -44,6 +48,10 @@ public class OutboxEventEntity {
     public void markSent() {
         this.sent = true;
         this.sentAt = LocalDateTime.now();
+    }
+
+    public void markFailed() {
+        this.outboxStatus = OutboxStatus.FAILED;
     }
 
     public void increaseRetryCount() {

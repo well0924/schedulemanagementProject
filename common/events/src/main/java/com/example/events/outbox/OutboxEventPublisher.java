@@ -87,37 +87,12 @@ public class OutboxEventPublisher {
     @Transactional
     public void updateEvents(List<OutboxEventEntity> events) {
         for (OutboxEventEntity event : events) {
-            if (event.getRetryCount() > 5 && !event.getSent()) {
-                try {
-                    // DLQ 토픽 이름 결정
-                    String dlqTopic = resolveDlqTopic(event);
-                    // 원래 payload 그대로 DLQ 토픽으로 전송 (비동기 callback 처리)
-                    kafkaTemplate.send(dlqTopic, event.getId().toString(), event.getPayload())
-                            .whenComplete((result, ex) -> {
-                                if (ex == null) {
-                                    log.warn("DLQ 전송 성공 - eventId={}, type={}, dlqTopic={}",
-                                            event.getId(), event.getEventType(), dlqTopic);
-                                } else {
-                                    log.error("DLQ 전송 실패 - eventId={}, dlqTopic={}, error={}",
-                                            event.getId(), dlqTopic, ex.getMessage(), ex);
-                                }
-                            });
-                    // Outbox에서는 삭제해서 중복 발행 방지
-                    repository.delete(event);
-                } catch (Exception e) {
-                    log.error("DLQ 처리 중 예외 발생 - eventId={}, error={}", event.getId(), e.getMessage(), e);
-                }
+            if (event.getRetryCount() > 5 && event.getOutboxStatus() == OutboxStatus.FAILED) {
+                event.markFailed();
+                log.warn("Outbox 이벤트 영구 실패 처리: eventId={}", event.getId());
             }
         }
         repository.saveAll(events);
-    }
-
-    private String resolveDlqTopic(OutboxEventEntity event) {
-        return switch (event.getAggregateType()) {
-            case "MEMBER" -> "member-signup-events.DLQ";
-            case "SCHEDULE" -> "notification-events.DLQ";
-            default -> throw new IllegalArgumentException("지원하지 않는 AggregateType: " + event.getAggregateType());
-        };
     }
 
     private Class<?> resolveEventClass(OutboxEventEntity event) {

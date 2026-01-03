@@ -33,9 +33,9 @@ API
 
 ### 단일 호출 테스트 (10회)
 
-![img.png](image/img.png)
+![img.png](../image/img.png)
 
-![img_1.png](image/img_1.png)
+![img_1.png](../image/img_1.png)
 
 결과 요약
 
@@ -48,12 +48,6 @@ API
 - GC Pause: 거의 없음
 - CPU 사용률: 유의미한 변화 없음
 
-해석
-
-단일 요청 환경에서 응답 시간 변동이 크지 않고, 에러 없이 안정적으로 동작함을 확인했다.
-기능 구현 자체에는 문제가 없다고 판단할 수 있다.
-
-
 ### 부하 테스트 (50 VU)
 
 조건
@@ -61,11 +55,11 @@ API
 - Ramp-up: 30초
 - Duration: 3분
 
-![img_2.png](image/img_2.png)
+![img_2.png](../image/img_2.png)
 
-![img_3.png](image/img_3.png)
+![img_3.png](../image/img_3.png)
 
-![img_4.png](image/img_4.png)
+![img_4.png](../image/img_4.png)
 
 결과 요약
 - 평균 응답시간: 346ms
@@ -89,11 +83,11 @@ API
 - Ramp-up: 30초
 - Duration: 3분
 
-![img_5.png](image/img_5.png)
+![img_5.png](../image/img_5.png)
 
-![img_6.png](image/img_6.png)
+![img_6.png](../image/img_6.png)
 
-![img_7.png](image/img_7.png)
+![img_7.png](../image/img_7.png)
 
 결과 요약
 - 평균 응답시간: 945ms

@@ -9,13 +9,12 @@ Kafka 기반 비동기 이벤트 처리, Redis 기반 캐싱/락 관리, S3 업�
 Promtail → Loki / Prometheus → Grafana를 통해 로그와 메트릭을 통합 시각화합니다.
 
 | 구분 | 구성 요소 | 설명 |
-|------|------------|------|
-| **Frontend** | Next.js (Vercel 배포 예정) | 캘린더 UI, 일정 CRUD, WebSocket 실시간 수신 |
+|------|-----------|------|
+| **Frontend** | Next.js | 캘린더 UI, 일정 CRUD, WebSocket 실시간 수신 |
 | **Backend** | Spring Boot, Kafka, Redis, MySQL, S3 | Outbox + DLQ 기반 복원력 아키텍처 |
 | **Monitoring** | Prometheus, Loki, Grafana | 메트릭/로그 수집 및 대시보드 시각화 |
 
 ### 2.코드 레벨 헥사고날 아키텍처
-
 ![Image](https://github.com/user-attachments/assets/f5a60741-5e24-48f4-9aef-a310b0eacbaf)
 
 **구조 개요**

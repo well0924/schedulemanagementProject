@@ -39,7 +39,7 @@
 
 ## 🧱 아키텍처
 
-### 0️⃣ 전체 시스템 아키텍처
+### 전체 시스템 아키텍처
 ![Image](https://github.com/user-attachments/assets/c6b0a448-d7b6-4dc8-a47c-78546f60f4ba)
 
 **요약**  
@@ -48,19 +48,9 @@ Kafka 기반 비동기 이벤트 처리, Redis, S3, WebSocket을 중심으로 �
 Promtail → Loki / Prometheus → Grafana를 통해 로그와 메트릭을 통합 시각화합니다.
 
 | 구분 | 구성 요소 | 설명 |
-|------|------------|------|
-| **Frontend** | Next.js (Vercel 배포 예정) | 캘린더 UI, 일정 CRUD, WebSocket 실시간 수신 |
+|------|---------|------|
+| **Frontend** | Next.js | 캘린더 UI, 일정 CRUD, WebSocket 실시간 수신 |
 | **Backend** | Spring Boot, Kafka, Redis, MySQL, S3 | Outbox + DLQ 기반 복원력 아키텍처 |
 | **Monitoring** | Prometheus, Loki, Grafana | 메트릭/로그 수집 및 대시보드 시각화 |
 
 ---
-
-## 🗂 ERD 및 모델 구조
-
-![Image](https://github.com/user-attachments/assets/72c7cb36-40af-4493-8e12-69b34f167252)
-
-**ERD 설계 원칙**: JPA 연관관계 최소화 및 DB 무결성 강제
-ERD는 JPA 연관관계를 사용하지 않고, DB 외래 키(FK) 및 제약조건을 통해 데이터 정합성을 보장하도록 설계했습니다.
-
-**ORM 연관관계 최소화**: 엔티티는 다른 엔티티의 외래 키를 단순히 Long 타입의 ID(scheduleId, attachId 등)로만 보관합니다. 이는 코드의 결합도를 낮추고, 흔히 발생하는 N+1 문제의 리스크를 근본적으로 줄입니다.
-

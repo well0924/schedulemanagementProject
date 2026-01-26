@@ -10,6 +10,7 @@ import com.example.events.spring.ScheduleEvents;
 import com.example.exception.schedules.dto.ScheduleErrorCode;
 import com.example.exception.schedules.exception.ScheduleCustomException;
 import com.example.inbound.schedules.ScheduleRepositoryPort;
+import com.example.interfaces.notification.notification.NotificationInterfaces;
 import com.example.model.schedules.SchedulesModel;
 import com.example.security.config.SecurityUtil;
 import com.example.service.schedule.repeat.create.RepeatScheduleFactory;
@@ -54,6 +55,8 @@ public class ScheduleDomainService {
     private final RepeatScheduleFactory repeatScheduleFactory;
 
     private final OutboxEventService outboxEventService;
+
+    private final NotificationInterfaces notificationInterfaces;
 
     public List<SchedulesModel> getAllSchedules() {
         return scheduleRepositoryPort.findAllSchedules();
@@ -138,10 +141,11 @@ public class ScheduleDomainService {
                                 .notificationType(ScheduleActionType.SCHEDULE_CREATED)
                                 .createdTime(firstSchedule.getCreatedTime())
                         .build());
+        // 리마인드 알림 생성
+        notificationInterfaces.createReminder(savedSchedules.get(0));
         // 아웃 박스 저장
         outboxEventService.saveEvent(notificationEvents,
                 AggregateType.SCHEDULE.name(),firstSchedule.getId().toString(),notificationEvents.getNotificationType().name());
-
 
         return firstSchedule;
     }
@@ -156,6 +160,8 @@ public class ScheduleDomainService {
         RepeatUpdateType t = Optional.ofNullable(updateType).orElse(RepeatUpdateType.SINGLE);
         // RepeatUpdateType에 따른 일정 수정
         List<SchedulesModel> result = repeatUpdateRegistry.dispatch(t, existing, model);
+        // 수정시 리마인드 알림
+        notificationInterfaces.createReminder(result.get(0));
         //아웃 박스 전송
         for (SchedulesModel updated : result) {
             NotificationChannel channel = domainEventPublisher.resolveChannel(updated.getMemberId());
@@ -193,6 +199,8 @@ public class ScheduleDomainService {
         scheduleGuard.assertOwnerOrAdmin(target);
         //타입에 따른 일정 삭제
         repeatDeleteRegistry.dispatch(deleteType,target);
+        // 일정 자체가 삭제되었으므로 예약된 알림도 DB에서 완전히 제거합니다.
+        notificationInterfaces.deleteReminderByScheduleId(scheduleId);
         //삭제후 이벤트 발행.
         NotificationChannel channel = domainEventPublisher.resolveChannel(target.getMemberId());
         NotificationEvents notificationEvents =

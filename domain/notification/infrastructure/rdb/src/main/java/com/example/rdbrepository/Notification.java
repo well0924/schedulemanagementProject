@@ -30,6 +30,8 @@ public class Notification extends BaseEntity {
     private String message;
     private Boolean isRead; // 읽음 여부
     private Boolean isSent; // 발송여부
+    @Builder.Default
+    private Boolean isReminderSent = false; // 리마인드 발송 여부 추가
     private Long scheduleId;
     private Long userId;
     private String notificationType;

@@ -26,6 +26,7 @@ public class NotificationService {
                 .notificationType(model.getNotificationType())
                 .isRead(false)
                 .isSent(model.isSent())
+                .isReminderSent(false)
                 .scheduledAt(model.getScheduledAt())
                 .build();
 
@@ -44,7 +45,7 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public List<NotificationModel> getScheduledNotificationsToSend() {
-        return notificationOutConnector.findByScheduledAtBeforeAndIsSentFalse(LocalDateTime.now());
+        return notificationOutConnector.findPendingReminders(LocalDateTime.now());
     }
 
     public void markAsRead(Long id) {
@@ -53,6 +54,10 @@ public class NotificationService {
 
     public void markAsSent(Long id) {
         notificationOutConnector.markAsSent(id);
+    }
+
+    public void deleteReminderByScheduleId(Long scheduleId) {
+        notificationOutConnector.deleteReminderByScheduleId(scheduleId);
     }
 
 }

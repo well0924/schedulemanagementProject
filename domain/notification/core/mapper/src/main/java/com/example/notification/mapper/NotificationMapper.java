@@ -26,6 +26,7 @@ public class NotificationMapper {
                 .userId(notification.getUserId())
                 .isRead(notification.getIsRead())
                 .isSent(notification.getIsSent())
+                .isReminderSent(notification.getIsReminderSent())
                 .notificationType(NotificationType.valueOf(notification.getNotificationType()))
                 .scheduledAt(notification.getScheduledAt())
                 .build();
@@ -82,6 +83,7 @@ public class NotificationMapper {
                 .userId(notificationModel.getUserId())
                 .isRead(notificationModel.isRead())
                 .isSent(notificationModel.isSent())
+                .isReminderSent(notificationModel.isReminderSent())
                 .build();
     }
 

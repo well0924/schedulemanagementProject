@@ -51,4 +51,9 @@ public class NotificationInConnector implements NotificationInterfaces{
     public void createReminder(com.example.model.schedules.SchedulesModel schedule) {
         reminderNotificationService.createReminder(schedule);
     }
+
+    @Override
+    public void deleteReminderByScheduleId(Long scheduleId) {
+        notificationService.deleteReminderByScheduleId(scheduleId);
+    }
 }

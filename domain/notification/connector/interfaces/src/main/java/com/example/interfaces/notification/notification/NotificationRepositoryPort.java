@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface NotificationRepositoryPort {
 
-    List<NotificationModel> findByScheduledAtBeforeAndIsSentFalse(LocalDateTime now);
+    List<NotificationModel> findPendingReminders(LocalDateTime now);
 
     List<NotificationModel> findByUserIdOrderByCreatedAtDesc(Long userId);
 
@@ -20,6 +20,8 @@ public interface NotificationRepositoryPort {
     void markAsRead(Long id);
 
     void markAsSent(Long id);
+
+    void markAsReminderSent(Long id);
 
     void deleteOldSentReminders(String type,LocalDateTime threshold);
 

@@ -16,4 +16,6 @@ public interface NotificationInterfaces {
     void markedRead(Long id);
 
     void createReminder(SchedulesModel schedule);
+
+    void deleteReminderByScheduleId(Long scheduleId);
 }

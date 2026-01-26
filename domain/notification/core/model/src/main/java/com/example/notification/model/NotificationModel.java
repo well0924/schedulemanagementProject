@@ -21,6 +21,7 @@ public class NotificationModel {
     private NotificationType notificationType;
     private boolean isRead;
     private boolean isSent;
+    private boolean isReminderSent;
     private Long userId;
     private Long scheduleId;
     private LocalDateTime scheduledAt;

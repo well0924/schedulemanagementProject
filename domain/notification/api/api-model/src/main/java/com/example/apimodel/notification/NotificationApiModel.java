@@ -18,5 +18,6 @@ public class NotificationApiModel {
             long scheduleId,
             boolean isRead,
             boolean isSent,
+            boolean isReminderSent,
             LocalDateTime scheduledAt) {}
 }

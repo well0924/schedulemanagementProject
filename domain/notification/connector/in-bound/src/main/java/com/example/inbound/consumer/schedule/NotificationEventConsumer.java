@@ -116,6 +116,13 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
 
 
     private void handleWebNotification(NotificationEvents event) {
+        NotificationType type = mapActionToType(event.getNotificationType().name());
+
+        if (type == NotificationType.SCHEDULE_REMINDER) {
+            // 이미 원본 알림의 isReminderSent가 true이므로 추가 저장 없이 통과
+            log.info("🔔 리마인드 웹 알림 발송 완료: scheduleId={}", event.getScheduleId());
+            return;
+        }
         // DB 저장
         NotificationModel model = toNotificationModel(event);
 
@@ -140,6 +147,7 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
                 .scheduledAt(event.getScheduleAt())
                 .isRead(false)
                 .isSent(false)
+                .isReminderSent(false)
                 .build();
     }
 

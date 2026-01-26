@@ -26,8 +26,8 @@ public class NotificationOutConnector implements NotificationRepositoryPort {
     private final NotificationMapper notificationMapper;
 
     //리마인드 알림
-    public List<NotificationModel> findByScheduledAtBeforeAndIsSentFalse(LocalDateTime now) {
-        List<Notification> list = notificationRepository.findByScheduledAtBeforeAndIsSentFalse(now);
+    public List<NotificationModel> findPendingReminders(LocalDateTime now) {
+        List<Notification> list = notificationRepository.findPendingReminders(now);
         return list
                 .stream()
                 .map(notificationMapper::toModel)
@@ -75,6 +75,10 @@ public class NotificationOutConnector implements NotificationRepositoryPort {
 
     public void markAsSent(Long id) {
         notificationRepository.markAsSent(id);
+    }
+
+    public void markAsReminderSent(Long id) {
+        notificationRepository.markAsReminderSent(id);
     }
 
     public void deleteOldSentReminders(String type,LocalDateTime threshold) {

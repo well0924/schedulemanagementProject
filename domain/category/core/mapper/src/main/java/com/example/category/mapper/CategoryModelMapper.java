@@ -28,7 +28,6 @@ public class CategoryModelMapper {
                 .builder()
                 .name(createRequest.name())
                 .parentId(createRequest.parentId())
-                .depth(createRequest.depth())
                 .build();
     }
 

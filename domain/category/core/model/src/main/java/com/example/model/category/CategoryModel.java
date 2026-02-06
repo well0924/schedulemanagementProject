@@ -24,10 +24,6 @@ public class CategoryModel {
     private LocalDateTime updatedTime;
 
     public void setChildCategory(Long parentId, String createdBy) {
-        if (parentId != null && parentId == this.id) {
-            throw new IllegalArgumentException("A category cannot be its own parent.");
-        }
-
         this.parentId = parentId;
         this.depth = (parentId == null) ? 1L : getDepth() + 1;  // 부모 카테고리에서 1 깊이 추가
         this.createdBy = createdBy;

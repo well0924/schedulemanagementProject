@@ -10,8 +10,7 @@ public class CategoryApiModel {
     public record CreateRequest(
             @NotBlank(message = "카테고리명을 입력해야 합니다.")
             String name,
-            Long parentId,
-            Long depth) {}
+            Long parentId) {}
 
     @Builder
     public record UpdateRequest(String name,Long parentId,Long depth) {}

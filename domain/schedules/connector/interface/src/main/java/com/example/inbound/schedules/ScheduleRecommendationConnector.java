@@ -8,5 +8,5 @@ import java.util.List;
 
 public interface ScheduleRecommendationConnector {
 
-    Mono<List<ScheduleApiModel.responseSchedule>> recommend(String userId, Pageable pageable);
+    Mono<List<ScheduleApiModel.responseSchedule>> recommend(String accessToken, Pageable pageable);
 }

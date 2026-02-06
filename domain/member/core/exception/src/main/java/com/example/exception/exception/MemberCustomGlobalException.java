@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 
-@RestControllerAdvice(basePackages = "com.example.service")
+@RestControllerAdvice
 public class MemberCustomGlobalException {
 
     @ExceptionHandler(value = MemberCustomException.class)

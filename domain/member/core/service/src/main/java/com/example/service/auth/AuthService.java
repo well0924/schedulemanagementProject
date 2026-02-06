@@ -72,7 +72,12 @@ public class AuthService {
     }
 
     public Long currentUserId(String accessToken){
-        String userId = jwtTokenProvider.getAuthentication(accessToken).getName();
+        String token = accessToken;
+
+        if ( accessToken != null &&  accessToken.startsWith("Bearer ")) {
+            token =  accessToken.substring(7);
+        }
+        String userId = jwtTokenProvider.getAuthentication(token).getName();
         CustomMemberDetails customMemberDetails = (CustomMemberDetails) auth.loadUserByUsername(userId);
         return customMemberDetails.getMemberModel().getId();
     }

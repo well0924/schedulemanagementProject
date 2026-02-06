@@ -45,7 +45,6 @@ public class MemberModelMapper {
                 .builder()
                 .id(memberModel.getId())
                 .userId(memberModel.getUserId())
-                .password(memberModel.getPassword())
                 .userEmail(memberModel.getUserEmail())
                 .userPhone(memberModel.getUserPhone())
                 .userName(memberModel.getUserName())

@@ -16,6 +16,8 @@ public interface ScheduleRepositoryPort {
 
     Page<SchedulesModel> findByUserId(String userId, Pageable pageable);
 
+    Page<SchedulesModel> findAllByMemberId(Long memberId, Pageable pageable);
+
     Page<SchedulesModel> findByCategoryId(String categoryId, Pageable pageable);
 
     Page<SchedulesModel> findAllByPROGRESS_STATUS(String userId, String status, Pageable pageable);

@@ -63,10 +63,18 @@ public class ScheduleOutConnector implements ScheduleRepositoryPort {
         return result;
     }
 
-    //회원 번호로 일정목록
+    //회원 아이디로 일정목록
     public Page<SchedulesModel> findByUserId(String  userId,Pageable pageable) {
         return Optional.ofNullable(scheduleRepository.findAllByUserId(userId,pageable))
                 .filter(list->!list.isEmpty())
+                .orElseThrow(()->new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_EMPTY));
+    }
+    
+    //회원 번호로 일정목록
+    public Page<SchedulesModel> findAllByMemberId(Long memberId, Pageable pageable) {
+        return Optional
+                .ofNullable(scheduleRepository.findAllByMemberId(memberId,pageable))
+                .filter(list ->!list.isEmpty())
                 .orElseThrow(()->new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_EMPTY));
     }
 
@@ -98,6 +106,8 @@ public class ScheduleOutConnector implements ScheduleRepositoryPort {
                 .map(scheduleEntityMapper::toModel)
                 .collect(Collectors.toList());
     }
+    
+    
 
     //일정 단일 조회 (첨부파일 포함)
     public SchedulesModel findById(Long scheduleId) {

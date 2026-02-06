@@ -13,5 +13,5 @@ public interface AuthInterface {
     //토큰 재발급
     public TokenResponse tokenReissue(RequestRefreshTokenDto refreshTokenDto);
     //회원 현재 번호
-    public Long currentUserId(String username);
+    public Long currentUserId(String accessToken);
 }

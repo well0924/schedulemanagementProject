@@ -253,6 +253,54 @@ public class ScheduleRepositoryCustomImpl implements ScheduleRepositoryCustom {
         return new PageImpl<>(mapTuples(results),pageable,total);
     }
 
+    @Override
+    public Page<SchedulesModel> findAllByMemberId(Long memberId, Pageable pageable) {
+        List<Tuple> results = queryFactory
+                .select(
+                        qSchedules.id,
+                        qSchedules.contents,
+                        qSchedules.startTime,
+                        qSchedules.endTime,
+                        qSchedules.scheduleMonth,
+                        qSchedules.scheduleDay,
+                        qSchedules.memberId,
+                        qSchedules.categoryId,
+                        qSchedules.progress_status,
+                        qSchedules.repeatType,
+                        qSchedules.repeatCount,
+                        qSchedules.repeatGroupId,
+                        qSchedules.repeatInterval,
+                        qSchedules.createdTime,
+                        qSchedules.createdBy,
+                        qSchedules.updatedBy,
+                        qSchedules.updatedTime,
+                        qAttach.storedFileName,
+                        qAttach.id
+                )
+                .from(qSchedules)
+                .leftJoin(qAttach)
+                .on(qSchedules.id.eq(qAttach.scheduledId))
+                .where(
+                        qSchedules.memberId.eq(memberId),
+                        qSchedules.isDeletedScheduled.isFalse()
+                )
+                .orderBy(qSchedules.id.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        Long total = queryFactory
+                .select(qSchedules.count())
+                .from(qSchedules)
+                .where(
+                        qSchedules.memberId.eq(memberId),
+                        qSchedules.isDeletedScheduled.isFalse()
+                )
+                .fetchOne();
+
+        return new PageImpl<>(mapTuples(results), pageable, total);
+    }
+
     //회원 아이디별 일정 목록 count
     private Long countByUserId(String userId){
         return Optional.ofNullable(

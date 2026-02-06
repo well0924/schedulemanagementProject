@@ -1,5 +1,5 @@
 dependencies {
-
+    implementation project(':common:events')
     implementation project(':domain:attach:core:model')
     implementation project(':domain:attach:core:mapper')
     implementation project(':domain:attach:api:api-model')

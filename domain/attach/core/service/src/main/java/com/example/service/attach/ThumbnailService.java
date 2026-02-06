@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +22,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service("attachFailedThumbnailService")
@@ -45,28 +43,24 @@ public class ThumbnailService {
 
 
     @Timed(value = "s3_thumbnail_generation", description = "썸네일 생성 시간", histogram = true)
-    @Async("threadPoolTaskExecutor")
-    public CompletableFuture<Void> createAndUploadThumbnail(AttachModel attachModel) {
+    public void createAndUploadThumbnail(AttachModel attachModel) {
         String fileName = attachModel.getStoredFileName();
+        log.info(fileName);
         try {
             String lower = fileName.toLowerCase();
+            log.info(lower);
             // 1. 이미지 파일 여부 체크
             if (!FileUtile.isSupportedImageExtension(lower)) {
                 log.info("[섬네일 건너뜀] 이미지 파일 아님: {}", lower);
-                return CompletableFuture.completedFuture(null);
+                return;
             }
 
             log.info("[썸네일 생성 시작] {}", attachModel.getStoredFileName());
 
             InputStream inputStream = amazonS3.getObjectInputStream(fileName);
 
-            if (!FileUtile.isSupportedImageExtension(lower)) {
-                log.info("[섬네일 건너뜀] MIME 타입으로 확인한 결과 이미지 아님: {}", lower);
-                return CompletableFuture.completedFuture(null);
-            }
-
             BufferedImage originalImage = ImageIO.read(inputStream);
-
+            log.info(originalImage.toString());
             if (originalImage == null) {
                 throw new IllegalArgumentException("썸네일 생성 실패: 유효하지 않은 이미지: " + attachModel.getStoredFileName());
             }
@@ -85,21 +79,19 @@ public class ThumbnailService {
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentLength(thumbnailBytes.length);
             metadata.setContentType("image/jpeg");
-
+            // thumbNail 파일명
             String thumbnailFileName = "thumb_" + attachModel.getStoredFileName();
-
+            log.info(thumbnailFileName);
+            // S3에 업로드
             amazonS3.upload(thumbnailFileName, thumbnailInputStream, metadata);
-
+            // thumbNail 경로
             String thumbnailUrl = amazonS3.getFileUrl(thumbnailFileName);
-
+            // 섬네일 업데이트
             attachModel.setThumbnailFilePath(thumbnailUrl);
             attachRepository.updateAttach(attachModel.getId(), attachModel);
 
             log.info("[썸네일 업로드 완료] {}", thumbnailUrl);
 
-            CompletableFuture<Void> done = new CompletableFuture<>();
-            done.complete(null);
-            return done;
         } catch (Exception e) {
             log.error("[썸네일 생성 실패]",e);
 

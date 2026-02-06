@@ -4,7 +4,6 @@ import com.example.interfaces.notification.push.NotificationPushRepositoryPort;
 import com.example.notification.mapper.NotificationEntityMapper;
 import com.example.notification.mapper.NotificationMapper;
 import com.example.notification.model.PushSubscriptionModel;
-import com.example.rdbrepository.PushSubscription;
 import com.example.rdbrepository.PushSubscriptionRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -48,14 +47,20 @@ public class PushSubscriptionOutConnector implements NotificationPushRepositoryP
 
     public void deactivateAll(Long memberId){
         pushSubscriptionRepository.findByMemberIdAndActiveTrue(memberId)
-                .forEach(PushSubscription::deactivate);
+                .forEach(sub -> {
+                    sub.deactivate();
+                    pushSubscriptionRepository.save(sub);
+                });;
     }
 
     public void deactivateByEndpoint(Long memberId, String endpoint) {
         pushSubscriptionRepository.findByMemberIdAndActiveTrue(memberId)
                 .stream()
                 .filter(s -> s.getEndpoint().equals(endpoint))
-                .forEach(PushSubscription::deactivate);
+                .forEach(sub -> {
+                    sub.deactivate();
+                    pushSubscriptionRepository.save(sub);
+                });
     }
 
 }

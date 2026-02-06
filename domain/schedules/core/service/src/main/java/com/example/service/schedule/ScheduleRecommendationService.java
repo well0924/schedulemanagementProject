@@ -40,13 +40,13 @@ public class ScheduleRecommendationService {
     private final ObjectMapper objectMapper;
 
     @CircuitBreaker(name = "openAiClient", fallbackMethod = "fallbackRecommendSchedules")
-    public Mono<List<SchedulesModel>> recommendSchedules(String userId, Pageable pageable) {
+    public Mono<List<SchedulesModel>> recommendSchedules(String accessToken, Pageable pageable) {
         //회원 번호 추출
-        Long memberId = authInterface.currentUserId(userId);
+        Long memberId = authInterface.currentUserId(accessToken);
         log.info("memberId::"+memberId);
 
-        String cacheKey = "schedule:recommend:" + userId + ":" + LocalDate.now();
-        List<SchedulesModel> schedulesSize = scheduleRepositoryPort.findByUserId(userId, pageable).getContent();
+        String cacheKey = "schedule:recommend:" + memberId + ":" + LocalDate.now();
+        List<SchedulesModel> schedulesSize = scheduleRepositoryPort.findAllByMemberId(memberId, pageable).getContent();
         log.info("가져온 일정 수: {}", schedulesSize.size());
         // 일정 캐시 확인.
         Optional<List<SchedulesModel>> cached = recommendCacheService.get(cacheKey, new TypeReference<>() {
@@ -57,21 +57,21 @@ public class ScheduleRecommendationService {
             return Mono.just(cached.get());
         }
 
-        return Mono.just(scheduleRepositoryPort.findByUserId(userId, pageable).getContent())
+        return Mono.just(scheduleRepositoryPort.findAllByMemberId(memberId, pageable).getContent())
                 .map(this::mapToSchedules)
                 .doOnNext(schedules -> {
                     List<TimeSlot> conflictSlots = schedules.stream()
                             .map(s -> new TimeSlot(s.getStartTime(), s.getEndTime()))
                             .collect(Collectors.toList());
                     log.info(conflictSlots.toString());
-                    String conflictKey = "schedule:conflict:" + userId + ":" + LocalDate.now();
+                    String conflictKey = "schedule:conflict:" + memberId + ":" + LocalDate.now();
                     log.info(conflictKey);
                     recommendCacheService.set(conflictKey, conflictSlots, Duration.ofDays(1));
                 })
                 .map(this::buildPromptFromSchedules)
                 .map(this::buildOpenAiRequest)
                 .flatMap(request -> aiClient.getChatCompletion(request))
-                .doOnError(e -> log.error("[OpenAI 호출 실패] userId={}, 이유: {}", userId, e.getMessage(), e))
+                .doOnError(e -> log.error("[OpenAI 호출 실패] memberId={}, 이유: {}", memberId, e.getMessage(), e))
                 .map(response -> {
                     String content = response.getChoices().get(0).getMessage().getContent();
                     log.info("AI 응답 원본:\n{}", content);

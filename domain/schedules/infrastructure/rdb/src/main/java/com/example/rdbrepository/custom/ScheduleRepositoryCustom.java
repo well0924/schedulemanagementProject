@@ -17,4 +17,6 @@ public interface ScheduleRepositoryCustom {
     Page<SchedulesModel>findAllByCategoryName(String categoryName,Pageable pageable);
     //일정 상태별로 회원일정 목록
     Page<SchedulesModel>findAllByProgressStatus(String userId, String progressStatus, Pageable pageable);
+
+    Page<SchedulesModel> findAllByMemberId(Long memberId, Pageable pageable);
 }

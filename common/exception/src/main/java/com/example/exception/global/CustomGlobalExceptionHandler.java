@@ -1,10 +1,12 @@
 package com.example.exception.global;
 
 import com.example.exception.BaseCustomException;
+import com.example.exception.dto.ErrorCode;
 import com.example.exception.dto.ErrorDto;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -12,6 +14,22 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Order(2)
 @RestControllerAdvice
 public class CustomGlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorDto> handleValidationException(
+            MethodArgumentNotValidException ex) {
+
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .findFirst()
+                .map(error -> error.getDefaultMessage())
+                .orElse("요청 값이 올바르지 않습니다.");
+
+        return ResponseEntity
+                .badRequest()
+                .body(new ErrorDto(ErrorCode.INVALID_PARAMETER.getStatus(), message));
+    }
 
     // 나머지 도메인 모듈 400 처리 부분
     @ExceptionHandler({BaseCustomException.class})

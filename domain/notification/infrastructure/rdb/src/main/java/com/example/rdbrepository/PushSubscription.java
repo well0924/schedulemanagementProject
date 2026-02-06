@@ -8,6 +8,11 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+@Table(
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"memberId", "endpoint"})
+        }
+)
 @Entity
 @Getter
 @Builder

@@ -4,6 +4,7 @@ import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.example.attach.dto.AttachErrorCode;
 import com.example.attach.exception.AttachCustomExceptionHandler;
+import com.example.events.spring.AttachCreatedEvent;
 import com.example.interfaces.attach.AmazonS3Port;
 import com.example.interfaces.attach.AttachRepositoryPort;
 import com.example.model.attach.AttachModel;
@@ -13,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,7 +29,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -37,9 +38,9 @@ public class AttachService {
 
     private final AmazonS3Port amazonS3;
 
-    private final ThumbnailService thumbnailService;
-
     private final AttachRepositoryPort attachRepository;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${cloud.aws.s3.bucket}")
     private String bucketName;
@@ -104,12 +105,11 @@ public class AttachService {
     public List<AttachModel> createAttach(List<String> uploadedFileNames) {
 
         List<AttachModel> savedAttachModels = new ArrayList<>();
-        List<CompletableFuture<Void>> thumbnailFutures = new ArrayList<>();
 
         for (String tempStoredFileName : uploadedFileNames) {
             try {
                 String finalStoredFileName = tempStoredFileName.replaceFirst("^temp/", "final/");
-
+                log.info(finalStoredFileName);
                 // 1. temp → final 복사
                 amazonS3.copy(tempStoredFileName,finalStoredFileName);
 
@@ -126,32 +126,23 @@ public class AttachService {
                         .filePath(fileUrl)
                         .fileSize(fileSize)
                         .build();
-
+                log.info(attachModel.getStoredFileName());
                 AttachModel savedAttach = attachRepository.createAttach(attachModel);
+                log.info("fileSaved::"+savedAttach.toString());
+                //이벤트 전송
+                eventPublisher.publishEvent(new AttachCreatedEvent(savedAttach.getId()));
                 savedAttachModels.add(savedAttach);
                 // 로깅
                 MDC.put("flow", "presigned-complete");
                 MDC.put("storedFile", finalStoredFileName);
                 MDC.put("attachId", String.valueOf(savedAttach.getId()));
-
-                // 비동기로 썸네일 생성
-                try{
-                    CompletableFuture<Void> future = thumbnailService.createAndUploadThumbnail(savedAttach);
-                    thumbnailFutures.add(future);
-                } finally {
-                    MDC.remove("flow");
-                    MDC.remove("storedFile");
-                    MDC.remove("attachId");
-                }
             } catch (Exception e) {
                 log.error("[파일 업로드 실패] 파일: {}", tempStoredFileName, e);
                 throw new AttachCustomExceptionHandler(AttachErrorCode.S3_OPERATION_FAIL);
             }
         }
 
-        // 6. 모든 썸네일 생성 작업 병렬 완료까지 대기
-        CompletableFuture.allOf(thumbnailFutures.toArray(new CompletableFuture[0])).join();
-        log.info("[썸네일 생성 완료] 전체 {}건", thumbnailFutures.size());
+        log.info("[썸네일 생성 완료] 전체 {}건", savedAttachModels.size());
 
         return savedAttachModels;
     }

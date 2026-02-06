@@ -32,7 +32,7 @@ import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
+
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.eq;
@@ -116,8 +116,7 @@ public class AttachUnitTest {
                 .thenReturn(new URL("https://dummy-url.com/thumb_test-image.jpg"));
 
         // when
-        CompletableFuture<Void> future = thumbnailService.createAndUploadThumbnail(attachModel);
-        future.join();
+        thumbnailService.createAndUploadThumbnail(attachModel);
 
         // then
         verify(amazonS3, times(1)).putObject(eq(bucketName), startsWith("thumb_"), any(InputStream.class), any(ObjectMetadata.class));
@@ -185,7 +184,7 @@ public class AttachUnitTest {
         verify(attachOutConnector, times(2)).updateAttach(anyLong(), any());
 
         // 썸네일 S3 putObject 호출도 2회
-        verify(amazonS3, times(2))
+        verify(amazonS3, timeout(1000).times(2))
                 .putObject(eq("test-bucket"), startsWith("thumb_"), any(), any());
     }
 

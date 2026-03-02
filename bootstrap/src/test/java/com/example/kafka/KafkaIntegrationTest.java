@@ -12,6 +12,7 @@ import com.example.events.outbox.OutboxEventRepository;
 import com.example.events.outbox.OutboxEventService;
 import com.example.events.process.ProcessedEventRepository;
 import com.example.events.process.ProcessedEventService;
+import com.example.inbound.consumer.slack.SlackNotifier;
 import com.example.kafka.dlq.DlqTestConsumer;
 import com.example.kafka.dlq.MemberSignUpDlqRetryTestScheduler;
 import com.example.kafka.dlq.NotificationDlqRetryTestScheduler;
@@ -27,6 +28,7 @@ import com.example.outbound.notification.NotificationOutConnector;
 import com.example.service.member.MemberService;
 import com.example.service.schedule.ScheduleDomainService;
 import jakarta.persistence.EntityManager;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -60,19 +62,25 @@ import org.springframework.util.backoff.FixedBackOff;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.containers.Network;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+@Slf4j
 @SpringBootTest
 @ActiveProfiles("test")
 @Import(KafkaIntegrationTest.KafkaTestConfig.class)
@@ -81,7 +89,8 @@ import static org.mockito.Mockito.verify;
 public class KafkaIntegrationTest {
 
     @Container
-    static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.3.0"));
+    static KafkaContainer kafka1 = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.3.0"))
+            .withNetwork(Network.newNetwork());
 
     @Container
     static MySQLContainer<?> mysql = new MySQLContainer(DockerImageName.parse("mysql:8.0"))
@@ -95,7 +104,8 @@ public class KafkaIntegrationTest {
 
     @DynamicPropertySource
     static void kafkaProps(DynamicPropertyRegistry registry) {
-        registry.add("spring.kafka.bootstrap-servers", () -> kafka.getBootstrapServers());
+        String bootstrapServers = kafka1.getBootstrapServers();
+        registry.add("spring.kafka.bootstrap-servers", () -> bootstrapServers);
         registry.add("spring.datasource.url", mysql::getJdbcUrl);
         registry.add("spring.datasource.username", mysql::getUsername);
         registry.add("spring.datasource.password", mysql::getPassword);
@@ -159,6 +169,9 @@ public class KafkaIntegrationTest {
     @Autowired
     ProcessedEventRepository processedEventRepository;
 
+    @Autowired
+    SlackNotifier slackNotifier;
+
     @TestConfiguration
     static class KafkaTestConfig {
 
@@ -166,7 +179,9 @@ public class KafkaIntegrationTest {
         @Primary
         public ProducerFactory<String, MemberSignUpKafkaEvent> memberProducerFactory() {
             Map<String, Object> config = new HashMap<>();
-            config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+            config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka1.getBootstrapServers());
+            config.put(ProducerConfig.ACKS_CONFIG, "all"); // 모든 복제본 저장 확인
+            config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true); // 프로듀서 자체 멱등성 활성화
             config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
             config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
             config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
@@ -192,7 +207,7 @@ public class KafkaIntegrationTest {
         @Primary
         public ConcurrentKafkaListenerContainerFactory<String, MemberSignUpKafkaEvent> memberKafkaListenerFactory() {
             Map<String, Object> props = new HashMap<>();
-            props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+            props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka1.getBootstrapServers());
             props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-member-group");
             props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
             props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
@@ -217,7 +232,9 @@ public class KafkaIntegrationTest {
         @Bean
         public ProducerFactory<String, NotificationEvents> notificationEventsProducerFactory() {
             Map<String, Object> config = new HashMap<>();
-            config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+            config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka1.getBootstrapServers());
+            config.put(ProducerConfig.ACKS_CONFIG, "all"); // 모든 복제본 저장 확인
+            config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true); // 프로듀서 자체 멱등성 활성화
             config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
             config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
             config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
@@ -242,7 +259,7 @@ public class KafkaIntegrationTest {
         @Bean(name = "testNotificationKafkaListenerFactory")
         public ConcurrentKafkaListenerContainerFactory<String, NotificationEvents> notificationKafkaListenerFactory() {
             Map<String, Object> props = new HashMap<>();
-            props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+            props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka1.getBootstrapServers());
             props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-notification-group");
             props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
             props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
@@ -266,7 +283,7 @@ public class KafkaIntegrationTest {
         @Bean(name = "testObjectKafkaTemplate")
         public KafkaTemplate<String, Object> objectKafkaTemplate() {
             Map<String, Object> config = new HashMap<>();
-            config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+            config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka1.getBootstrapServers());
             config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
             config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
             config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, true); // Outbox 이벤트 직렬화 위해 필요
@@ -277,7 +294,7 @@ public class KafkaIntegrationTest {
     @BeforeAll
     static void createTopics() throws Exception {
         Properties props = new Properties();
-        props.put("bootstrap.servers", kafka.getBootstrapServers());
+        props.put("bootstrap.servers", kafka1.getBootstrapServers());
         try (AdminClient admin = AdminClient.create(props)) {
             List<NewTopic> topics = Arrays.asList(
                     new NewTopic("member-signup-events", 1, (short) 1),
@@ -755,5 +772,41 @@ public class KafkaIntegrationTest {
                 });
     }
 
+    @Test
+    @DisplayName("동시성 테스트: 동일 EventId 메시지 10개 동시 처리 시 1건만 성공해야 함")
+    void concurrentIdempotencyTest() throws InterruptedException {
+        // given
+        int threadCount = 10;
+        String duplicateEventId = "TEST-EVENT-" + UUID.randomUUID();
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        // 성공/실패 카운트 (원자성 보장)
+        AtomicInteger successCount = new AtomicInteger();
+        AtomicInteger failCount = new AtomicInteger();
+
+        // when
+        for (int i = 0; i < threadCount; i++) {
+            executorService.execute(() -> {
+                try {
+                    // 멱등성 로직 호출 (eventId 기반 저장)
+                    processedEventService.saveProcessedEvent(duplicateEventId);
+                    successCount.getAndIncrement();
+                } catch (Exception e) {
+                    // Unique 제약 조건 위반 등으로 에러가 나야 정상
+                    failCount.getAndIncrement();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await(10, TimeUnit.SECONDS);
+
+        // then
+        log.info("성공 횟수: {}, 실패(차단) 횟수: {}", successCount.get(), failCount.get());
+
+        assertThat(successCount.get()).isEqualTo(1); // 오직 1개만 DB에 박혀야 함
+        assertThat(failCount.get()).isEqualTo(9);    // 9개는 반드시 튕겨나가야 함
+    }
 
 }

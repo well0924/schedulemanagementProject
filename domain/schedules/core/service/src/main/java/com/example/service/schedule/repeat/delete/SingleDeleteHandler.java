@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -22,8 +24,9 @@ public class SingleDeleteHandler implements RepeatDeleteHandler{
 
     @Transactional
     @Override
-    public void handle(SchedulesModel target) {
+    public List<SchedulesModel> handle(SchedulesModel target) {
         log.info("single-delete");
         repositoryPort.deleteSchedule(target.getId());
+        return List.of(target);
     }
 }

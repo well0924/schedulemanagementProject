@@ -30,11 +30,22 @@ public class OutboxEventPublisher {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 3초마다 Outbox의 미전송 이벤트를 조회하여 발행한다.
+     * [ShedLock 적용 이유]
+     * 1. 단일 실행 보장
+     *    배포 또는 재시작 과정에서 인스턴스가 일시적으로 중첩될 가능성이 있으므로 스케줄 작업의 중복 실행을 방지한다.
+     * 2. 데이터 정합성 보호
+     *    본 작업은 DB 상태 변경 및 외부 이벤트 발행을 수행하므로 중복 실행 시 이벤트 중복 발행이 발생할 수 있다.
+     * 3. 확장 대응
+     *    향후 다중 인스턴스 환경으로 전환되더라도 추가 코드 수정 없이 동시성 제어가 가능하도록 분산 락을 적용한다.
+     */
     @Timed(value = "outbox.publish.duration", description = "Outbox Kafka 발행 처리 시간")
     @Counted(value = "outbox.publish.count", description = "Outbox Kafka 발행 실행 횟수")
     @Scheduled(fixedDelay = 3000) //3초마다 실행
     @SchedulerLock(name = "OutboxPublisherLock", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
     public void publishOutboxEvents() {
+        // 전송되지 않은 이벤트를 생성순으로 100건씩 가져와 순차 발행
         List<OutboxEventEntity> events = repository.findTop100BySentFalseOrderByCreatedAtAsc();
 
         for (OutboxEventEntity event : events) {
@@ -49,12 +60,14 @@ public class OutboxEventPublisher {
         updateEvents(events); // 전송 상태 반영
     }
 
-    // 이벤트를 Kafka로 발행한다.
+    // Kafka 메시지에 Outbox PK를 eventId로 주입합니다.
+    // 컨슈머는 이 ID를 사용하여 이미 처리한 메시지인지 확인(멱등성 체크)함으로써 중복 로직 실행을 방지합니다.
     private void publishSingleEvent(OutboxEventEntity event) throws IOException {
         String topic = event.resolveTopic();
         Object payload = objectMapper.readValue(event.getPayload(), resolveEventClass(event));
 
         // eventId 주입 (Outbox PK → Kafka eventId)
+        // Outbox PK를 이벤트 모델의 eventId에 매핑하여 전송 (At-least-once 전략의 핵심)
         if (payload instanceof BaseKafkaEvent baseEvent) {
             if(baseEvent.getEventId() == null || baseEvent.getEventId().isBlank()) {
                 baseEvent.setEventId(event.getId());

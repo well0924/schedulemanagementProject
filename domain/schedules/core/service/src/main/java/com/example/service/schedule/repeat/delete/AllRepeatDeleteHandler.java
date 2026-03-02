@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Component
 @RequiredArgsConstructor
 public class AllRepeatDeleteHandler implements RepeatDeleteHandler {
@@ -23,12 +25,16 @@ public class AllRepeatDeleteHandler implements RepeatDeleteHandler {
 
     @Override
     @Transactional
-    public void handle(SchedulesModel target) {
+    public List<SchedulesModel> handle(SchedulesModel target) {
         guard.validateRepeatDelete(target);
+
+        List<SchedulesModel> targets = out.findAfterStartTime(target.getRepeatGroupId(), target.getStartTime());
+
         Long me = SecurityUtil.currentUserId();
-        boolean anyNotMine = out.findAfterStartTime(target.getRepeatGroupId(), target.getStartTime())
-                .stream().anyMatch(t -> !me.equals(t.getMemberId()));
-        if (anyNotMine) throw guard.notOwner();
+        if (targets.stream().anyMatch(s -> !me.equals(s.getMemberId()))) throw guard.notOwner();
+
         out.markAsDeletedByRepeatGroupId(target.getRepeatGroupId());
+
+        return targets;
     }
 }

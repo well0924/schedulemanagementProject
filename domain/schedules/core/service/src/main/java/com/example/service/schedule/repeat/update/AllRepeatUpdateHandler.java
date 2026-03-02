@@ -7,12 +7,10 @@ import com.example.security.config.SecurityUtil;
 import com.example.service.schedule.guard.ScheduleGuard;
 import com.example.service.schedule.support.AttachBinder;
 import com.example.service.schedule.support.ScheduleClassifier;
-import com.example.service.schedule.support.SchedulePatchApplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -35,20 +33,12 @@ public class AllRepeatUpdateHandler implements RepeatUpdateHandler{
         guard.ensureRepeatable(existing);
         guard.assertOwnerOrAdmin(existing);
 
-        Long me = SecurityUtil.currentUserId();
-        boolean anyNotMine = out.findAfterStartTime(existing.getRepeatGroupId(), existing.getStartTime())
-                .stream().anyMatch(s -> !me.equals(s.getMemberId()));
-        if (anyNotMine) throw guard.notOwner();
+        List<SchedulesModel> targets = out.findAfterStartTime(existing.getRepeatGroupId(), existing.getStartTime());
 
-        List<SchedulesModel> results = new ArrayList<>();
-        out.findAfterStartTime(existing.getRepeatGroupId(), existing.getStartTime()).forEach(target -> {
-            SchedulesModel updated = SchedulePatchApplier.apply(target, patch);
-            updated = classifier.normalizeAndClassify(updated);
-            updated = attachBinder.handleAttachUpdate(target, updated);
-            updated.updateProgressStatus();
-            SchedulesModel saved = out.updateSchedule(target.getId(), updated);
-            results.add(saved);
-        });
-        return results;
+        Long me = SecurityUtil.currentUserId();
+        if (targets.stream().anyMatch(s -> !me.equals(s.getMemberId()))) throw guard.notOwner();
+
+        List<SchedulesModel> results = transformTargets(targets,patch,classifier,attachBinder);
+        return out.saveAll(results);
     }
 }

@@ -12,4 +12,5 @@ public interface MemberRepositoryPort {
     MemberModel createMember(MemberModel memberModel);
     MemberModel updateMember(Long id, MemberModel memberModel);
     void deleteMember(Long id);
+    boolean existsById(Long id);
 }

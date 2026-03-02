@@ -48,6 +48,7 @@ public class ScheduleEntityMapper {
                 .repeatInterval(entity.getRepeatInterval())
                 .repeatGroupId(entity.getRepeatGroupId())
                 .isAllDay(entity.getIsAllDay())
+                .isDeletedScheduled(entity.getIsDeletedScheduled())
                 .scheduleType(ScheduleType.valueOf(entity.getScheduleType()))
                 .createdBy(entity.getCreatedBy())
                 .createdTime(entity.getCreatedTime())

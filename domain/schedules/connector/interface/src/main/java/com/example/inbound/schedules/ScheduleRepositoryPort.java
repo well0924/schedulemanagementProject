@@ -45,8 +45,14 @@ public interface ScheduleRepositoryPort {
     void markAsDeletedByRepeatGroupId(String repeatGroupId);
 
     void deleteOldSchedules(LocalDateTime thresholdDate);
-
+    // 일정 충돌
     void validateScheduleConflict(SchedulesModel model);
+    //일정충돌 (bulk 조회용)
+    List<SchedulesModel> findOverlappingSchedulesInRange(Long memberId, LocalDateTime start, LocalDateTime end);
 
     List<Long> findOwnedIds(Long memberId, List<Long> ids);
+
+    List<SchedulesModel> saveAll(List<SchedulesModel> models);
+
+    List<SchedulesModel> findAllByIds(List<Long>ids);
 }

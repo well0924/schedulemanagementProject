@@ -63,10 +63,6 @@ public class Schedules extends BaseEntity {
     //일정 타입(단일, 하루종일, 장기)
     private String scheduleType;
 
-    public void isDeletedScheduled() {
-        this.isDeletedScheduled = true;
-    }
-
     public void updateSchedule(SchedulesModel model) {
         this.contents = model.getContents();
         this.scheduleDay = model.getScheduleDays();

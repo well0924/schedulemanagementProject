@@ -22,9 +22,9 @@ public class RepeatDeleteRegistry {
     @PostConstruct
     void init() { handlers.forEach(h -> map.put(h.type(), h)); }
 
-    public void dispatch(DeleteType type, SchedulesModel target) {
+    public List<SchedulesModel> dispatch(DeleteType type, SchedulesModel target) {
         RepeatDeleteHandler h = map.get(type);
         if (h == null) throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_DELETE_FAIL, "No handler for " + type);
-        h.handle(target);
+        return h.handle(target);
     }
 }

@@ -28,9 +28,9 @@ public class JwtTokenProvider {
 
     private final Key key;
     //accessToken 1일
-    private final static Date accessTokenExpiredTime = new Date(new Date().getTime() + 86400000);
+    private final static long accessTokenExpiredTime = 86400000L;
     //refreshToken 7일
-    private final static Date refreshTokenExpiredTime = new Date(new Date().getTime() + 86400000*7);
+    private final static long refreshTokenExpiredTime = 86400000*7L;
 
     private final AuthOutConnector outConnector;
 
@@ -43,6 +43,10 @@ public class JwtTokenProvider {
     }
 
     public TokenDto generateToken(Authentication authentication) {
+        Date now = new Date();
+        Date accessExpire = new Date(now.getTime() + accessTokenExpiredTime);
+        Date refreshExpire = new Date(now.getTime() + refreshTokenExpiredTime);
+
         // 권한 가져오기
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -52,13 +56,13 @@ public class JwtTokenProvider {
                 .setSubject(authentication.getName())
                 .claim("memberId", ((CustomMemberDetails) authentication.getPrincipal()).getMemberModel().getId())
                 .claim("auth", authorities)
-                .setExpiration(accessTokenExpiredTime)
+                .setExpiration(accessExpire)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
         // Refresh Token 생성
         String refreshToken = Jwts.builder()
-                .setExpiration(refreshTokenExpiredTime)
+                .setExpiration(refreshExpire)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
@@ -67,7 +71,7 @@ public class JwtTokenProvider {
                 .grantType("Bearer")
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
-                .refreshTokenExpiredTime(refreshTokenExpiredTime.getTime())
+                .refreshTokenExpiredTime(refreshTokenExpiredTime)
                 .build();
     }
 

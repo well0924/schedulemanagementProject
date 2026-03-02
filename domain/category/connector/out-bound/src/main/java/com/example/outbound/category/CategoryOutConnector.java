@@ -88,6 +88,10 @@ public class CategoryOutConnector implements CategoryRepositoryPort {
         }
     }
 
+    public boolean existsById(Long id) {
+        return categoryRepository.existsById(id);
+    }
+
     //카테고리 존재 여부
     public boolean hasCategories() {
         return categoryRepository.count() > 0;

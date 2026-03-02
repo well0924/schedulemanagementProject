@@ -151,9 +151,7 @@ public class ScheduleOutConnector implements ScheduleRepositoryPort {
     
     //일정 삭제(논리삭제)
     public void deleteSchedule(Long scheduleId) {
-        Schedules schedules = getScheduleById(scheduleId);
-        schedules.isDeletedScheduled();
-        scheduleRepository.save(schedules);
+        scheduleRepository.markDeleted(scheduleId);
     }
 
     //일정 삭제(벌크처리)
@@ -202,6 +200,16 @@ public class ScheduleOutConnector implements ScheduleRepositoryPort {
         }
     }
 
+    // 일정 충돌 (bulk용)
+    public List<SchedulesModel> findOverlappingSchedulesInRange(Long memberId, LocalDateTime start, LocalDateTime end) {
+        List<SchedulesModel> entities = scheduleRepository
+                .findOverlappingSchedulesInRange(memberId, start, end)
+                .stream()
+                .map(scheduleEntityMapper::toModel)
+                .collect(Collectors.toList());
+        return entities;
+    }
+
     public void validateAllDayScheduleConflict(SchedulesModel model) {
         LocalDate date = model.getStartTime().toLocalDate();
         Long count = scheduleRepository.countAllDayOnDate(model.getMemberId(), date);
@@ -215,6 +223,28 @@ public class ScheduleOutConnector implements ScheduleRepositoryPort {
     public List<Long> findOwnedIds(Long me , List<Long> ids) {
         return scheduleRepository.findOwnedIds(me,ids);
     }
+
+    public List<SchedulesModel> saveAll(List<SchedulesModel> models) {
+        List<Schedules> entities = models
+                .stream()
+                .map(scheduleEntityMapper::toEntity)
+                .toList();
+
+        List<Schedules> savedEntities = scheduleRepository.saveAll(entities);
+
+        return savedEntities
+                .stream()
+                .map(scheduleEntityMapper::toModel)
+                .toList();
+    }
+
+    public List<SchedulesModel> findAllByIds(List<Long> ids) {
+        return scheduleRepository.findAllByIds(ids)
+                .stream()
+                .map(scheduleEntityMapper::toModel)
+                .collect(Collectors.toList());
+    }
+
 
     private void validateScheduleData(SchedulesModel model) {
         if (!memberRepository.existsById(model.getMemberId())) {

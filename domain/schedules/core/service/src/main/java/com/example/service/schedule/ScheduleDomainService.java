@@ -26,7 +26,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -97,7 +96,7 @@ public class ScheduleDomainService {
     }
 
     //일정 등록
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public SchedulesModel saveSchedule(SchedulesModel model) {
         // 반복 없음이면 그냥 1건만 저장
         List<SchedulesModel> schedulesToSave = (model.getRepeatType() == RepeatType.NONE || model.getRepeatCount() == null || model.getRepeatCount() <= 0)
@@ -108,13 +107,21 @@ public class ScheduleDomainService {
             throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_CREATED_FAIL);
         }
 
-        List<SchedulesModel> savedSchedules = new ArrayList<>();
+        Long currentMemberId = SecurityUtil.currentUserId();
 
-        for (SchedulesModel m : schedulesToSave) {
-            //일정 저장
-            SchedulesModel saved = saveSingleSchedule(m,model,savedSchedules.isEmpty());
-            savedSchedules.add(saved);
-        }
+        List<SchedulesModel> processedSchedules = schedulesToSave.stream()
+                .map(m -> m.toBuilder()
+                        .scheduleType(scheduleClassifier.classify(m))
+                        .memberId(currentMemberId)
+                        .build())
+                .toList();
+
+        // 일정 생성시 검증
+        validateBulkConflict(processedSchedules);
+        scheduleGuard.validateCreation(processedSchedules);
+        // 일정 일괄 저장
+        List<SchedulesModel> savedSchedules = scheduleRepositoryPort.saveAll(processedSchedules);
+
         // 첫 번째 등록된 일정 반환
         SchedulesModel firstSchedule = savedSchedules.get(0);
         log.info("result:"+firstSchedule);
@@ -127,31 +134,12 @@ public class ScheduleDomainService {
         }
         log.info("일정 저장 완료, 이벤트 발행 시도");
         // 이벤트 발행.
-        NotificationChannel channel = domainEventPublisher.resolveChannel(firstSchedule.getMemberId());
-        log.info(channel.toString());
-
-        NotificationEvents notificationEvents =
-                NotificationEvents.of(ScheduleEvents
-                        .builder()
-                                .scheduleId(firstSchedule.getId())
-                                .startTime(firstSchedule.getStartTime())
-                                .contents(firstSchedule.getContents())
-                                .userId(firstSchedule.getMemberId())
-                                .notificationChannel(channel)
-                                .notificationType(ScheduleActionType.SCHEDULE_CREATED)
-                                .createdTime(firstSchedule.getCreatedTime())
-                        .build());
-        // 리마인드 알림 생성
-        notificationInterfaces.createReminder(savedSchedules.get(0));
-        // 아웃 박스 저장
-        outboxEventService.saveEvent(notificationEvents,
-                AggregateType.SCHEDULE.name(),firstSchedule.getId().toString(),notificationEvents.getNotificationType().name());
-
+        sendCreateNotification(firstSchedule);
         return firstSchedule;
     }
 
     //일정 수정
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public SchedulesModel updateSchedule(Long scheduleId, SchedulesModel model,RepeatUpdateType updateType) {
         SchedulesModel existing = scheduleRepositoryPort.findById(scheduleId);
         //사용자 인증
@@ -162,27 +150,29 @@ public class ScheduleDomainService {
         List<SchedulesModel> result = repeatUpdateRegistry.dispatch(t, existing, model);
         // 수정시 리마인드 알림
         notificationInterfaces.createReminder(result.get(0));
-        //아웃 박스 전송
+
+        List<Object> eventDtos = new ArrayList<>();
+        List<String> aggregateIds = new ArrayList<>();
+        List<String> eventTypes = new ArrayList<>();
+
         for (SchedulesModel updated : result) {
             NotificationChannel channel = domainEventPublisher.resolveChannel(updated.getMemberId());
-            NotificationEvents events = NotificationEvents
-                    .of(ScheduleEvents
-                            .builder()
-                            .scheduleId(updated.getId())
-                            .startTime(updated.getStartTime())
-                            .contents(updated.getContents())
-                            .userId(updated.getMemberId())
-                            .notificationChannel(channel)
-                            .notificationType(ScheduleActionType.SCHEDULE_UPDATE)
-                            .createdTime(updated.getCreatedTime())
-                            .build());
-            outboxEventService.saveEvent(
-                    events,
-                    AggregateType.SCHEDULE.name(),
-                    updated.getId().toString(),
-                    events.getNotificationType().name()
-            );
+            NotificationEvents event = NotificationEvents.of(ScheduleEvents.builder()
+                    .scheduleId(updated.getId())
+                    .startTime(updated.getStartTime())
+                    .contents(updated.getContents())
+                    .userId(updated.getMemberId())
+                    .notificationChannel(channel)
+                    .notificationType(ScheduleActionType.SCHEDULE_UPDATE)
+                    .createdTime(updated.getCreatedTime())
+                    .build());
+
+            eventDtos.add(event);
+            aggregateIds.add(updated.getId().toString());
+            eventTypes.add(ScheduleActionType.SCHEDULE_UPDATE.name());
         }
+        // 2. 벌크 저장 호출
+        outboxEventService.saveAllEvents(eventDtos, AggregateType.SCHEDULE.name(), aggregateIds, eventTypes);
         return result.get(0);
     }
 
@@ -192,61 +182,88 @@ public class ScheduleDomainService {
     }
 
     //일정 삭제 (논리 삭제)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void deleteSchedule(Long scheduleId, DeleteType deleteType) {
         SchedulesModel target = scheduleRepositoryPort.findById(scheduleId);
+        log.info("id:"+target.getId());
         //삭제시 인증
         scheduleGuard.assertOwnerOrAdmin(target);
         //타입에 따른 일정 삭제
-        repeatDeleteRegistry.dispatch(deleteType,target);
+        List<SchedulesModel> deletedSchedules = repeatDeleteRegistry.dispatch(deleteType,target);
         // 일정 자체가 삭제되었으므로 예약된 알림도 DB에서 완전히 제거합니다.
         notificationInterfaces.deleteReminderByScheduleId(scheduleId);
-        //삭제후 이벤트 발행.
-        NotificationChannel channel = domainEventPublisher.resolveChannel(target.getMemberId());
-        NotificationEvents notificationEvents =
-                NotificationEvents.of(ScheduleEvents
-                        .builder()
-                        .scheduleId(target.getId())
-                        .startTime(target.getStartTime())
-                        .contents(target.getContents())
-                        .userId(target.getMemberId())
-                        .notificationChannel(channel)
-                        .notificationType(ScheduleActionType.SCHEDULE_DELETE)
-                        .createdTime(target.getCreatedTime())
-                        .build());
-        outboxEventService.saveEvent(notificationEvents,AggregateType.SCHEDULE.name(),target.getId().toString(),notificationEvents.getNotificationType().name());
+
+        List<Object> eventDtos = new ArrayList<>();
+        List<String> aggregateIds = new ArrayList<>();
+        List<String> eventTypes = new ArrayList<>();
+
+        for (SchedulesModel model : deletedSchedules) {
+            NotificationChannel channel = domainEventPublisher.resolveChannel(model.getMemberId());
+            NotificationEvents event = NotificationEvents.of(ScheduleEvents.builder()
+                    .scheduleId(model.getId())
+                    .startTime(model.getStartTime())
+                    .contents(model.getContents())
+                    .userId(model.getMemberId())
+                    .notificationChannel(channel)
+                    .notificationType(ScheduleActionType.SCHEDULE_DELETE)
+                    .createdTime(model.getCreatedTime())
+                    .build());
+
+            eventDtos.add(event);
+            aggregateIds.add(model.getId().toString());
+            eventTypes.add(ScheduleActionType.SCHEDULE_DELETE.name());
+        }
+
+        // 삭제된 모든 일정에 대해 Outbox 이벤트 원샷 저장
+        outboxEventService.saveAllEvents(eventDtos, AggregateType.SCHEDULE.name(), aggregateIds, eventTypes);
     }
 
     //선택 삭제
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void deleteSchedules(List<Long> ids) {
         //사용자 인증
         Long me = SecurityUtil.currentUserId();
         log.info("memberId:"+me);
+        // 삭제할 일정 번호 찾기
         List<Long> owned = scheduleRepositoryPort.findOwnedIds(me,ids);
 
         if (owned.size() != ids.size()) {
             throw new ScheduleCustomException(ScheduleErrorCode.INVALID_OWNER_FOR_BULK);
         }
+
+        List<SchedulesModel> targets = scheduleRepositoryPort.findAllByIds(ids);
         // 일정 삭제
         scheduleRepositoryPort.markAsDeletedByIds(ids);
-        // 각 일정마다 이벤트 발행
-        for (Long id : ids) {
-            SchedulesModel model = scheduleRepositoryPort.findById(id); // 이벤트 정보용
+
+
+        List<Object> eventDtos = new ArrayList<>();
+        List<String> aggregateIds = new ArrayList<>();
+        List<String> eventTypes = new ArrayList<>();
+
+        for (SchedulesModel model : targets) {
             NotificationChannel channel = domainEventPublisher.resolveChannel(model.getMemberId());
-            NotificationEvents notificationEvents =
-                    NotificationEvents.of(ScheduleEvents
-                            .builder()
-                            .scheduleId(model.getId())
-                            .startTime(model.getStartTime())
-                            .contents(model.getContents())
-                            .userId(model.getMemberId())
-                            .notificationChannel(channel)
-                            .notificationType(ScheduleActionType.SCHEDULE_DELETE)
-                            .createdTime(model.getCreatedTime())
-                            .build());
-            outboxEventService.saveEvent(notificationEvents,AggregateType.SCHEDULE.name(),model.getId().toString(),notificationEvents.getNotificationType().name());
+            NotificationEvents event = NotificationEvents.of(ScheduleEvents.builder()
+                    .scheduleId(model.getId())
+                    .startTime(model.getStartTime())
+                    .contents(model.getContents())
+                    .userId(model.getMemberId())
+                    .notificationChannel(channel)
+                    .notificationType(ScheduleActionType.SCHEDULE_DELETE)
+                    .createdTime(model.getCreatedTime())
+                    .build());
+
+            eventDtos.add(event);
+            aggregateIds.add(model.getId().toString());
+            eventTypes.add(ScheduleActionType.SCHEDULE_DELETE.name());
         }
+
+        // 5. [벌크 Outbox 저장] 쿼리 1번으로 끝
+        outboxEventService.saveAllEvents(
+                eventDtos,
+                AggregateType.SCHEDULE.name(),
+                aggregateIds,
+                eventTypes
+        );
     }
 
     //일괄삭제 기능 (자정마다 작동이 되게끔 하기)
@@ -256,27 +273,49 @@ public class ScheduleDomainService {
         scheduleRepositoryPort.deleteOldSchedules(thresholdDate);
     }
 
-    private SchedulesModel saveSingleSchedule(SchedulesModel schedule, SchedulesModel originalModel, boolean isFirst) {
+    // 벌크 충돌 검증 로직 상세
+    private void validateBulkConflict(List<SchedulesModel> newSchedules) {
+        // 전체 기간 산출
+        LocalDateTime minStart = newSchedules.stream().map(SchedulesModel::getStartTime).min(LocalDateTime::compareTo).get();
+        LocalDateTime maxEnd = newSchedules.stream().map(SchedulesModel::getEndTime).max(LocalDateTime::compareTo).get();
 
-        ScheduleType type = scheduleClassifier.classify(schedule);
-        schedule = schedule.toBuilder()
-                .scheduleType(type)
-                .memberId(SecurityUtil.currentUserId())
-                .build();
-        log.info(type.name());
-        scheduleRepositoryPort.validateScheduleConflict(schedule);
+        // 1번의 쿼리로 해당 범위의 기존 일정 모두 가져오기
+        List<SchedulesModel> existingSchedules = scheduleRepositoryPort.findOverlappingSchedulesInRange(
+                newSchedules.get(0).getMemberId(), minStart, maxEnd);
 
-        SchedulesModel saved = scheduleRepositoryPort.saveSchedule(schedule);
-
-
-        if (saved == null || saved.getId() == null) {
-            throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_CREATED_FAIL);
+        // 충돌 체크
+        for (SchedulesModel newModel : newSchedules) {
+            boolean isConflict = existingSchedules.stream().anyMatch(existing ->
+                    !existing.getId().equals(newModel.getId()) &&
+                            newModel.getStartTime().isBefore(existing.getEndTime()) &&
+                            newModel.getEndTime().isAfter(existing.getStartTime())
+            );
+            if (isConflict) throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_TIME_CONFLICT);
         }
-
-        if (attachBinder.hasAttachFiles(originalModel) && isFirst) {
-            attachBinder.bindToSchedule(originalModel.getAttachIds(), saved.getId());
-        }
-        return saved;
     }
 
+    // 일정 생성시 리마인드 알림 및 이벤트 발행
+    private void sendCreateNotification(SchedulesModel firstSchedule) {
+        // 리마인드 알림 생성
+        notificationInterfaces.createReminder(firstSchedule);
+
+        // 이벤트 발행 (Outbox 저장)
+        NotificationChannel channel = domainEventPublisher.resolveChannel(firstSchedule.getMemberId());
+        NotificationEvents notificationEvents = NotificationEvents.of(ScheduleEvents.builder()
+                .scheduleId(firstSchedule.getId())
+                .startTime(firstSchedule.getStartTime())
+                .contents(firstSchedule.getContents())
+                .userId(firstSchedule.getMemberId())
+                .notificationChannel(channel)
+                .notificationType(ScheduleActionType.SCHEDULE_CREATED)
+                .createdTime(firstSchedule.getCreatedTime())
+                .build());
+
+        outboxEventService.saveEvent(
+                notificationEvents,
+                AggregateType.SCHEDULE.name(),
+                firstSchedule.getId().toString(),
+                notificationEvents.getNotificationType().name()
+        );
+    }
 }

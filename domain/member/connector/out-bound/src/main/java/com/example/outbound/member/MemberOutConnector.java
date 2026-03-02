@@ -86,4 +86,8 @@ public class MemberOutConnector implements MemberRepositoryPort {
         memberRepository.deleteById(id);
     }
 
+    public boolean existsById(Long id) {
+        return memberRepository.existsById(id);
+    }
+
 }

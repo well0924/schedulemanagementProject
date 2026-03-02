@@ -13,4 +13,5 @@ public interface CategoryRepositoryPort {
     void deleteCategory(Long categoryId);
     boolean hasCategories();
     void validateCategoryNameNotExists(String name);
+    boolean existsById(Long id);
 }

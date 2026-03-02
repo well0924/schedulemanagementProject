@@ -38,6 +38,22 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
                                    @Param("endTime") LocalDateTime endTime,
                                    @Param("excludeId") Long excludeId);
 
+    // 일정 충돌 (bulk 조회용)
+    @Query("""
+    SELECT s 
+    FROM Schedules s
+    WHERE s.memberId = :userId
+    AND s.isDeletedScheduled = false
+    AND s.startTime < :rangeEnd   
+    AND s.endTime > :rangeStart
+    """)
+    List<Schedules> findOverlappingSchedulesInRange(
+            @Param("userId") Long memberId,
+            @Param("rangeStart") LocalDateTime rangeStart,
+            @Param("rangeEnd") LocalDateTime rangeEnd
+    );
+
+
     //당일인지 하루종일인지 확인하는 쿼리.
     @Query("""
     SELECT COUNT(s) FROM Schedules s
@@ -68,6 +84,12 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     @Query("UPDATE Schedules s SET s.isDeletedScheduled = true WHERE s.id IN :ids")
     void markAsDeletedByIds(@Param("ids") List<Long> ids);
 
+    // 일정 단일 삭제
+    @Modifying
+    @Query("update Schedules s set s.isDeletedScheduled = true where s.id = :id")
+    void markDeleted(Long id);
+
+
     //현재 남아있는 일정 보여주기
     @Query("""
     SELECT 
@@ -97,4 +119,6 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     // 선택 일정 삭제시 사용자 번호(userId) 인증
     @Query(value = "select s.memberId from Schedules s where s.id in(:ids) and s.memberId = :me")
     List<Long> findOwnedIds(@Param("me") Long me ,@Param("ids") List<Long> ids);
+
+    List<Schedules> findAllByIds(List<Long> ids);
 }

@@ -42,9 +42,10 @@ public class DlqTestConsumer {
             // 실패 이력 저장
             failedMessageService.createFailMessage(FailMessageModel.builder()
                     .topic("member-signup-events")
-                    .messageType("MemberSignUpKafkaEvent")
+                    .messageType("MEMBER_SIGNUP")
                     .exceptionMessage("테스트 실패 시뮬레이션")
                     .payload(payload)
+                    .eventId(event.getEventId())
                     .resolved(false)
                     .retryCount(0)
                     .createdAt(LocalDateTime.now())
@@ -69,9 +70,10 @@ public class DlqTestConsumer {
             // 실패 이력 저장
             failedMessageService.createFailMessage(FailMessageModel.builder()
                     .topic("notification-events")
-                    .messageType("NotificationEvents")
+                    .messageType("NOTIFICATION")
                     .exceptionMessage("테스트 실패 시뮬레이션")
                     .payload(payload)
+                    .eventId(event.getEventId())
                     .resolved(false)
                     .retryCount(0)
                     .createdAt(LocalDateTime.now())

@@ -239,7 +239,7 @@ public class ScheduleOutConnector implements ScheduleRepositoryPort {
     }
 
     public List<SchedulesModel> findAllByIds(List<Long> ids) {
-        return scheduleRepository.findAllByIds(ids)
+        return scheduleRepository.findAllByIdIn(ids)
                 .stream()
                 .map(scheduleEntityMapper::toModel)
                 .collect(Collectors.toList());

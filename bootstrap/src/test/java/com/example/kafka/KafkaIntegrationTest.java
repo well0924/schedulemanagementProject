@@ -367,7 +367,9 @@ public class KafkaIntegrationTest {
     @Test
     @DisplayName("회원 DLQ로 보내진 후 실패이력을 저장을 하고 재처리 하기")
     public void MemberSignUpDLQTest2(){
-        // 1. DLQ 유도 (Consumer에서 실패할 email 설정)
+        //1.무조건 비우고 시작
+        dlqTestConsumer.clear();
+        //2.DLQ 유도 (Consumer에서 실패할 email 설정)
         MemberSignUpKafkaEvent event = MemberSignUpKafkaEvent.builder()
                 .receiverId(999L)
                 .message("강제실패 알림")
@@ -377,25 +379,25 @@ public class KafkaIntegrationTest {
 
         kafkaTemplate.send("member-signup-events", event);
 
-        // 2. Await DLQ 저장
+        //3.Await DLQ 저장
         await().atMost(10, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
                     var failList = failedMessageService.findByResolvedFalse();
                     assertThat(failList).isNotEmpty();
                 });
 
-        // 3. 수동으로 재처리 (스케줄러 직접 호출)
+        //4.수동으로 재처리 (스케줄러 직접 호출)
         retryScheduler.retryMemberSignUps();
 
-        //스파이를 통해 호출 여부 검증
+        //5.스파이를 통해 호출 여부 검증
         verify(retryScheduler, times(1)).retryMemberSignUps();
 
-        // 4. RetryTopicConsumer → 원래 토픽으로 재전송됐는지 확인
+        //6.RetryTopicConsumer → 알림 DB를 확인
         await().atMost(10, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
-                    List<MemberSignUpKafkaEvent> messages = dlqTestConsumer.getMemberDlqMessages();
-                    assertThat(messages).isNotEmpty();
-                    assertThat(messages.get(0).getEmail()).isEqualTo("fail@test.com");
+                    var notiList = notificationService.getNotificationsByUserId(999L);
+                    assertThat(notiList).isNotEmpty();
+                    assertThat(notiList.get(0).getMessage()).contains("환영합니다");
                 });
     }
 

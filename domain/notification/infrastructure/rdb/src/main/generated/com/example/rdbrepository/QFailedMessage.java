@@ -23,6 +23,8 @@ public class QFailedMessage extends EntityPathBase<FailedMessage> {
 
     public final BooleanPath dead = createBoolean("dead");
 
+    public final StringPath eventId = createString("eventId");
+
     public final StringPath exceptionMessage = createString("exceptionMessage");
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
@@ -30,6 +32,8 @@ public class QFailedMessage extends EntityPathBase<FailedMessage> {
     public final DateTimePath<java.time.LocalDateTime> lastTriedAt = createDateTime("lastTriedAt", java.time.LocalDateTime.class);
 
     public final StringPath messageType = createString("messageType");
+
+    public final DateTimePath<java.time.LocalDateTime> nextRetryTime = createDateTime("nextRetryTime", java.time.LocalDateTime.class);
 
     public final StringPath payload = createString("payload");
 

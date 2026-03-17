@@ -36,11 +36,11 @@ public class MemberSignUpDlqRetryTestScheduler {
         this.objectMapper = objectMapper;
     }
 
-    @Scheduled(fixedDelay = 10 * 60 * 1000)
+    @Scheduled(fixedDelay = 30 * 1000)
     @SchedulerLock(name = "retryMemberSignUpDlq", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
     public void retryMemberSignUps() {
         List<FailMessageModel> list = failedService
-                .findByResolvedFalse()
+                .findReadyToRetry()
                 .stream()
                 .filter(e -> "MEMBER_SIGNUP".equals(e.getMessageType()))
                 .toList();

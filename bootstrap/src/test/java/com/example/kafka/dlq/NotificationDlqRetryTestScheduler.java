@@ -36,13 +36,14 @@ public class NotificationDlqRetryTestScheduler {
     }
 
 
-    @Scheduled(fixedDelay = 10 * 60 * 1000)
+    @Scheduled(fixedDelay = 30 * 1000)
     @SchedulerLock(name = "retryNotificationDlq", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
     public void retryNotifications() {
         log.info("💡 DLQ 재처리 스케줄러 실행");
         List<FailMessageModel> failMessageModels = failedMessageService
-                .findByResolvedFalse()
+                .findReadyToRetry()
                 .stream()
+                .filter(e -> "NOTIFICATION".equals(e.getMessageType()))
                 .toList();
         log.info("List::"+failMessageModels);
         log.info("size:::"+failMessageModels.size());

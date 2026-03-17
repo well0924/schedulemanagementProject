@@ -120,5 +120,5 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     @Query(value = "select s.memberId from Schedules s where s.id in(:ids) and s.memberId = :me")
     List<Long> findOwnedIds(@Param("me") Long me ,@Param("ids") List<Long> ids);
 
-    List<Schedules> findAllByIds(List<Long> ids);
+    List<Schedules> findAllByIdIn(List<Long> ids);
 }

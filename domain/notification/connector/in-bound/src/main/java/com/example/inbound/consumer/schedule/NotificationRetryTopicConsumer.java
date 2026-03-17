@@ -3,6 +3,7 @@ package com.example.inbound.consumer.schedule;
 import com.example.inbound.consumer.slack.SlackNotifier;
 import com.example.events.kafka.NotificationEvents;
 import com.example.logging.MDC.KafkaMDCUtil;
+import com.example.notification.service.FailedMessageService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -30,6 +31,8 @@ public class NotificationRetryTopicConsumer {
 
     //수동 측정하기.
     private final MeterRegistry meterRegistry;
+
+    private final FailedMessageService failedMessageService;
 
     @KafkaListener(topics = "notification-events.retry.5s", groupId = "retry-group-5s")
     public void retry5s(String message) {
@@ -101,11 +104,11 @@ public class NotificationRetryTopicConsumer {
         try {
             NotificationEvents event = objectMapper.readValue(message, NotificationEvents.class);
             KafkaMDCUtil.initMDC(event);
-            // 마지막 실패 → 슬랙으로 연동하기.(추후 구현)
-            meterRegistry.counter("kafka.retry.notification.failure.final").increment();
+            failedMessageService.markAsDeadByEventId(event.getEventId());
             String text = String.format(
                     "- EventId: %s%n- Topic: %s%n- Exception: %s",
                     event.getEventId(), event.getNotificationType(), event.getMessage());
+            meterRegistry.counter("kafka.retry.notification.failure.final").increment();
             slackNotifier.send("Dlq_Notification", event.getMessage());
             log.warn("최종 재전송 도달 - 후속조치 필요: {}", text);
         } catch (JsonProcessingException e) {

@@ -17,8 +17,10 @@ import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -45,42 +47,43 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
             containerFactory = "memberKafkaListenerFactory"
     )
     @Override
-    public void handle(MemberSignUpKafkaEvent event) {
+    @Transactional //1.비즈니스 로직과 멱등성 저장을 한 원자성으로 묶음
+    public void handle(MemberSignUpKafkaEvent event, Acknowledgment ack) { //2.Acknowledgment 추가
         try {
             KafkaMDCUtil.initMDC(event);
-
+            //3. 멱등성 중복 처리 로직
             if (processedEventService.isAlreadyProcessed(event.getEventId())) {
                 log.info("⚠️ 이미 처리된 이벤트 무시: {}", event.getEventId());
-                throw new CustomExceptionHandler("중복 이벤트 처리됨: " + event.getEventId(),
-                        ErrorCode.EVENT_DUPLICATE);
+                throw new CustomExceptionHandler("중복 이벤트 처리됨: " + event.getEventId(), ErrorCode.EVENT_DUPLICATE);
             }
-            // 1. 이메일 발송 (실패해도 서비스 진행은 계속)
+            //4. 이메일 발송 (실패해도 서비스 진행은 계속)
             try {
-                emailService.sendHtmlEmail(
-                        event.getEmail(),
-                        "🎉 회원가입을 환영합니다!",
-                        buildWelcomeEmailContent(event.getUsername())
-                );
+                emailService.sendHtmlEmail(event.getEmail(), "🎉 회원가입을 환영합니다!", buildWelcomeEmailContent(event.getUsername()));
                 log.info("회원가입 환영 메일 발송 성공: {}", event.getEmail());
             } catch (Exception emailEx) {
                 log.error("이메일 발송 실패 (계속 진행): {}", emailEx.getMessage(), emailEx);
             }
-            //2. 알림 내역 저장
+            //4.알림 내역 저장
             saveNotificationToDatabase(event);
-            //3. 알림 발송.
+            //5.알림 발송.
             String message = objectMapper.writeValueAsString(event);
-            simpMessagingTemplate
-                    .convertAndSend("/topic/memberSignUp/" +
-                            event.getReceiverId(),
-                    message);
-            // 이벤트 저장
+            simpMessagingTemplate.convertAndSend("/topic/memberSignUp/" + event.getReceiverId(), message);
+            //6.이벤트 저장
             processedEventService.saveProcessedEvent(event.getEventId());
+            //7.최종 성공 커밋
+            ack.acknowledge();
         } catch (CustomExceptionHandler ex) {
-            // 재처리 불필요 → 여기서 끝
-            log.warn("[Kafka Non-Retry Error] code={}, msg={}",
-                    ex.getErrorCode(), ex.getMessage());
+            if(ex.getErrorCode()==ErrorCode.EVENT_DUPLICATE) {
+                log.warn("[Kafka Non-Retry Error] code={}, msg={}", ex.getErrorCode(), ex.getMessage());
+                // 중복이 된 경우 카프카에게 중복된 메시지라고 알리기
+                ack.acknowledge();
+            } else {
+                log.error("기타 비즈니스 예외: {}", ex.getMessage());
+                throw ex;
+            }
         } catch(JsonProcessingException e) {
             log.error("Kafka 메시지 직렬화 오류: {}", e.getMessage());
+            ack.acknowledge();
             throw new CustomExceptionHandler("이벤트 직렬화 실패: " + event.getEventId(), ErrorCode.EVENT_SERIALIZATION_ERROR);
         } catch (Exception e) {
             log.error("WebSocket 전송 실패 (DLQ 안 보냄)", e);

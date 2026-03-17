@@ -31,18 +31,21 @@ public class NotificationDlqRetryScheduler {
     public static int EXECUTION_COUNT = 0;
 
     @Timed(value = "kafka.dlq.retry.duration", description = "DLQ 재시도 처리 시간")
-    @Scheduled(fixedDelay = 10 * 60 * 1000)
+    @Scheduled(fixedDelay = 30 * 1000) // 10분(10*60*1000)에서 30초(30*1000)로 변경
     @SchedulerLock(name = "retryNotificationDlq", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
     public void retryNotifications() {
         EXECUTION_COUNT++;
         log.info("실행됨: " + EXECUTION_COUNT);
         log.info("💡 DLQ 재처리 스케줄러 실행");
         List<FailMessageModel> failMessageModels = failedMessageService
-                .findByResolvedFalse()
+                .findReadyToRetry()
                 .stream()
                 .toList();
         log.info("List::"+failMessageModels);
         log.info("size:::"+failMessageModels.size());
+
+        if (failMessageModels.isEmpty()) return;
+
         for (FailMessageModel entity : failMessageModels) {
 
             if(entity.getRetryCount() >= MAX_RETRY_COUNT) {
@@ -68,7 +71,7 @@ public class NotificationDlqRetryScheduler {
             } finally {
                 KafkaMDCUtil.clear();
             }
-                failedMessageService.updateFailMessage(entity);
+            failedMessageService.updateFailMessage(entity);
         }
     }
 

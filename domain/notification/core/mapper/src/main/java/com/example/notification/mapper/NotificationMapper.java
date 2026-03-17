@@ -62,11 +62,13 @@ public class NotificationMapper {
         return FailMessageModel
                 .builder()
                 .id(failedMessage.getId())
+                .eventId(failedMessage.getEventId())
                 .exceptionMessage(failedMessage.getExceptionMessage())
                 .topic(failedMessage.getTopic())
                 .payload(failedMessage.getPayload())
                 .resolved(failedMessage.isResolved())
                 .retryCount(failedMessage.getRetryCount())
+                .nextRetryTime(failedMessage.getNextRetryTime())
                 .createdAt(failedMessage.getCreatedAt())
                 .resolvedAt(failedMessage.getResolvedAt())
                 .lastTriedAt(failedMessage.getLastTriedAt())

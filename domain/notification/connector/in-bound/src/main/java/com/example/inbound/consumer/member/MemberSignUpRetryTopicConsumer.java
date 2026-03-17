@@ -3,6 +3,8 @@ package com.example.inbound.consumer.member;
 import com.example.inbound.consumer.slack.SlackNotifier;
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.logging.MDC.KafkaMDCUtil;
+import com.example.notification.model.FailMessageModel;
+import com.example.notification.service.FailedMessageService;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +24,8 @@ public class MemberSignUpRetryTopicConsumer {
     private final MeterRegistry meterRegistry;
 
     private final SlackNotifier slackNotifier;
+
+    private final FailedMessageService failedMessageService;
 
     @KafkaListener(topics = "member-signup.retry.5s", groupId = "member-retry-5s")
     public void retry5s(MemberSignUpKafkaEvent event) {
@@ -75,12 +79,16 @@ public class MemberSignUpRetryTopicConsumer {
     public void retryFinal(MemberSignUpKafkaEvent event) {
         try {
             KafkaMDCUtil.initMDC(event);
+            // 죽여줘야 스케줄러가 다시 안 긁음.
+            failedMessageService.markAsDeadByEventId(event.getEventId());
             String test = String.format("- EventId: %s%n- Topic: %s%n- Exception: %s",
                     event.getEventId(),event.getNotificationType(),event.getMessage());
             // 최종 실패 → Slack 알림처리하기.(추후 구현)
             meterRegistry.counter("kafka.retry.signup.failure.final").increment();
             slackNotifier.send("Dlq_Notification",test);
             log.warn(" 회원가입 최종 재시도 실패: {}", event.getEmail());
+        } catch (Exception e) {
+            log.error("최종 실패 처리 중 에러 발생: {}", e.getMessage());
         } finally {
             KafkaMDCUtil.clear();
         }

@@ -31,26 +31,6 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-//    @Bean
-//    public ConsumerFactory<String, NotificationEvents> consumerFactory(Class<T> targetClass) {
-//
-//        Map<String, Object> config = new HashMap<>();
-//        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-//        config.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-group");
-//        // DLQ 작동을 위한 역직렬화 설정
-//        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class.getName());
-//        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class.getName());
-//        // 내부에서 실제로 사용할 디시리얼라이저 지정
-//        config.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class.getName());
-//        config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class.getName());
-//        //기타 설정.
-//        config.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-//        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, targetClass.getName());
-//        config.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
-//        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-//        return config;
-//    }
-
     /**
      * 컨슈머 공통 설정: 역직렬화 에러 처리 및 신뢰성 있는 메시지 수신용
      */
@@ -101,13 +81,14 @@ public class KafkaConsumerConfig {
                         // 원본 토픽명 뒤에 ".DLQ"를 붙여 실패 메시지 격리 (partition 유지)
                         (record, ex) -> new TopicPartition(record.topic() + ".DLQ", record.partition())
                 ),
-                // 즉시(0L) 3회 재시도 후 DLQ로 전송
-                new FixedBackOff(0L, 3)
+                // 2초간격으로 3회 재시도 후 DLQ로 전송
+                new FixedBackOff(2000L, 3)
         ));
         //MANUAL_IMMEDIATE: 비즈니스 로직 성공 후 즉시 오프셋을 커밋하여 데이터 정합성 강화
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         // 시작 시 토픽이 없어도 애플리케이션 실행 허용
         factory.setMissingTopicsFatal(false);
+        factory.setConcurrency(2);
         return factory;
     }
 
@@ -127,8 +108,10 @@ public class KafkaConsumerConfig {
                 ),
                 new FixedBackOff(0L, 3)
         ));
-
+        //MANUAL_IMMEDIATE: 비즈니스 로직 성공 후 즉시 오프셋을 커밋하여 데이터 정합성 강화
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         factory.setMissingTopicsFatal(false);
+        factory.setConcurrency(2);
         return factory;
     }
 }

@@ -46,31 +46,30 @@ public class KafkaProducerConfig {
     }
 
     /**
-     * 공통 Producer 설정
-     */
-    private <T> ProducerFactory<String, T> genericProducerFactory(Class<T> clazz) {
-        Map<String, Object> config = new HashMap<>();
-        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        config.put(ProducerConfig.ACKS_CONFIG, "all");
-        config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
-        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-        return new DefaultKafkaProducerFactory<>(config);
-    }
-
-    /**
      * 범용 Object 전송용 Template
      * Primary 선언으로 기본 Template으로 지정
      */
     @Primary
     @Bean(name = "objectKafkaTemplate")
     public KafkaTemplate<String, Object> objectKafkaTemplate() {
+        // acks=all과 idempotence=true
+        return new KafkaTemplate<>(genericProducerFactory(Object.class));
+    }
+
+    /**
+     * 공통 Producer 설정
+     */
+    private <T> ProducerFactory<String, T> genericProducerFactory(Class<T> clazz) {
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        // 데이터 유실 방지
+        config.put(ProducerConfig.ACKS_CONFIG, "all");
+        // 중복 발행 방지
+        config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-        // ADD_TYPE_INFO_HEADERS: 메시지 헤더에 Java 타입 정보를 포함시켜 컨슈머가 어떤 객체로 역직렬화할지 알 수 있게 함 (다형성 처리 용이)
-        config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, true); // 이게 핵심
-        return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(config));
+        // 헤더에 타입 정보를 포함시켜 컨슈머의 역직렬화 도우미 역할 (다형성 처리)
+        config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, true);
+        return new DefaultKafkaProducerFactory<>(config);
     }
 }

@@ -28,8 +28,8 @@ public class FailedMessageService {
     }
 
     @Transactional(readOnly = true)
-    public boolean findByPayload(String payload){
-        return failMessageOutConnector.findByPayload(payload);
+    public boolean isAlreadyRecorded(String eventId) {
+        return failMessageOutConnector.isAlreadyRecorded(eventId);
     }
 
     public FailMessageModel updateFailMessage(FailMessageModel model) {
@@ -40,5 +40,18 @@ public class FailedMessageService {
         LocalDateTime threshold = LocalDateTime.now().minusDays(7); // 예: 7일 이전
         int deleted = failMessageOutConnector.deleteByResolvedIsTrueAndResolvedAtBefore(threshold);
         log.info("🧹 삭제된 실패 메시지 개수 = {}", deleted);
+    }
+
+    @Transactional(readOnly = true)
+    public List<FailMessageModel> findReadyToRetry() {
+        return failMessageOutConnector.findReadyToRetry();
+    }
+
+    public void markAsDeadByEventId(String eventId) {
+        failMessageOutConnector.findByEventId(eventId) // Optional 반환
+                .ifPresent(model -> {
+                    model.markAsDead();
+                    failMessageOutConnector.updateFailMessage(model);
+                });
     }
 }

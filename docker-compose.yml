@@ -1,18 +1,58 @@
 version: '3.8'
 
 services:
-  backend:
-    image: well4149/schedule-management:latest  # Jib으로 빌드한 이미지
-    container_name: schedule-backend
+  # 로드밸런서 추가
+  nginx:
+    image: nginx:latest
+    container_name: nginx-lb
     ports:
-      - "8082:8082"
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend-1
+      - backend-2
+    networks:
+      - backend-net
+
+  # 서버 1
+  backend-1:
+    image: well4149/schedule-management:latest
+    container_name: schedule-backend-1
     environment:
       - SPRING_PROFILES_ACTIVE=local
+      - SERVER_PORT=8081
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/schedule?characterEncoding=UTF-8&serverTimezone=Asia/Seoul
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
+      - MAIL_TEST_HOST=${MAIL_TEST_HOST}
+      - MAIL_TEST_PORT=${MAIL_TEST_PORT}
+      - MAIL_TEST_USERNAME=${MAIL_TEST_USERNAME}
+      - MAIL_TEST_PASSWORD=${MAIL_TEST_PASSWORD}
+    depends_on:
+      - kafka
+      - redis
+    networks:
+      - backend-net
+
+  # 서버 2
+  backend-2:
+    image: well4149/schedule-management:latest
+    container_name: schedule-backend-2
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - SERVER_PORT=8082
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/schedule?characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - MAIL_TEST_HOST=${MAIL_TEST_HOST}
+      - MAIL_TEST_PORT=${MAIL_TEST_PORT}
+      - MAIL_TEST_USERNAME=${MAIL_TEST_USERNAME}
+      - MAIL_TEST_PASSWORD=${MAIL_TEST_PASSWORD}
     depends_on:
       - kafka
       - redis

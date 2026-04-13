@@ -8,6 +8,7 @@ dependencies {
     implementation project(':domain:schedules:core:model')
     implementation project(':domain:schedules:core:enumerate')
     implementation project(':domain:schedules:core:exception')
+    implementation project(':domain:schedules:core:mapper')
     implementation project(':domain:schedules:connector:interface')
     implementation project(':domain:schedules:connector:out-bound')
     implementation project(':domain:schedules:connector:out-bound:open-ai')

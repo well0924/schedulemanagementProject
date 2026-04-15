@@ -1,6 +1,7 @@
 package com.example.service.schedule.recommend;
 
 import com.example.interfaces.category.CategoryRepositoryPort;
+import com.example.model.category.CategoryModel;
 import com.example.outbound.openai.dto.TimeSlot;
 import com.example.rdbrepository.Schedules;
 import lombok.AllArgsConstructor;
@@ -67,9 +68,10 @@ public class SchedulePromptBuilder {
                 .distinct()
                 .collect(Collectors.toMap(
                         id -> id,
-                        id -> categoryRepository.existsById(id)
-                                ? categoryRepository.findById(id).getName()
-                                : "미분류"
+                        id -> {
+                            CategoryModel category = categoryRepository.findById(id);
+                            return (category != null) ? category.getName() : "미분류";
+                        }
                 ));
     }
 

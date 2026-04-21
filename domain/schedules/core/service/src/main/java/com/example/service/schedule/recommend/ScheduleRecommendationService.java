@@ -1,4 +1,4 @@
-package com.example.service.schedule;
+package com.example.service.schedule.recommend;
 
 import com.example.inbound.schedules.ScheduleRepositoryPort;
 import com.example.interfaces.auth.AuthInterface;
@@ -9,8 +9,6 @@ import com.example.outbound.openai.dto.OpenAiResponse;
 import com.example.outbound.openai.dto.ScheduleRecommendationDto;
 import com.example.rdbrepository.Schedules;
 import com.example.schedules.mapper.ScheduleRecommendMapper;
-import com.example.service.schedule.recommend.OpenAiRequestBuilder;
-import com.example.service.schedule.recommend.SchedulePromptBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.AllArgsConstructor;

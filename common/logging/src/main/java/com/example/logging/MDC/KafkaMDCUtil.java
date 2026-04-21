@@ -2,6 +2,7 @@ package com.example.logging.MDC;
 
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.events.kafka.NotificationEvents;
+import com.example.events.spring.ChatCompletedEvent;
 import org.slf4j.MDC;
 
 import java.util.UUID;
@@ -25,6 +26,18 @@ public class KafkaMDCUtil {
             MDC.put("email", event.getEmail());
         if (event.getEventId() != null)
             MDC.put("eventId", event.getEventId());
+        MDC.put("requestId", UUID.randomUUID().toString());
+    }
+
+    public static void initMDC(ChatCompletedEvent event) {
+        if(event.getMemberId() != null)
+            MDC.put("memberId",String.valueOf(event.getMemberId()));
+        if(event.getUserMessage() != null)
+            MDC.put("userMessage",event.getUserMessage());
+        if(event.getEventId() != null)
+            MDC.put("eventId",event.getEventId());
+        if(event.getAssistantResponse() != null)
+            MDC.put("assistantResponse",event.getAssistantResponse());
         MDC.put("requestId", UUID.randomUUID().toString());
     }
 

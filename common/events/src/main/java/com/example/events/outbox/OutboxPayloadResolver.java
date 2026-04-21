@@ -3,6 +3,7 @@ package com.example.events.outbox;
 import com.example.events.kafka.BaseKafkaEvent;
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.events.kafka.NotificationEvents;
+import com.example.events.spring.ChatCompletedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,7 @@ public class OutboxPayloadResolver {
         return switch (event.getAggregateType()) {
             case "MEMBER" -> MemberSignUpKafkaEvent.class;
             case "SCHEDULE" -> NotificationEvents.class;
+            case "CHAT" -> ChatCompletedEvent.class;
             default -> throw new IllegalArgumentException(
                     "지원하지 않는 AggregateType: " + event.getAggregateType());
         };

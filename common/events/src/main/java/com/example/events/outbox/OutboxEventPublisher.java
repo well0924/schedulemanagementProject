@@ -1,21 +1,12 @@
 package com.example.events.outbox;
 
-import com.example.events.kafka.BaseKafkaEvent;
-import com.example.events.kafka.MemberSignUpKafkaEvent;
-import com.example.events.kafka.NotificationEvents;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.annotation.Counted;
 import io.micrometer.core.annotation.Timed;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.io.IOException;
 import java.util.List;
 
 @Slf4j

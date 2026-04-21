@@ -2,10 +2,12 @@ package com.example.inbound.schedules;
 
 import com.example.apimodel.schedule.ScheduleApiModel;
 import com.example.schedules.mapper.ScheduleMapper;
-import com.example.service.schedule.ScheduleRecommendationService;
+import com.example.service.schedule.recommend.ChatBotService;
+import com.example.service.schedule.recommend.ScheduleRecommendationService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,6 +18,8 @@ public class ScheduleRecommendationConnectorImpl implements ScheduleRecommendati
 
     private final ScheduleRecommendationService scheduleRecommendationService;
 
+    private final ChatBotService chatBotService;
+
     private final ScheduleMapper scheduleMapper;
 
     @Override
@@ -24,6 +28,11 @@ public class ScheduleRecommendationConnectorImpl implements ScheduleRecommendati
                 .map(schedules -> schedules.stream()
                         .map(scheduleMapper::toApi)
                         .collect(Collectors.toList()));
+    }
+
+    @Override
+    public Flux<String> streamChat(Long memberId, String userMessage) {
+        return chatBotService.streamChat(memberId,userMessage);
     }
 
 }

@@ -2,6 +2,7 @@ package com.example.apiclient.config.kafka;
 
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.events.kafka.NotificationEvents;
+import com.example.events.spring.ChatCompletedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -62,6 +63,15 @@ public class KafkaConsumerConfig {
                 new ErrorHandlingDeserializer<>(new JsonDeserializer<>(MemberSignUpKafkaEvent.class, false)));
     }
 
+    @Bean
+    public ConsumerFactory<String, ChatCompletedEvent> chatConsumerFactory() {
+        return new DefaultKafkaConsumerFactory<>(
+                consumerConfigs(ChatCompletedEvent.class),  // 기존 공통 메서드 재사용
+                new StringDeserializer(),
+                new ErrorHandlingDeserializer<>(
+                        new JsonDeserializer<>(ChatCompletedEvent.class, false)));
+    }
+
     /**
      * 알림 서비스용 리스너 팩토리 (DLQ 및 수동 커밋 설정 포함)
      */
@@ -109,6 +119,28 @@ public class KafkaConsumerConfig {
                 new FixedBackOff(0L, 3)
         ));
         //MANUAL_IMMEDIATE: 비즈니스 로직 성공 후 즉시 오프셋을 커밋하여 데이터 정합성 강화
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+        factory.setMissingTopicsFatal(false);
+        factory.setConcurrency(2);
+        return factory;
+    }
+
+    @Bean(name = "chatKafkaListenerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, ChatCompletedEvent> chatKafkaListenerFactory(
+            @Qualifier("objectKafkaTemplate") KafkaTemplate<String, Object> kafkaTemplate
+    ) {
+        ConcurrentKafkaListenerContainerFactory<String, ChatCompletedEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(chatConsumerFactory());
+
+        factory.setCommonErrorHandler(new DefaultErrorHandler(
+                new DeadLetterPublishingRecoverer(
+                        kafkaTemplate,
+                        (record, ex) -> new TopicPartition(record.topic() + ".DLQ", record.partition())
+                ),
+                new FixedBackOff(2000L, 3)  // 2초 간격 3회 재시도
+        ));
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         factory.setMissingTopicsFatal(false);
         factory.setConcurrency(2);

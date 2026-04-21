@@ -16,6 +16,7 @@ import io.micrometer.core.annotation.Counted;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -81,6 +82,9 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
                 log.error("기타 비즈니스 예외: {}", ex.getMessage());
                 throw ex;
             }
+        } catch (DataIntegrityViolationException e) {
+            // 이미 처리된 이벤트라면 무시
+            log.warn("이벤트 중복 저장 시도 감지됨: {}", event.getEventId());
         } catch(JsonProcessingException e) {
             log.error("Kafka 메시지 직렬화 오류: {}", e.getMessage());
             ack.acknowledge();

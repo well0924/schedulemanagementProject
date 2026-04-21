@@ -9,7 +9,7 @@ import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.inbound.attach.AttachInConnector;
 import com.example.model.schedules.SchedulesModel;
 import com.example.schedules.mapper.ScheduleMapper;
-import com.example.service.schedule.ScheduleDomainService;
+import com.example.service.schedule.domainService.ScheduleDomainService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

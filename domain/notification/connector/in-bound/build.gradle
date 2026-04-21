@@ -4,6 +4,8 @@ dependencies {
     implementation project(':common:logging')
     implementation project(':common:exception')
     implementation project(':domain:schedules:core:model')
+    implementation project(':domain:schedules:connector:interface')
+    implementation project(':domain:schedules:connector:out-bound:open-ai')
     implementation project(':domain:notification:connector:interfaces')
     implementation project(':domain:notification:api:api-model')
     implementation project(':domain:notification:core:service')

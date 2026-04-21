@@ -1,4 +1,4 @@
-package com.example.service.schedule;
+package com.example.service.schedule.domainService;
 
 import com.example.enumerate.schedules.*;
 import com.example.events.enums.AggregateType;
@@ -13,13 +13,13 @@ import com.example.inbound.schedules.ScheduleRepositoryPort;
 import com.example.interfaces.notification.notification.NotificationInterfaces;
 import com.example.model.schedules.SchedulesModel;
 import com.example.security.config.SecurityUtil;
-import com.example.service.schedule.repeat.create.RepeatScheduleFactory;
-import com.example.service.schedule.repeat.delete.RepeatDeleteRegistry;
-import com.example.service.schedule.repeat.update.RepeatUpdateRegistry;
-import com.example.service.schedule.support.AttachBinder;
-import com.example.service.schedule.support.DomainEventPublisher;
-import com.example.service.schedule.guard.ScheduleGuard;
-import com.example.service.schedule.support.ScheduleClassifier;
+import com.example.service.schedule.domainService.repeat.create.RepeatScheduleFactory;
+import com.example.service.schedule.domainService.repeat.delete.RepeatDeleteRegistry;
+import com.example.service.schedule.domainService.repeat.update.RepeatUpdateRegistry;
+import com.example.service.schedule.domainService.support.AttachBinder;
+import com.example.service.schedule.domainService.support.DomainEventPublisher;
+import com.example.service.schedule.domainService.guard.ScheduleGuard;
+import com.example.service.schedule.domainService.support.ScheduleClassifier;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

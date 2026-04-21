@@ -1,10 +1,10 @@
-package com.example.service.schedule.repeat.update;
+package com.example.service.schedule.domainService.repeat.update;
 
 import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.model.schedules.SchedulesModel;
-import com.example.service.schedule.support.AttachBinder;
-import com.example.service.schedule.support.ScheduleClassifier;
-import com.example.service.schedule.support.SchedulePatchApplier;
+import com.example.service.schedule.domainService.support.AttachBinder;
+import com.example.service.schedule.domainService.support.ScheduleClassifier;
+import com.example.service.schedule.domainService.support.SchedulePatchApplier;
 
 import java.util.List;
 

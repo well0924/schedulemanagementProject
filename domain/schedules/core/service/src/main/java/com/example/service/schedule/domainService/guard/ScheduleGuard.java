@@ -1,4 +1,4 @@
-package com.example.service.schedule.guard;
+package com.example.service.schedule.domainService.guard;
 
 import com.example.category.dto.CategoryErrorCode;
 import com.example.category.exception.CategoryCustomException;

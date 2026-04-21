@@ -2,6 +2,8 @@ dependencies {
     implementation project(':domain:schedules:api:api-model')
     implementation project(':domain:schedules:core:enumerate')
     implementation project(':domain:schedules:core:model')
+    implementation project(':domain:schedules:connector:out-bound:open-ai')
+    implementation project(':common:events')
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 }

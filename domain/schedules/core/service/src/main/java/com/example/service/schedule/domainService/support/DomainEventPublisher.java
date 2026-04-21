@@ -1,4 +1,4 @@
-package com.example.service.schedule.support;
+package com.example.service.schedule.domainService.support;
 
 import com.example.events.enums.NotificationChannel;
 import com.example.interfaces.notification.push.NotificationSettingInterfaces;

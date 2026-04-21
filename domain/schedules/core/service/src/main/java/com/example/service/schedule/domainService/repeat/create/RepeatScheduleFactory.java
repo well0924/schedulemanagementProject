@@ -1,4 +1,4 @@
-package com.example.service.schedule.repeat.create;
+package com.example.service.schedule.domainService.repeat.create;
 
 import com.example.enumerate.schedules.RepeatType;
 import com.example.model.schedules.SchedulesModel;

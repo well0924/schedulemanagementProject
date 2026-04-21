@@ -1,4 +1,4 @@
-package com.example.service.schedule.repeat.update;
+package com.example.service.schedule.domainService.repeat.update;
 
 import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.exception.schedules.dto.ScheduleErrorCode;

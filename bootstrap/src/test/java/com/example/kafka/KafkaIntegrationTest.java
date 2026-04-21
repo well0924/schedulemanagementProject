@@ -26,7 +26,7 @@ import com.example.notification.model.NotificationModel;
 import com.example.notification.service.ReminderNotificationService;
 import com.example.outbound.notification.NotificationOutConnector;
 import com.example.service.member.MemberService;
-import com.example.service.schedule.ScheduleDomainService;
+import com.example.service.schedule.domainService.ScheduleDomainService;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;

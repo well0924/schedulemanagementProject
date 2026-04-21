@@ -1,4 +1,4 @@
-package com.example.service.schedule.repeat.delete;
+package com.example.service.schedule.domainService.repeat.delete;
 
 import com.example.enumerate.schedules.DeleteType;
 import com.example.exception.schedules.dto.ScheduleErrorCode;

@@ -1,4 +1,4 @@
-package com.example.service.schedule.support;
+package com.example.service.schedule.domainService.support;
 
 import com.example.interfaces.attach.AttachInterfaces;
 import com.example.model.schedules.SchedulesModel;

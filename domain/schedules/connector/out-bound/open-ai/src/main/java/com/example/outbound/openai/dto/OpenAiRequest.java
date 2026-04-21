@@ -17,6 +17,9 @@ public class OpenAiRequest {
     private String model;
     private List<Message> messages;
 
+    @Builder.Default
+    private boolean stream = false;
+
     @Getter
     @Builder
     @NoArgsConstructor

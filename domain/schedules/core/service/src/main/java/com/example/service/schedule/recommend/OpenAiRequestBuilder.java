@@ -20,4 +20,12 @@ public class OpenAiRequestBuilder {
                         .build()))
                 .build();
     }
+
+    public OpenAiRequest buildWithMessages(List<OpenAiRequest.Message> messages) {
+        return OpenAiRequest.builder()
+                .model("gpt-4o")
+                .messages(messages)
+                .stream(true)   // 스트리밍 활성화
+                .build();
+    }
 }

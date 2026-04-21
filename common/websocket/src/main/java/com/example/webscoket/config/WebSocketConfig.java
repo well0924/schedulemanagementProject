@@ -1,4 +1,4 @@
-package com.example.apiclient.config.websocket;
+package com.example.webscoket.config;
 
 import com.example.service.auth.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +28,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
+                .addInterceptors(new JwtHandshakeInterceptor(jwtTokenProvider))
                 .withSockJS();
     }
 

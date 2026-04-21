@@ -12,6 +12,7 @@ include("common:logging")
 include("common:redis")
 include("common:events")
 include("common:s3")
+include("common:websocket")
 
 // Member 관련 모듈
 include("domain:member")

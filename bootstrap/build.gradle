@@ -24,6 +24,7 @@ dependencies {
 	implementation project(':common:redis')
 	implementation project(':common:events')
 	implementation project(':common:s3')
+	implementation project(':common:websocket')
 	// 회원
 	implementation project(':domain:member:api:controller')
 	implementation project(':domain:member:api:api-model')
@@ -60,6 +61,7 @@ dependencies {
 	// 알림
 	implementation project(':domain:notification:api:controller')
 	implementation project(':domain:notification:connector:in-bound')
+	implementation project(':domain:notification:connector:interfaces')
 	implementation project(':domain:notification:connector:out-bound')
 	implementation project(':domain:notification:connector:out-bound:api-client')
 	implementation project(':domain:notification:core:service')

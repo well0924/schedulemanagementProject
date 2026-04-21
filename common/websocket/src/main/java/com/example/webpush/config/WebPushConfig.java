@@ -1,4 +1,4 @@
-package com.example.apiclient.config.webpush;
+package com.example.webpush.config;
 
 import jakarta.annotation.PostConstruct;
 import nl.martijndwars.webpush.PushService;

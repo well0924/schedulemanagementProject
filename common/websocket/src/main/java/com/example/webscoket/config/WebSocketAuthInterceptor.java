@@ -1,4 +1,4 @@
-package com.example.apiclient.config.websocket;
+package com.example.webscoket.config;
 
 import com.example.service.auth.jwt.JwtTokenProvider;
 import io.jsonwebtoken.Claims;

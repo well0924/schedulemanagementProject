@@ -5,7 +5,9 @@ public enum CacheKey {
     REFRESH_TOKEN("refreshToken"),
     BLACKLIST("blackList"),
     CATEGORY("category"),
-    SCHEDULE("schedule");
+    SCHEDULE("schedule"),
+    CHAT_HISTORY("chat_history"), // 대화 이력용 (2시간)
+    CHAT_PATTERN("chat_pattern");  // 분석 패턴용 (7일)
 
     private final String key;
 

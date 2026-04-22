@@ -14,4 +14,5 @@ public interface ScheduleRecommendationCachePort {
     void appendChatMessage(Long memberId, ChatMessage message);
     List<ChatMessage> getChatHistory(Long memberId);
     void clearChatHistory(Long memberId);
+    public void increment(String key, String hashKey, long delta);
 }

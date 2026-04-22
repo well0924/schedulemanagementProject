@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.cache.RedisCacheManagerBuilderCustomizer;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -31,6 +30,8 @@ public class CacheConfig {
     private static final Duration CATEGORY_TTL = Duration.ofDays(7);
     private static final Duration USER_TTL = Duration.ofMinutes(10);
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(7);
+    private static final Duration CHAT_HISTORY_TTL = Duration.ofHours(2);
+    private static final Duration CHAT_PATTERN_TTL = Duration.ofDays(7);
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
@@ -62,7 +63,9 @@ public class CacheConfig {
                 .withCacheConfiguration(CacheKey.SCHEDULE.getKey(), createCacheConfig(SCHEDULE_TTL))
                 .withCacheConfiguration(CacheKey.CATEGORY.getKey(), createCacheConfig(CATEGORY_TTL))
                 .withCacheConfiguration(CacheKey.USER.getKey(), createCacheConfig(USER_TTL))
-                .withCacheConfiguration(CacheKey.REFRESH_TOKEN.getKey(), createCacheConfig(REFRESH_TOKEN_TTL));
+                .withCacheConfiguration(CacheKey.REFRESH_TOKEN.getKey(), createCacheConfig(REFRESH_TOKEN_TTL))
+                .withCacheConfiguration(CacheKey.CHAT_HISTORY.getKey(), createCacheConfig(CHAT_HISTORY_TTL))
+                .withCacheConfiguration(CacheKey.CHAT_PATTERN.getKey(), createCacheConfig(CHAT_PATTERN_TTL));
 
     }
 

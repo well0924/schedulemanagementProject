@@ -8,6 +8,8 @@ import com.example.interfaces.notification.kafka.KafkaEventConsumer;
 import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.model.schedules.ChatHistoryModel;
 import com.example.outbound.openai.dto.ChatMessage;
+import io.micrometer.core.annotation.Counted;
+import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,6 +27,8 @@ public class ChatHistorySaveConsumer implements KafkaEventConsumer<ChatCompleted
     private final ScheduleRecommendationCachePort cacheService;
     private final ProcessedEventService processedEventService;
 
+    @Timed(value = "kafka.consumer.chat.save.time", description = "이력 저장 소요 시간")
+    @Counted(value = "kafka.consumer.chat.save.count", description = "이력 저장 처리 횟수")
     @KafkaListener(
             topics = "chat-history",
             groupId = "chat-history-save",

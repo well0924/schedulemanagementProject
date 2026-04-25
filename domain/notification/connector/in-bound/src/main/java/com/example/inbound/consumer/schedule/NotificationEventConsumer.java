@@ -128,8 +128,13 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
         NotificationType type = mapActionToType(event.getNotificationType().name());
 
         if (type == NotificationType.SCHEDULE_REMINDER) {
-            // 이미 원본 알림의 isReminderSent가 true이므로 추가 저장 없이 통과
-            log.info("🔔 리마인드 웹 알림 발송 완료: scheduleId={}", event.getScheduleId());
+            try {
+                // 이미 원본 알림의 isReminderSent가 true이므로 추가 저장 없이 통과
+                log.info("🔔 리마인드 웹 알림 발송 완료: scheduleId={}", event.getScheduleId());
+                webPushService.sendPush(event.getReceiverId(), event);
+            } catch(Exception e) {
+                log.error("❌ 리마인드 웹푸시 발송 실패: {}", e.getMessage());
+            }
             return;
         }
         // DB 저장

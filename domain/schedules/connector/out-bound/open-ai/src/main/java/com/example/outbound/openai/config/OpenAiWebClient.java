@@ -4,6 +4,9 @@ import com.example.outbound.openai.dto.OpenAiRequest;
 import com.example.outbound.openai.dto.OpenAiResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,9 +28,15 @@ public class OpenAiWebClient {
 
     private final ObjectMapper objectMapper;
 
-    public OpenAiWebClient(@Qualifier("openAiWebClientInternal") WebClient openAiWebClient, ObjectMapper objectMapper) {
+    private final CircuitBreaker circuitBreaker;
+
+
+    public OpenAiWebClient(@Qualifier("openAiWebClientInternal") WebClient openAiWebClient,
+                           ObjectMapper objectMapper,
+                           CircuitBreakerRegistry registry) {
         this.openAiWebClient = openAiWebClient;
         this.objectMapper = objectMapper;
+        this.circuitBreaker = registry.circuitBreaker("openail.yml");
     }
 
     public Mono<OpenAiResponse> getChatCompletion(OpenAiRequest request) {
@@ -51,25 +60,28 @@ public class OpenAiWebClient {
 
     // 챗봇 스트리밍
     public Flux<String> streamChatCompletion(OpenAiRequest request) {
-        return openAiWebClient.post()
+        Flux<String> chatFlux = openAiWebClient.post()
                 .uri("/chat/completions")
                 .header("Authorization", "Bearer " + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.TEXT_EVENT_STREAM)     // SSE 스트리밍
+                .accept(MediaType.TEXT_EVENT_STREAM)
                 .bodyValue(request)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, response ->
                         response.bodyToMono(String.class)
-                                .flatMap(body -> {
-                                    log.error("[OpenAI 스트리밍 오류] status={} body={}",
-                                            response.statusCode(), body);
-                                    return Mono.error(new RuntimeException("OpenAI 스트리밍 오류: " + body));
-                                })
+                                .flatMap(body -> Mono.error(new RuntimeException("OpenAI 오류: " + body)))
                 )
                 .bodyToFlux(String.class)
                 .filter(data -> !data.isBlank() && !data.equals("[DONE]"))
-                .mapNotNull(this::extractToken)
-                .doOnError(e -> log.error("[OpenAI 스트리밍 실패] {}", e.getMessage(), e));
+                .mapNotNull(this::extractToken);
+        // Flux 전체 스트림에 대해 서킷 브레이커 적용
+        return chatFlux
+                .transformDeferred(CircuitBreakerOperator.of(circuitBreaker)) // 서킷 브레이커 적용
+                .onErrorResume(e -> {
+                    log.error("[OpenAI 서킷 오픈 또는 에러 발생] Fallback 메시지 반환. 사유: {}", e.getMessage());
+                    return Flux.just("죄송합니다. ", "현재 ", "AI ", "연결이 ", "원활하지 ", "않습니다. ",
+                            "잠시 ", "후 ", "다시 ", "시도해 ", "주세요.");
+                });
     }
 
     // SSE 데이터에서 텍스트 토큰만 추출

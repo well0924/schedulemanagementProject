@@ -11,7 +11,7 @@ dependencies {
     implementation project(':domain:member:infrastructure:rdb')
     implementation project(':domain:member:core:exception')
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-
+    implementation 'io.github.resilience4j:resilience4j-reactor:2.2.0'
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
     implementation 'io.github.resilience4j:resilience4j-timelimiter'
     implementation 'io.github.resilience4j:resilience4j-circuitbreaker'

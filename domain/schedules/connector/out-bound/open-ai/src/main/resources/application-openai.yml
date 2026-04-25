@@ -12,7 +12,8 @@ resilience4j:
     instances:
       openAiClient:
         registerHealthIndicator: true
-        slidingWindowSize: 5
-        minimumNumberOfCalls: 3
-        waitDurationInOpenState: 5s
-        failureRateThreshold: 50
+        slidingWindowSize: 10              # 최근 10개의 호출을 감시
+        failureRateThreshold: 50           # 그중 50% 이상 실패하면 서킷 오픈
+        waitDurationInOpenState: 10s       # 서킷이 열리고 10초 뒤에 다시 시도(Half-open)
+        slowCallDurationThreshold: 3000ms  # 3초 이상 걸리면 느린 호출로 간주
+        slowCallRateThreshold: 50          # 느린 호출이 50% 이상이면 서킷 오픈

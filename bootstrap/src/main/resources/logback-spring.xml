@@ -27,7 +27,9 @@
                         "logger": "%logger",
                         "message": "%message",
                         "eventId": "%X{eventId}",
-                        "requestId": "%X{requestId}"
+                        "requestId": "%X{requestId}",
+                        "traceId": "%X{traceId:-}",
+                        "spanId": "%X{spanId:-}"
                         }
                     </pattern>
                 </pattern>

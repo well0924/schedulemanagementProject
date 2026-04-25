@@ -83,7 +83,8 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(notificationConsumerFactory());
-
+        // 분산 추적 활성화
+        factory.getContainerProperties().setObservationEnabled(true);
         // 예외 발생 시 재시도 및 DLQ 전송 로직 제어
         factory.setCommonErrorHandler(new DefaultErrorHandler(
                 new DeadLetterPublishingRecoverer(
@@ -110,6 +111,8 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(memberSignUpConsumerFactory());
+        // 분산 추적 활성화
+        factory.getContainerProperties().setObservationEnabled(true);
 
         factory.setCommonErrorHandler(new DefaultErrorHandler(
                 new DeadLetterPublishingRecoverer(
@@ -133,6 +136,8 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(chatConsumerFactory());
+        // 분산 추적 활성화
+        factory.getContainerProperties().setObservationEnabled(true);
 
         factory.setCommonErrorHandler(new DefaultErrorHandler(
                 new DeadLetterPublishingRecoverer(

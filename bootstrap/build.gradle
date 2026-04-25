@@ -15,7 +15,7 @@ repositories {
 dependencies {
 
 	implementation 'mysql:mysql-connector-java:8.0.33'
-	implementation 'org.springframework.kafka:spring-kafka'
+	implementation 'org.springframework.kafka:spring-kafka:3.1.1'
 
 	implementation project(':common:security')
 	implementation project(':common:jpa')
@@ -92,6 +92,14 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'net.javacrumbs.shedlock:shedlock-spring:5.9.0'
 	implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.9.0'
+	// logging
+	// 1. Micrometer Observation & Tracing (핵심 엔진)
+	implementation 'io.micrometer:micrometer-observation'
+	implementation 'io.micrometer:micrometer-tracing-bridge-otel' // OpenTelemetry 브릿지
+
+	// 2. OTLP Exporter (Tempo로 데이터를 쏴주는 역할)
+	implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+	// 3. Kafka 연동 (Kafka 지표 및 추적 수집용)
 	implementation 'io.micrometer:micrometer-registry-prometheus'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'net.logstash.logback:logstash-logback-encoder:7.4'

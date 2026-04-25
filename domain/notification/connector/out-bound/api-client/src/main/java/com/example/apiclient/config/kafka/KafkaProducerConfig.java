@@ -37,12 +37,16 @@ public class KafkaProducerConfig {
     @Bean
     public KafkaTemplate<String, NotificationEvents> notificationKafkaTemplate() {
         // 공통 설정이 적용된 genericProducerFactory 사용
-        return new KafkaTemplate<>(genericProducerFactory(NotificationEvents.class));
+        KafkaTemplate<String, NotificationEvents> template = new KafkaTemplate<>(genericProducerFactory(NotificationEvents.class));
+        template.setObservationEnabled(true);
+        return template;
     }
 
     @Bean
     public KafkaTemplate<String, MemberSignUpKafkaEvent> memberKafkaTemplate() {
-        return new KafkaTemplate<>(genericProducerFactory(MemberSignUpKafkaEvent.class));
+        KafkaTemplate<String, MemberSignUpKafkaEvent> template = new KafkaTemplate<>(genericProducerFactory(MemberSignUpKafkaEvent.class));
+        template.setObservationEnabled(true);
+        return template;
     }
 
     /**
@@ -53,7 +57,10 @@ public class KafkaProducerConfig {
     @Bean(name = "objectKafkaTemplate")
     public KafkaTemplate<String, Object> objectKafkaTemplate() {
         // acks=all과 idempotence=true
-        return new KafkaTemplate<>(genericProducerFactory(Object.class));
+        KafkaTemplate<String, Object> kafkaTemplate = new KafkaTemplate<>(genericProducerFactory(Object.class));
+        // 분산추적 true
+        kafkaTemplate.setObservationEnabled(true);
+        return kafkaTemplate;
     }
 
     /**

@@ -4,6 +4,7 @@ import com.example.enumerate.member.LoginType;
 import com.example.model.member.MemberModel;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,7 +18,8 @@ import java.util.Map;
 
 @Builder
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor  // Jackson용
+@AllArgsConstructor // Builder용 & Jackson 보조용
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CustomMemberDetails implements UserDetails, OAuth2User {
 
@@ -28,16 +30,6 @@ public class CustomMemberDetails implements UserDetails, OAuth2User {
     String attributeKey;
 
     LoginType loginType;
-
-    public CustomMemberDetails(MemberModel memberModel,
-                               Map<String,Object>attributes,
-                               String attributeKey,
-                               LoginType loginType) {
-        this.memberModel = memberModel;
-        this.attributes = attributes;
-        this.attributeKey = attributeKey;
-        this.loginType = loginType;
-    }
 
     @Override
     public Map<String, Object> getAttributes() {

@@ -3,6 +3,7 @@ package com.example.model.auth;
 import com.example.enumerate.member.LoginType;
 import com.example.model.member.MemberModel;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,6 +18,7 @@ import java.util.Map;
 @Builder
 @Getter
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class CustomMemberDetails implements UserDetails, OAuth2User {
 
     MemberModel memberModel;

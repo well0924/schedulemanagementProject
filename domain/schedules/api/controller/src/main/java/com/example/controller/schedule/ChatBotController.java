@@ -2,7 +2,7 @@ package com.example.controller.schedule;
 
 import com.example.apimodel.schedule.ChatRequest;
 import com.example.inbound.schedules.ChatBotMessageSenderPort;
-import com.example.inbound.schedules.ScheduleRecommendationConnectorImpl;
+import com.example.inbound.schedules.ScheduleRecommendationConnector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +20,7 @@ public class ChatBotController {
 
     private final ChatBotMessageSenderPort chatBotMessageSenderPort;
 
-    private final ScheduleRecommendationConnectorImpl scheduleRecommendationConnector;
+    private final ScheduleRecommendationConnector scheduleRecommendationConnector;
 
     @PostMapping("/send")
     public ResponseEntity<Void> sendMessage(@RequestBody ChatRequest request) {

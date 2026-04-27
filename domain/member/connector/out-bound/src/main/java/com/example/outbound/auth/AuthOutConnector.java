@@ -5,6 +5,7 @@ import com.example.model.member.MemberModel;
 import com.example.rdb.member.Member;
 import com.example.rdb.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -19,6 +20,7 @@ public class AuthOutConnector implements UserDetailsService{
     private final MemberModelMapper memberModelMapper;
 
     @Override
+    @Cacheable(value = "user", key = "#username", cacheManager = "cacheManager", unless = "#result == null")
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Member userDetails = memberRepository.findByUserId(username)
                 .orElseThrow(()->new UsernameNotFoundException("회원을 찾을 수 없습니다."));

@@ -2,8 +2,10 @@ package com.example.model.auth;
 
 import com.example.enumerate.member.LoginType;
 import com.example.model.member.MemberModel;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -14,6 +16,7 @@ import java.util.Map;
 
 @Builder
 @Getter
+@NoArgsConstructor
 public class CustomMemberDetails implements UserDetails, OAuth2User {
 
     MemberModel memberModel;
@@ -41,6 +44,10 @@ public class CustomMemberDetails implements UserDetails, OAuth2User {
 
     @Override
     public String getName() {
+        // attributes가 null이면 userId나 빈 문자열 리턴
+        if (attributes == null || attributeKey == null) {
+            return memberModel != null ? memberModel.getUserId() : "";
+        }
         return attributes.get(attributeKey).toString();
     }
 
@@ -65,9 +72,12 @@ public class CustomMemberDetails implements UserDetails, OAuth2User {
     }
 
     @Override
+    @JsonIgnore // JSON 변환 시 무시 (Authority 객체는 직렬화가 까다로움)
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Collection<GrantedAuthority> authorities = new ArrayList<>();
-        authorities.add(() -> memberModel.getRoles().getValue());
+        if (memberModel != null && memberModel.getRoles() != null) {
+            authorities.add(() -> memberModel.getRoles().getValue());
+        }
         return authorities;
     }
 

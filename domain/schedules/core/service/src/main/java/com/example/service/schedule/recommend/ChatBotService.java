@@ -8,7 +8,6 @@ import com.example.model.schedules.SchedulesModel;
 import com.example.outbound.openai.config.OpenAiWebClient;
 import com.example.outbound.openai.dto.ChatMessage;
 import com.example.outbound.openai.dto.OpenAiRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Pageable;
@@ -23,16 +22,27 @@ import java.util.List;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ChatBotService {
 
     private final ScheduleRecommendationCachePort cacheService;  // 이력 관리
     private final ScheduleRepositoryPort scheduleRepositoryPort;
     private final OpenAiWebClient openAiWebClient;
     private final OpenAiRequestBuilder openAiRequestBuilder;
-
-    @Qualifier("chatOutboxAdapter")
     private final ChatEventPort chatEventPort;
+
+    public ChatBotService(
+            ScheduleRecommendationCachePort cacheService,
+            ScheduleRepositoryPort scheduleRepositoryPort,
+            OpenAiWebClient openAiWebClient,
+            OpenAiRequestBuilder openAiRequestBuilder,
+            @Qualifier("chatOutboxAdapter") ChatEventPort chatEventPort // 위치는 여기!
+    ) {
+        this.cacheService = cacheService;
+        this.scheduleRepositoryPort = scheduleRepositoryPort;
+        this.openAiWebClient = openAiWebClient;
+        this.openAiRequestBuilder = openAiRequestBuilder;
+        this.chatEventPort = chatEventPort;
+    }
 
     /**
      * 사용자의 질문에 대해 일정 데이터를 참고하여 AI 응답을 스트리밍한다.

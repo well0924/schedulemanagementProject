@@ -38,7 +38,6 @@ public class OutboxDlqProcessor {
             String dlqTopic = resolveDlqTopic(event);
             kafkaTemplate.send(dlqTopic, event.getId().toString(), event.getPayload())
                     .whenComplete((result, ex) -> handleDlqResult(event, dlqTopic, ex));
-            repository.delete(event);
         } catch (Exception e) {
             log.error("DLQ 처리 중 예외 - eventId={}, error={}",
                     event.getId(), e.getMessage());
@@ -52,6 +51,7 @@ public class OutboxDlqProcessor {
         if (ex == null) {
             log.warn("DLQ 전송 성공 - eventId={}, dlqTopic={}",
                     event.getId(), dlqTopic);
+            repository.delete(event);
         } else {
             log.error("DLQ 전송 실패 - eventId={}, dlqTopic={}, error={}",
                     event.getId(), dlqTopic, ex.getMessage(), ex);

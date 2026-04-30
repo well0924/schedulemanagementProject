@@ -114,6 +114,7 @@ public class ScheduleDomainService {
                         .scheduleType(scheduleClassifier.classify(m))
                         .memberId(currentMemberId)
                         .build())
+                .sorted(Comparator.comparing(SchedulesModel::getStartTime)) // 인덱스에 있는 시작시간으로 정렬
                 .toList();
 
         // 일정 생성시 검증
@@ -280,18 +281,11 @@ public class ScheduleDomainService {
         LocalDateTime maxEnd = newSchedules.stream().map(SchedulesModel::getEndTime).max(LocalDateTime::compareTo).get();
 
         // 1번의 쿼리로 해당 범위의 기존 일정 모두 가져오기
-        List<SchedulesModel> existingSchedules = scheduleRepositoryPort.findOverlappingSchedulesInRange(
+        boolean isConflict = scheduleRepositoryPort.findOverlappingSchedulesInRange(
                 newSchedules.get(0).getMemberId(), minStart, maxEnd);
 
         // 충돌 체크
-        for (SchedulesModel newModel : newSchedules) {
-            boolean isConflict = existingSchedules.stream().anyMatch(existing ->
-                    !existing.getId().equals(newModel.getId()) &&
-                            newModel.getStartTime().isBefore(existing.getEndTime()) &&
-                            newModel.getEndTime().isAfter(existing.getStartTime())
-            );
-            if (isConflict) throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_TIME_CONFLICT);
-        }
+        if (isConflict) throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_TIME_CONFLICT);
     }
 
     // 일정 생성시 리마인드 알림 및 이벤트 발행

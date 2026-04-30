@@ -36,7 +36,7 @@ public class OpenAiWebClient {
                            CircuitBreakerRegistry registry) {
         this.openAiWebClient = openAiWebClient;
         this.objectMapper = objectMapper;
-        this.circuitBreaker = registry.circuitBreaker("openail.yml");
+        this.circuitBreaker = registry.circuitBreaker("openai.yml");
     }
 
     public Mono<OpenAiResponse> getChatCompletion(OpenAiRequest request) {

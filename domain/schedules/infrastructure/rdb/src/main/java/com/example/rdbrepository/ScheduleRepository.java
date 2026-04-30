@@ -41,16 +41,17 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
                                    @Param("excludeId") Long excludeId);
 
     // 일정 충돌 (bulk 조회용)
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    //@Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-    SELECT s 
+    SELECT 
+        CASE WHEN COUNT(s) > 0 THEN true ELSE false END
     FROM Schedules s
     WHERE s.memberId = :userId
     AND s.isDeletedScheduled = false
     AND s.startTime < :rangeEnd   
     AND s.endTime > :rangeStart
     """)
-    List<Schedules> findOverlappingSchedulesInRange(
+    Boolean findOverlappingSchedulesInRange(
             @Param("userId") Long memberId,
             @Param("rangeStart") LocalDateTime rangeStart,
             @Param("rangeEnd") LocalDateTime rangeEnd

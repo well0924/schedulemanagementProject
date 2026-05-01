@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nl.martijndwars.webpush.PushService;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import nl.martijndwars.webpush.Notification;
@@ -22,6 +23,7 @@ public class WebPushService {
 
     private final ObjectMapper objectMapper;
 
+    @Async("threadPoolTaskExecutor")
     public void sendPush(Long memberId, NotificationEvents event) {
 
         List<PushSubscriptionModel> subs = subscriptionService.getActiveSubscriptions(memberId);
@@ -39,6 +41,7 @@ public class WebPushService {
             return;
         }
 
+        // 비동기로 처리를 한 경우에는 메인 스레드나 DB커넥션에 영향이 없음.
         for (PushSubscriptionModel sub : subs) {
             try {
                 Notification notification = new Notification(

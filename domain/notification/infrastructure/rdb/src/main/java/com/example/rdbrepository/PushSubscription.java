@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Table(
+        name = "push_subscription",
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = {"memberId", "endpoint"})
         }
@@ -26,7 +27,7 @@ public class PushSubscription {
 
     private Long memberId; // 유저 ID (FK)
 
-    @Column(nullable = false, unique = true, length = 1000)
+    @Column(nullable = false, unique = true, length = 500)
     private String endpoint;
 
     @Column(nullable = false, length = 255)

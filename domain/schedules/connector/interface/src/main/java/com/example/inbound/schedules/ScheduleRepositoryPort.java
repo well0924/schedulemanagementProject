@@ -48,7 +48,7 @@ public interface ScheduleRepositoryPort {
     // 일정 충돌
     void validateScheduleConflict(SchedulesModel model);
     //일정충돌 (bulk 조회용)
-    Boolean findOverlappingSchedulesInRange(Long memberId, LocalDateTime start, LocalDateTime end);
+    Long findOverlappingSchedulesInRange(Long memberId, LocalDateTime start, LocalDateTime end);
 
     List<Long> findOwnedIds(Long memberId, List<Long> ids);
 

@@ -19,10 +19,13 @@ import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
 import java.util.Optional;
 
 @Slf4j
@@ -42,19 +45,36 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
 
     private final ObjectMapper objectMapper;
 
+    private final RedisTemplate redisTemplate;
+
     @Timed(value = "kafka.consumer.notification.duration", description = "알림 Kafka 메시지 처리 시간")
     @Counted(value = "kafka.consumer.notification.count", description = "알림 Kafka 메시지 처리 횟수")
     @KafkaListener(
             topics = "notification-events",
             groupId = "notification-group",
-            containerFactory = "notificationKafkaListenerFactory")
+            containerFactory = "notificationKafkaListenerFactory",
+            concurrency = "3")
     public void handle(NotificationEvents event, Acknowledgment ack) {
 
         try {
             KafkaMDCUtil.initMDC(event);
+
             NotificationChannel channel = Optional
                     .ofNullable(event.getNotificationChannel())
                     .orElse(NotificationChannel.WEB);
+
+            String eventKey = "event:processed:" + event.getEventId();
+
+            // 1. [Redis Pre-check] DB 커넥션을 잡기 전에 Redis로 먼저 거르기
+            // setIfAbsent는 Redis의 SETNX와 같아서, 이미 키가 있으면 false를 반환함
+            Boolean isNewEvent = redisTemplate.opsForValue()
+                    .setIfAbsent(eventKey, "processing", Duration.ofMinutes(10));
+
+            if (Boolean.FALSE.equals(isNewEvent)) {
+                log.info("🚀 [Redis Filter] 이미 처리 중이거나 완료된 이벤트: {}", event.getEventId());
+                ack.acknowledge();
+                return;
+            }
 
             // EOS 중복 체크
             if (processedEventService.isAlreadyProcessed(event.getEventId())) {
@@ -73,14 +93,7 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
             switch (channel) {
                 case WEB -> {
                     log.info("📩 Kafka 알림 수신: memberId={}, type={}, channel={}", event.getReceiverId(), event.getNotificationType(), channel);
-                    // dlq 처리시 조건 추가 (알림 구독여부)
-                    boolean result = notificationSettingService.isEnabled(event.getReceiverId(), channel);
-                    log.info("알림구독 여부:"+result);
-                    if (!event.isForceSend() && !result) {
-                        log.info("🔕 사용자 설정에 따라 알림 차단됨: userId={}, type={}, channel={}",
-                                event.getReceiverId(), event.getNotificationType(), event.getNotificationChannel());
-                        return;
-                    }
+
                     //알림 내역 저장
                     handleWebNotification(event);
                     String message = objectMapper.writeValueAsString(event);
@@ -112,12 +125,14 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
         } catch (DataIntegrityViolationException e) {
             // 이미 처리된 이벤트라면 무시
             log.warn("이벤트 중복 저장 시도 감지됨: {}", event.getEventId());
+            ack.acknowledge();
         } catch (JsonProcessingException e) {
             log.error("Kafka 메시지 직렬화 오류: {}", e.getMessage());
             ack.acknowledge();
             throw new CustomExceptionHandler("이벤트 직렬화 실패: " + event.getEventId(), ErrorCode.EVENT_SERIALIZATION_ERROR);
         } catch (Exception e) {
             log.error("WebSocket 전송 실패", e);
+            redisTemplate.delete("event:processed:" + event.getEventId());
         } finally {
             KafkaMDCUtil.clear();
         }

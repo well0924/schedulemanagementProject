@@ -201,10 +201,9 @@ public class ScheduleOutConnector implements ScheduleRepositoryPort {
     }
 
     // 일정 충돌 (bulk용)
-    public Boolean findOverlappingSchedulesInRange(Long memberId, LocalDateTime start, LocalDateTime end) {
-        Boolean result = scheduleRepository
+    public Long findOverlappingSchedulesInRange(Long memberId, LocalDateTime start, LocalDateTime end) {
+        return scheduleRepository
                 .findOverlappingSchedulesInRange(memberId, start, end);
-        return Boolean.TRUE.equals(result);
     }
 
     public void validateAllDayScheduleConflict(SchedulesModel model) {

@@ -281,11 +281,11 @@ public class ScheduleDomainService {
         LocalDateTime maxEnd = newSchedules.stream().map(SchedulesModel::getEndTime).max(LocalDateTime::compareTo).get();
 
         // 1번의 쿼리로 해당 범위의 기존 일정 모두 가져오기
-        boolean isConflict = scheduleRepositoryPort.findOverlappingSchedulesInRange(
+        long isConflictCount = scheduleRepositoryPort.findOverlappingSchedulesInRange(
                 newSchedules.get(0).getMemberId(), minStart, maxEnd);
 
         // 충돌 체크
-        if (isConflict) throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_TIME_CONFLICT);
+        if (isConflictCount > 0) throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_TIME_CONFLICT);
     }
 
     // 일정 생성시 리마인드 알림 및 이벤트 발행

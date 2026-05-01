@@ -32,10 +32,11 @@ public class AsyncConfig {
     public Executor threadPoolTaskExecutor(TaskDecorator mdcTaskDecorator) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setTaskDecorator(mdcTaskDecorator);
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(100);
+        executor.setCorePoolSize(20);
+        executor.setMaxPoolSize(50);
+        executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("AsyncExecutor-");
+        executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy()); // 풀이 꽉 차면 호출한 쓰레드에서 처리 (안정성)
         executor.initialize();
         return executor;
     }

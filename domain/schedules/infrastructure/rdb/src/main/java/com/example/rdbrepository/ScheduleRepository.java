@@ -44,14 +44,14 @@ public interface ScheduleRepository extends JpaRepository<Schedules, Long>, Sche
     //@Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
     SELECT 
-        CASE WHEN COUNT(s) > 0 THEN true ELSE false END
+        COUNT(s)
     FROM Schedules s
     WHERE s.memberId = :userId
     AND s.isDeletedScheduled = false
     AND s.startTime < :rangeEnd   
     AND s.endTime > :rangeStart
     """)
-    Boolean findOverlappingSchedulesInRange(
+    Long findOverlappingSchedulesInRange(
             @Param("userId") Long memberId,
             @Param("rangeStart") LocalDateTime rangeStart,
             @Param("rangeEnd") LocalDateTime rangeEnd

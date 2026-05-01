@@ -10,13 +10,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@Transactional
 @AllArgsConstructor
 public class PushSubscriptionService {
 
     private final PushSubscriptionOutConnector pushSubscriptionOutConnector;
 
     // 푸시 구독
+    @Transactional
     public PushSubscriptionModel saveSubscription(Long userId, String endpoint, String p256dh, String auth, String userAgent) {
         return pushSubscriptionOutConnector.findByUserIdAndEndpoint(userId, endpoint)
                 .map(existing -> {
@@ -48,10 +48,12 @@ public class PushSubscriptionService {
     }
 
     // 웹 푸시 구독 해제
+    @Transactional
     public void deactivateAll(Long memberId) {
         pushSubscriptionOutConnector.deactivateAll(memberId);
     }
 
+    @Transactional
     public void deactivateByEndpoint(Long memberId, String endpoint) {
         pushSubscriptionOutConnector.deactivateByEndpoint(memberId, endpoint);
     }

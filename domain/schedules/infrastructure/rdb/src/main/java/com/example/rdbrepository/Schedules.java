@@ -15,6 +15,12 @@ import java.time.LocalDateTime;
 @Builder(toBuilder = true)
 @Table(
         name = "schedules",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_member_starttime",
+                        columnNames = {"memberId", "startTime"}
+                )
+        },
         indexes = {
                 // 일정 충돌 인덱스
                 @Index(name = "idx_schedules_user_time", columnList = "memberId, startTime, endTime"),

@@ -51,6 +51,7 @@ public class ScheduleRecommendCacheService implements ScheduleRecommendationCach
     }
 
     // 대화 메시지 추가
+    // race condition 의 문제가 있음.....
     public void appendChatMessage(Long memberId, ChatMessage message) {
         String key = getHistoryKey(memberId);
         redisTemplate.opsForList().rightPush(key, message);

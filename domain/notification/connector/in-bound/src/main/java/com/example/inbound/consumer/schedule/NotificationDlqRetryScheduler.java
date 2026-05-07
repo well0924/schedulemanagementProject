@@ -4,6 +4,7 @@ import com.example.events.kafka.NotificationEvents;
 import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.model.FailMessageModel;
 import com.example.notification.service.FailedMessageService;
+import com.example.notification.service.WebPushService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
@@ -28,6 +29,7 @@ public class NotificationDlqRetryScheduler {
     private final FailedMessageService failedMessageService;
     @Qualifier("notificationKafkaTemplate")
     private final KafkaTemplate<String, NotificationEvents> kafkaTemplate;
+    private final WebPushService webPushService;
     private final ObjectMapper objectMapper;
     private static final int MAX_RETRY_COUNT = 5;
     public static int EXECUTION_COUNT = 0;
@@ -59,16 +61,25 @@ public class NotificationDlqRetryScheduler {
             }
 
             try {
-                NotificationEvents event = objectMapper.readValue(entity.getPayload(), NotificationEvents.class);
-                event.setForceSend(true);
-                KafkaMDCUtil.initMDC(event);
-                String retryTopic = getRetryTopicByCount(entity.getRetryCount());
-                kafkaTemplate.send(retryTopic, event);
-                retryCounter.increment(); // dlq가 정상 작동이 되었을때 카운트
-                log.info("재시도 메시지 전송: retryCount={}, topic={}", entity.getRetryCount(), retryTopic);
-                // resolved를 true로 변환
-                entity.resolveSuccess(event.getNotificationType().name());
-                log.info("DLQ 재처리 성공 - notification: id={}", entity.getId());
+                // WEB_PUSH는 별도 처리
+                if ("WEB_PUSH".equals(entity.getMessageType())) {
+                    NotificationEvents event = objectMapper
+                            .readValue(entity.getPayload(), NotificationEvents.class);
+                    webPushService.sendPush(event.getReceiverId(), event);
+                    entity.resolveSuccess("WEB_PUSH");
+                    log.info("WebPush 재처리 성공 - id={}", entity.getId());
+                } else {
+                    NotificationEvents event = objectMapper.readValue(entity.getPayload(), NotificationEvents.class);
+                    event.setForceSend(true);
+                    KafkaMDCUtil.initMDC(event);
+                    String retryTopic = getRetryTopicByCount(entity.getRetryCount());
+                    kafkaTemplate.send(retryTopic, event);
+                    retryCounter.increment(); // dlq가 정상 작동이 되었을때 카운트
+                    log.info("재시도 메시지 전송: retryCount={}, topic={}", entity.getRetryCount(), retryTopic);
+                    // resolved를 true로 변환
+                    entity.resolveSuccess(event.getNotificationType().name());
+                    log.info("DLQ 재처리 성공 - notification: id={}", entity.getId());
+                }
             } catch (Exception ex) {
                 entity.resolveFailure(ex);
                 log.warn("DLQ 재처리 실패 - notification: id={}, reason={}", entity.getId(), ex.getMessage());

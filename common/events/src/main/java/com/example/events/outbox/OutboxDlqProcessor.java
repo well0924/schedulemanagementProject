@@ -65,6 +65,7 @@ public class OutboxDlqProcessor {
         return switch (event.getAggregateType()) {
             case "MEMBER" -> "member-signup-events.DLQ";
             case "SCHEDULE" -> "notification-events.DLQ";
+            case "CHAT" -> "chat-events.DLQ";
             default -> throw new IllegalArgumentException(
                     "지원하지 않는 AggregateType: " + event.getAggregateType());
         };

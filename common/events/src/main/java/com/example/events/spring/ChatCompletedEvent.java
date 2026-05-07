@@ -1,17 +1,13 @@
 package com.example.events.spring;
 
 import com.example.events.kafka.BaseKafkaEvent;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
 @Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@SuperBuilder
 public class ChatCompletedEvent extends BaseKafkaEvent {
     Long memberId;
     String userMessage;

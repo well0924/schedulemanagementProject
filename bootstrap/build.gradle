@@ -153,9 +153,11 @@ jib {
 		ports = ['8082']
 		jvmFlags = ['-Dserver.port=8082',
 					'-Dspring.profiles.active=prod',
-					'-Xms512m',
-					'-Xmx512m',
+					'-Xms768m',
+					'-Xmx768m',
 					'-XX:+UseG1GC',
+					'-XX:MaxGCPauseMillis=200', // 응답 지연 방지
+					'-XX:InitiatingHeapOccupancyPercent=35', // 조금 더 일찍 GC 시작
 					'-XX:MaxMetaspaceSize=256m',
 					'-XX:MaxDirectMemorySize=128m',
 					'-Duser.timezone=Asia/Seoul']

@@ -5,13 +5,12 @@ import com.example.events.enums.ScheduleActionType;
 import com.example.events.spring.ScheduleEvents;
 import com.example.notification.model.NotificationModel;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
 @Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@SuperBuilder
 public class NotificationEvents extends BaseKafkaEvent{
     private Long receiverId; // memberId 회원 번호
     private Long scheduleId; //일정 번호

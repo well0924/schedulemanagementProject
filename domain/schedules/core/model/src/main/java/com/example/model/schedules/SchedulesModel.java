@@ -111,16 +111,6 @@ public class SchedulesModel {
         updateProgressStatus();  // 상태 업데이트
     }
 
-    //진행완료변경
-    public void markAsComplete() {
-        if (this.progressStatus == PROGRESS_STATUS.COMPLETE) {
-            throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_COMPLETED);
-        }
-
-        this.progressStatus = PROGRESS_STATUS.COMPLETE;
-        this.endTime = LocalDateTime.now();
-    }
-
     //일정 반복
     public SchedulesModel shiftScheduleBy(RepeatType rule, int offset) {
         LocalDateTime newStart = this.startTime;

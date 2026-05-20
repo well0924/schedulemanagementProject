@@ -1,13 +1,12 @@
 package com.example.events.kafka;
 
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
 @Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@SuperBuilder
 public class MemberSignUpKafkaEvent extends BaseKafkaEvent {
     private Long receiverId;
     private String username;

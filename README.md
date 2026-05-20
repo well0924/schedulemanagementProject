@@ -23,7 +23,7 @@
 
 ### 전체 시스템 구성
 
-![DailyLine Architecture](https://github.com/well0924/schedulemanagementProject/blob/main/docs/architecture.png?raw=true)
+![DailyLine Architecture](https://github.com/user-attachments/assets/38113ebf-4474-4016-8d27-271ab60da0a3)
 
 | 구분 | 구성 요소 | 설명 |
 |------|-----------|------|

@@ -3,7 +3,7 @@
 
 **개발 기간:** 2025.01 ~ 2025.06 (1차: MVP) / 2025.09 ~ 2026.04 (2차: 분산 환경 고도화)
 
-**배포 환경:** AWS Lightsail + GitHub Actions
+**배포 환경:** AWS EC2 + GitHub Actions
 
 **모니터링:** Grafana · Prometheus · Loki
  
@@ -14,7 +14,7 @@
 - **Language & Framework:** Java 17, Spring Boot, Spring Data JPA
 - **Database & Cache:** MySQL 8.0, Redis
 - **Message Broker:** Apache Kafka (KRaft mode, 3-Broker Cluster)
-- **Infra & CI/CD:** AWS EC2 (t3.micro 2GB), GitHub Actions, Docker, Nginx
+- **Infra & CI/CD:** AWS EC2 (t3.micro 2GB), GitHub Actions, Docker(Google Jib을 통한 컨테이너 빌드 최적화), Nginx
 - **Observability:** Prometheus, Grafana, Loki (LGTM Stack)
 - **Test:** JMeter, TestContainers
 ---

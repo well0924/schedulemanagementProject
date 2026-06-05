@@ -8,6 +8,7 @@ import com.example.events.enums.NotificationChannel;
 import com.example.events.kafka.NotificationEvents;
 import com.example.events.outbox.OutboxEventService;
 import com.example.model.schedules.SchedulesModel;
+import com.example.outbound.schedule.NotificationChannelResolver;
 import com.example.outbound.schedule.ScheduleOutConnector;
 import com.example.security.config.SecurityUtil;
 import com.example.service.schedule.domainService.ScheduleDomainService;
@@ -41,6 +42,8 @@ public class ScheduleCRUDTest {
     ScheduleDomainService svc;
     @MockBean
     ScheduleOutConnector out;
+    @MockBean
+    NotificationChannelResolver notificationChannelResolver;
     @MockBean
     DomainEventPublisher events;
     @MockBean
@@ -92,7 +95,7 @@ public class ScheduleCRUDTest {
                     .build();
 
             // when
-            when(events.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
+            when(notificationChannelResolver.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
             when(out.saveSchedule(any())).thenReturn(saved);
             SchedulesModel result = svc.saveSchedule(req);
 
@@ -171,7 +174,7 @@ public class ScheduleCRUDTest {
                     });
             // when
             when(attach.hasAttachFiles(any())).thenReturn(false);
-            when(events.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
+            when(notificationChannelResolver.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
             SchedulesModel firstSaved = svc.saveSchedule(base);
             // then
             assertThat(firstSaved.getId()).isEqualTo(1L);
@@ -209,7 +212,7 @@ public class ScheduleCRUDTest {
                     .toBuilder().id(500L).memberId(777L).scheduleType(ScheduleType.ALL_DAY).build());
 
             when(attach.hasAttachFiles(req)).thenReturn(false);
-            when(events.resolveChannel(777L)).thenReturn(NotificationChannel.WEB);
+            when(notificationChannelResolver.resolveChannel(777L)).thenReturn(NotificationChannel.WEB);
             SchedulesModel saved = svc.saveSchedule(req);
 
             assertThat(saved.getId()).isEqualTo(500L);
@@ -240,7 +243,7 @@ public class ScheduleCRUDTest {
             doAnswer(inv -> { out.deleteSchedule(10L); return null; })
                     .when(repeatDelete).dispatch(eq(DeleteType.SINGLE), eq(target));
             // when
-            when(events.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
+            when(notificationChannelResolver.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
             svc.deleteSchedule(10L, DeleteType.SINGLE);
             // then
             verify(repeatDelete).dispatch(DeleteType.SINGLE, target);
@@ -277,7 +280,7 @@ public class ScheduleCRUDTest {
                     .when(repeatDelete).dispatch(eq(DeleteType.ALL_REPEAT), eq(target));
 
             // when
-            when(events.resolveChannel(200L)).thenReturn(NotificationChannel.WEB);
+            when(notificationChannelResolver.resolveChannel(200L)).thenReturn(NotificationChannel.WEB);
             svc.deleteSchedule(20L, DeleteType.ALL_REPEAT);
 
             // then
@@ -310,7 +313,7 @@ public class ScheduleCRUDTest {
             doNothing().when(guard).assertOwnerOrAdmin(target);
             doAnswer(inv -> { out.markAsDeletedAfter("GRP", st); return null; })
                     .when(repeatDelete).dispatch(eq(DeleteType.AFTER_THIS), eq(target));
-            when(events.resolveChannel(300L)).thenReturn(NotificationChannel.WEB);
+            when(notificationChannelResolver.resolveChannel(300L)).thenReturn(NotificationChannel.WEB);
             svc.deleteSchedule(30L, DeleteType.AFTER_THIS);
 
             verify(repeatDelete).dispatch(DeleteType.AFTER_THIS, target);
@@ -348,7 +351,7 @@ public class ScheduleCRUDTest {
 
             when(repeatUpdate.dispatch(eq(RepeatUpdateType.SINGLE), eq(existing), eq(patch)))
                     .thenReturn(List.of(updated));
-            when(events.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
+            when(notificationChannelResolver.resolveChannel(100L)).thenReturn(NotificationChannel.WEB);
             SchedulesModel result = svc.updateSchedule(1L, patch, RepeatUpdateType.SINGLE);
 
             assertThat(result.getContents()).isEqualTo("new");
@@ -382,7 +385,7 @@ public class ScheduleCRUDTest {
 
         when(repeatUpdate.dispatch(eq(RepeatUpdateType.AFTER_THIS), eq(existing), eq(patch)))
                 .thenReturn(List.of(updated));
-        when(events.resolveChannel(9L)).thenReturn(NotificationChannel.WEB);
+        when(notificationChannelResolver.resolveChannel(9L)).thenReturn(NotificationChannel.WEB);
         SchedulesModel result = svc.updateSchedule(2L, patch, RepeatUpdateType.AFTER_THIS);
 
         assertThat(result.getContents()).isEqualTo("p");
@@ -415,7 +418,7 @@ public class ScheduleCRUDTest {
 
         when(repeatUpdate.dispatch(eq(RepeatUpdateType.ALL), eq(existing), eq(patch)))
                 .thenReturn(List.of(updated));
-        when(events.resolveChannel(9L)).thenReturn(NotificationChannel.WEB);
+        when(notificationChannelResolver.resolveChannel(9L)).thenReturn(NotificationChannel.WEB);
         SchedulesModel result = svc.updateSchedule(3L, patch, RepeatUpdateType.ALL);
 
         assertThat(result.getContents()).isEqualTo("ALL");

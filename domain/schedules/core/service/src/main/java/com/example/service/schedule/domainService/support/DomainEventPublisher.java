@@ -1,30 +1,27 @@
 package com.example.service.schedule.domainService.support;
 
-import com.example.events.enums.NotificationChannel;
-import com.example.interfaces.notification.push.NotificationSettingInterfaces;
+import com.example.events.enums.ScheduleActionType;
+import com.example.events.spring.ScheduleDomainEvent;
+import com.example.model.schedules.SchedulesModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class DomainEventPublisher {
 
-    private final NotificationSettingInterfaces notificationSettingInConnector;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public NotificationChannel resolveChannel(Long userId) {
-        boolean webEnabled = notificationSettingInConnector.isEnabled(userId, NotificationChannel.WEB);
-        log.info("webAlarm::"+webEnabled);
-        boolean pushEnabled = notificationSettingInConnector.isEnabled(userId, NotificationChannel.PUSH);
-        log.info("pushAlarm::"+pushEnabled);
-        if (pushEnabled) {
-            return NotificationChannel.PUSH; // PUSH 우선
-        } else if (webEnabled) {
-            return NotificationChannel.WEB;
-        } else {
-            return NotificationChannel.WEB; // 기본값
+    public void publish(List<SchedulesModel> schedules, ScheduleActionType actionType) {
+        if (schedules == null || schedules.isEmpty()) {
+            return;
         }
+        log.info("스프링 도메인 이벤트 발행 시작: action={}, count={}", actionType, schedules.size());
+        eventPublisher.publishEvent(new ScheduleDomainEvent(schedules, actionType));
     }
-
 }

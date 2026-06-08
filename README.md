@@ -37,13 +37,7 @@
 AI 추천 엔진(OpenAI API)은 외부 의존성이 크고 모델 스펙이 수시로 변경됩니다.
 헥사고날 아키텍처를 도입하여 **외부 AI API 규격이 변경되거나 다른 LLM으로 교체되어도 핵심 일정 도메인 로직은 수정하지 않는 격리 환경**을 구성했습니다.
 
-```
-[외부 세계]                              [도메인 핵심]
-─────────────────────────────────────────────────────
-OpenAI / Gemini / Claude  ─→  Outbound Port(AI추천Port)  ─→  일정 도메인 (불변)
-REST Controller / WebSocket  ─→  Inbound Port(UseCase)  ─→  일정 도메인 (불변)
-─────────────────────────────────────────────────────
-```
+<img width="953" height="641" alt="Image" src="https://github.com/user-attachments/assets/abb12326-8951-471f-96c9-42677dc6726f" />
 
 ##  성능 검증 — 분산 아키텍처 한계 측정
 

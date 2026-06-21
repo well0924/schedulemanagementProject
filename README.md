@@ -1,11 +1,13 @@
-> **"사용자의 일정 결정 피로를 줄이는 루틴 추천 및 시간 관리 서비스"**
+> **"현대인은 해야 할 일을 아는 것보다, 언제 해야 할지 결정하는 과정에서 더 많은 에너지를 소비합니다.
+Daily Line은 사용자의 행동 패턴과 빈 시간을 분석해 최적의 일정을 자동으로 추천함으로써, 결정 피로 없이 루틴을 유지할 수 있도록 돕는 개인화 일정 관리 서비스입니다."**
+> 
 > 본 프로젝트는 단순 CRUD 구현을 넘어, 제한된 자원 환경에서 **시스템 임계점(Limit)을 파악하고, 데이터 정합성 보장 및 외부 API 장애 격리**를 목표로 아키텍처를 고도화한 프로젝트입니다.
 
 **개발 기간:** 2025.01 ~ 2025.03 (Phase 1: MVP) / 2025.04 ~ 2025.09 (Phase 2: 메시징 무결성) / 2026.04 ~ 현재 (Phase 3: 분산 가용성 및 인프라 최적화)
 
 **배포 환경:** AWS EC2 + GitHub Actions
 
-**모니터링:** Grafana · Prometheus · Loki
+**모니터링:** Grafana · Prometheus · Loki · Tempo
  
 ---
 
@@ -15,7 +17,7 @@
 - **Database & Cache:** MySQL 8.0, Redis
 - **Message Broker:** Apache Kafka (KRaft mode, 3-Broker Cluster)
 - **Infra & CI/CD:** AWS EC2 (t3.micro 2GB), GitHub Actions, Docker(Google Jib을 통한 컨테이너 빌드 최적화), Nginx
-- **Observability:** Prometheus, Grafana, Loki (LGTM Stack)
+- **Observability:** Prometheus, Grafana, Loki, Tempo (LGTM Stack)
 - **Test:** JMeter, TestContainers
 ---
 
@@ -23,14 +25,14 @@
 
 ### 전체 시스템 구성
 
-![DailyLine Architecture](https://github.com/user-attachments/assets/38113ebf-4474-4016-8d27-271ab60da0a3)
+<img width="1171" height="831" alt="Image" src="https://github.com/user-attachments/assets/236161e9-17bf-435a-a536-35222099ff5c" />
 
-| 구분 | 구성 요소                                | 설명 |
-|------|--------------------------------------|------|
+| 구분 | 구성 요소                                | 설명                                |
+|------|--------------------------------------|-----------------------------------|
 | **Frontend** | Next.js (App Router)                 | 캘린더 UI, 일정 CRUD, WebSocket 실시간 수신 |
-| **Backend** | Spring Boot, Kafka, Redis, MySQL, S3 | Outbox + DLQ 기반 복원력 아키텍처 |
-| **Infra** | AWS EC2, Nginx, Docker Compose       | App 2대 + Kafka 3-Broker 분산 환경 |
-| **Monitoring** | Prometheus, Loki, Grafana            | 메트릭/로그 수집 및 대시보드 시각화 |
+| **Backend** | Spring Boot, Kafka, Redis, MySQL, S3 | Outbox + DLQ 기반 복원력 아키텍처          |
+| **Infra** | AWS EC2, Nginx, Docker Compose       | App 2대 + Kafka 3-Broker 분산 환경     |
+| **Monitoring** | Prometheus, Loki, Grafana, Tempo     | 메트릭/로그 수집, 트레이싱 및 대시보드 시각화        |
 
 ### 헥사고날 아키텍처 (Ports & Adapters)
 
@@ -203,7 +205,7 @@ G1GC 튜닝 + 모니터링 서버 분리로 서비스 서버와의 리소스 경
 ## 📈 Observability & Monitoring
 
 - **Prometheus & Grafana:** HikariCP Connection Count, JVM Memory, CPU Usage 실시간 모니터링 및 Alertmanager 연동
-- **Loki & Promtail:** Distributed Tracing 환경 구축, 사용자 요청 흐름(TraceID)별 병목 구간 실시간 추적 및 MDC 파일명 매핑 로그 가시성 확보
+- **Loki & Promtail & Tempo:** Distributed Tracing 환경 구축, 사용자 요청 흐름(TraceID)별 병목 구간 실시간 추적 및 MDC 파일명 매핑 로그 가시성 확보
 ---
 
 ## 🧪 품질 보증

@@ -96,7 +96,8 @@ dependencies {
 	// 1. Micrometer Observation & Tracing (핵심 엔진)
 	implementation 'io.micrometer:micrometer-observation'
 	implementation 'io.micrometer:micrometer-tracing-bridge-otel' // OpenTelemetry 브릿지
-
+	//비동기 쓰레드 간 Trace/MDC 전파를 위한 스냅샷 라이브러리
+	implementation 'io.micrometer:context-propagation'
 	// 2. OTLP Exporter (Tempo로 데이터를 쏴주는 역할)
 	implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
 	// 3. Kafka 연동 (Kafka 지표 및 추적 수집용)

@@ -14,8 +14,9 @@ public enum ErrorCode {
     // --- Kafka Event 전용 ---
     EVENT_DUPLICATE(4100, "이미 처리된 이벤트입니다."),
     EVENT_SERIALIZATION_ERROR(4101, "이벤트 직렬화/역직렬화에 실패했습니다."),
-    EVENT_PROCESSING_ERROR(4102, "이벤트 처리 중 알 수 없는 오류가 발생했습니다.");
-
+    EVENT_PROCESSING_ERROR(4102, "이벤트 처리 중 알 수 없는 오류가 발생했습니다."),
+    // Outbox 전용
+    INVALID_AGGREGATE_TYPE(4200,"알 수 없는 Aggregate Type 입니다.");
     private final int status;
 
     private final String message;

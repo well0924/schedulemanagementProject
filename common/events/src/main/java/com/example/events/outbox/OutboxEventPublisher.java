@@ -14,7 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 public class OutboxEventPublisher {
 
-    private final OutboxEventRepository repository;
+    private final OutboxEventService outboxEventService;
 
     private final OutboxDlqProcessor outboxDlqProcessor;
 
@@ -30,15 +30,17 @@ public class OutboxEventPublisher {
     @SchedulerLock(name = "OutboxPublisherLock", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
     public void publishOutboxEvents() {
         // 전송되지 않은 이벤트를 생성순으로 100건씩 가져와 순차 발행
-        List<OutboxEventEntity> events = repository.findTop100BySentFalseOrderByCreatedAtAsc();
+        List<OutboxEventEntity> events = outboxEventService.getPendingEvents(100);
 
         for (OutboxEventEntity event : events) {
-            try {
-                outboxEventSender.send(event);
-            } catch (Exception e) {
-                event.increaseRetryCount();
-                log.error("Kafka 발행 실패 - id={}, error={}", event.getId(), e.getMessage());
-                // 실패하면 그대로 두면 됨 → 재시도됨
+            if (outboxEventService.tryLockEvent(event.getId())) {
+                try {
+                    outboxEventSender.send(event);
+                } catch (Exception e) {
+                    event.increaseRetryCount();
+                    log.error("Kafka 발행 실패 - id={}, error={}", event.getId(), e.getMessage());
+                    // 실패하면 그대로 두면 됨 → 재시도됨
+                }
             }
         }
         outboxDlqProcessor.process(events);

@@ -1,10 +1,14 @@
 package com.example.events.outbox;
 
+import com.example.exception.dto.ErrorCode;
+import com.example.exception.global.CustomExceptionHandler;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -21,6 +25,12 @@ public class OutboxEventService {
 
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+
+    @Transactional(readOnly = true)
+    public List<OutboxEventEntity> getPendingEvents(int limit) {
+        Pageable pageable = PageRequest.of(0, limit);
+        return outboxEventRepository.findPendingEvents(pageable);
+    }
 
     // 반복 일정 수정/삭제 시 bulk 처리
     @Transactional
@@ -48,7 +58,7 @@ public class OutboxEventService {
             outboxEventRepository.saveAll(entities);
             log.info("{}건의 Outbox 이벤트 Bulk 저장 완료", entities.size());
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Outbox 이벤트 Bulk 직렬화 실패", e);
+            throw new CustomExceptionHandler(ErrorCode.EVENT_SERIALIZATION_ERROR);
         }
     }
 
@@ -73,7 +83,7 @@ public class OutboxEventService {
             outboxEventRepository.save(entity);
 
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Outbox 이벤트 직렬화 실패", e);
+            throw new CustomExceptionHandler(ErrorCode.EVENT_SERIALIZATION_ERROR);
         }
     }
 
@@ -86,5 +96,22 @@ public class OutboxEventService {
         LocalDateTime threshold = LocalDateTime.now().minusDays(3);
         int deletedCount = outboxEventRepository.deleteBySentTrueAndCreatedAtBefore(threshold);
         log.info("Outbox 청소 완료: {}건의 오래된 이벤트 삭제", deletedCount);
+    }
+
+    @Transactional
+    public void updateSentStatus(String id) {
+        outboxEventRepository.markAsSent(id, LocalDateTime.now());
+    }
+
+    @Transactional
+    public void incrementRetryCount(String id) {
+        outboxEventRepository.incrementRetryCount(id);
+    }
+
+    @Transactional
+    public boolean tryLockEvent(String id) {
+        // 1을 반환하면 락 성공, 0이면 이미 다른 곳에서 선점 중
+        int updatedRows = outboxEventRepository.tryLockAndIncrement(id);
+        return updatedRows > 0;
     }
 }

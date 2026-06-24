@@ -1,5 +1,7 @@
 package com.example.events.outbox;
 
+import com.example.exception.dto.ErrorCode;
+import com.example.exception.global.CustomExceptionHandler;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -41,11 +43,6 @@ public class OutboxEventEntity {
 
     private LocalDateTime sentAt;
 
-    public void markSent() {
-        this.sent = true;
-        this.sentAt = LocalDateTime.now();
-    }
-
     public void increaseRetryCount() {
         this.retryCount++;
     }
@@ -54,7 +51,7 @@ public class OutboxEventEntity {
         return switch (this.aggregateType) {
             case "MEMBER" -> "member-signup-events";
             case "SCHEDULE" -> "notification-events";
-            default -> throw new IllegalArgumentException("알 수 없는 aggregateType: " + this.aggregateType);
+            default -> throw new CustomExceptionHandler(ErrorCode.INVALID_AGGREGATE_TYPE);
         };
     }
 }

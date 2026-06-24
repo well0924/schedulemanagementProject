@@ -16,7 +16,7 @@ public class OutboxEventSender {
     @Qualifier("objectKafkaTemplate")
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    private final OutboxEventRepository repository;
+    private final OutboxEventService outboxEventService;
     private final OutboxPayloadResolver payloadResolver;
 
     /**
@@ -27,12 +27,15 @@ public class OutboxEventSender {
         Object payload = payloadResolver.resolve(event);
         String topic = event.resolveTopic();
 
+        // 비동기 작업이 끝날 때까지 이 값의 무결성을 보장하기 위해서 final을 사용
+        final String eventId = event.getId();
+
         kafkaTemplate.send(topic, payload)
                 .whenComplete((result, ex) -> {
                     if (ex == null) {
-                        handleSuccess(event, result);
+                        handleSuccess(eventId, result);
                     } else {
-                        handleFailure(event, topic, ex);
+                        handleFailure(eventId, topic, ex);
                     }
                 });
     }
@@ -41,25 +44,27 @@ public class OutboxEventSender {
      * Kafka 발행 성공 시 sent=true로 즉시 저장한다.
      * whenComplete 콜백 안에서 저장하여 비동기 순서를 보장한다.
      */
-    private void handleSuccess(OutboxEventEntity event,
+    private void handleSuccess(String eventId,
                                org.springframework.kafka.support.SendResult<String, Object> result) {
-        event.markSent();
-        repository.save(event);
+
+        outboxEventService.updateSentStatus(eventId);
+
         log.info("Kafka 발행 성공 - topic={}, partition={}, offset={}, eventId={}",
                 result.getRecordMetadata().topic(),
                 result.getRecordMetadata().partition(),
                 result.getRecordMetadata().offset(),
-                event.getId());
+                eventId);
     }
 
     /**
      * Kafka 발행 실패 시 retryCount를 증가시키고 즉시 저장한다.
      * 재시도는 다음 폴링 주기에 자동으로 수행된다.
      */
-    private void handleFailure(OutboxEventEntity event, String topic, Throwable ex) {
-        event.increaseRetryCount();
-        repository.save(event);
+    private void handleFailure(String eventId, String topic, Throwable ex) {
+
+        outboxEventService.incrementRetryCount(eventId);
+
         log.error("Kafka 발행 실패 - topic={}, eventId={}, error={}",
-                topic, event.getId(), ex.getMessage(), ex);
+                topic, eventId, ex.getMessage(), ex);
     }
 }

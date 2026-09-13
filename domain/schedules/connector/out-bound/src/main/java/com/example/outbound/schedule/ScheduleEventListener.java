@@ -85,7 +85,11 @@ public class ScheduleEventListener {
 
         SchedulesModel target = event.schedules().get(0);
         try {
-            notificationInterfaces.createReminder(target);
+            if (event.actionType() == ScheduleActionType.SCHEDULE_CREATED) {
+                notificationInterfaces.createReminder(target); // DELETE 없이 INSERT만
+            } else {
+                notificationInterfaces.upsertReminder(target); // 기존 DELETE+INSERT
+            }
         } catch (Exception e) {
             log.error("[리마인더 생성 실패] AFTER_COMMIT이라 자동 재시도 없음 - scheduleId={}, memberId={}, error={}",
                     target.getId(), target.getMemberId(), e.getMessage(), e);

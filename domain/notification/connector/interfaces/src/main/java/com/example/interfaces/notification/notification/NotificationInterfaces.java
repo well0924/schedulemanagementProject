@@ -15,7 +15,11 @@ public interface NotificationInterfaces {
 
     void markedRead(Long id);
 
+    // 생성 전용 - 기존 리마인더가 있을 수 없으므로 DELETE 없이 INSERT만 수행
     void createReminder(SchedulesModel schedule);
+
+    // 수정 전용 - 기존 리마인더를 지우고 새로 만든다 (DELETE+INSERT)
+    void upsertReminder(SchedulesModel schedule);
 
     void deleteReminderByScheduleId(Long scheduleId);
 }

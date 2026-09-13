@@ -61,9 +61,18 @@ public class ReminderNotificationService {
         }
     }
 
+    // 생성 전용 - 방금 막 생성된 스케줄이라 기존 리마인더가 존재할 수 없으므로 DELETE 없이 INSERT만 한다 (2026-09-13)
     public void createReminder(SchedulesModel schedule) {
-        // 1. 기존 알림 삭제
+        notificationOutConnector.saveNotification(buildReminder(schedule));
+    }
+
+    // 수정 전용 - 시작시간이 바뀌면 리마인더 시각도 바뀌어야 하므로 기존 것을 지우고 새로 만든다
+    public void upsertReminder(SchedulesModel schedule) {
         notificationOutConnector.deleteReminderByScheduleId(schedule.getId());
+        notificationOutConnector.saveNotification(buildReminder(schedule));
+    }
+
+    private NotificationModel buildReminder(SchedulesModel schedule) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime reminderTime = schedule.getStartTime().minusMinutes(5);
 
@@ -72,8 +81,8 @@ public class ReminderNotificationService {
             log.info("⚠️ 리마인드 시간이 이미 지났습니다. 즉시 발송 대상으로 설정합니다.");
             reminderTime = now;
         }
-        // 2. 새 알림 등록
-        NotificationModel reminder = NotificationModel.builder()
+
+        return NotificationModel.builder()
                 .userId(schedule.getMemberId())
                 .scheduleId(schedule.getId())
                 .message("⏰ " + schedule.getContents() + " 일정이 곧 시작됩니다.")
@@ -83,8 +92,6 @@ public class ReminderNotificationService {
                 .isReminderSent(false)// 리마인드 알림 여부
                 .scheduledAt(reminderTime) // 5분 전 알림
                 .build();
-
-        notificationOutConnector.saveNotification(reminder);
     }
 
     @Scheduled(cron = "0 0 4 * * ?") // 매일 새벽 4시

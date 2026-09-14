@@ -30,7 +30,7 @@ public class OutboxEventPublisher {
     @Timed(value = "outbox.publish.duration", description = "Outbox Kafka 발행 처리 시간")
     @Counted(value = "outbox.publish.count", description = "Outbox Kafka 발행 실행 횟수")
     @Scheduled(fixedDelay = 1000)
-    @SchedulerLock(name = "OutboxPublisherLock", lockAtMostFor = "PT10M", lockAtLeastFor = "PT500MS")
+    @SchedulerLock(name = "OutboxPublisherLock", lockAtMostFor = "PT10M", lockAtLeastFor = "500")
     public void publishOutboxEvents() {
         // 전송되지 않은 이벤트를 생성순으로 200건씩 가져와 순차 발행
         List<OutboxEventEntity> events = outboxEventService.getPendingEvents(200);

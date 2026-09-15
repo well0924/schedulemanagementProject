@@ -108,7 +108,8 @@ public class SecurityConfig {
                         -> authorizationManagerRequestMatcherRegistry
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 프리플라이트 전부 허용
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/member/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/member/**").permitAll() // 회원가입만 공개
+                        .requestMatchers("/api/member/**").authenticated() // 조회/수정/삭제는 로그인 필요
                         .requestMatchers("/api/notice/**").permitAll()
                         .requestMatchers("/api/category/**").permitAll()
                         .requestMatchers("/api/attach/**").permitAll()

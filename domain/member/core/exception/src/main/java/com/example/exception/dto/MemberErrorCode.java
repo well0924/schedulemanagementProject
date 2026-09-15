@@ -18,7 +18,8 @@ public enum MemberErrorCode implements BaseErrorCode {
     NOT_PASSWORD_MATCH(HttpStatus.NOT_FOUND,4008,"비밀번호가 일치하지 않습니다."),
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST,4009,"이메일 형식이 올바르지 않습니다."),
     INVALID_PHONE_FORMAT(HttpStatus.BAD_REQUEST,4010,"전화번호 형식이 올바르지 않습니다."),
-    INVALID_USERID_LENGTH(HttpStatus.BAD_REQUEST,4011,"아이디는 5자 이상이어야 합니다.");
+    INVALID_USERID_LENGTH(HttpStatus.BAD_REQUEST,4011,"아이디는 5자 이상이어야 합니다."),
+    NOT_MEMBER_OWNER(HttpStatus.FORBIDDEN,4012,"본인 계정만 수정/삭제할 수 있습니다.");
 
     private final HttpStatus httpStatus;
 

@@ -9,6 +9,7 @@ import com.example.exception.dto.MemberErrorCode;
 import com.example.exception.exception.MemberCustomException;
 import com.example.interfaces.member.MemberRepositoryPort;
 import com.example.model.member.MemberModel;
+import com.example.service.member.guard.MemberGuard;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,8 @@ public class MemberService {
     private final MemberRepositoryPort memberRepositoryPort;
 
     private final OutboxEventService outboxEventService;
+
+    private final MemberGuard memberGuard;
 
     private static final Logger logger = LoggerFactory.getLogger(MemberService.class);
 
@@ -75,12 +78,14 @@ public class MemberService {
     }
 
     public MemberModel updateMember(Long id, MemberModel memberModel) {
+        memberGuard.assertOwnerOrAdmin(id);
         MemberModel updatedResult = memberRepositoryPort.updateMember(id, memberModel);
         logger.debug("createdResult::"+updatedResult);
         return updatedResult;
     }
 
     public void deleteMember(Long id) {
+        memberGuard.assertOwnerOrAdmin(id);
         logger.debug("member Deleted");
         memberRepositoryPort.deleteMember(id);
     }

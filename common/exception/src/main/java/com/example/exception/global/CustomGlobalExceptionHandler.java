@@ -3,6 +3,8 @@ package com.example.exception.global;
 import com.example.exception.BaseCustomException;
 import com.example.exception.dto.ErrorCode;
 import com.example.exception.dto.ErrorDto;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +13,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 // 도메인 Advice보다 우선순위 낮게
-@Order(2)
+@Slf4j
+@Order(1)
 @RestControllerAdvice
 public class CustomGlobalExceptionHandler {
 
@@ -25,7 +28,7 @@ public class CustomGlobalExceptionHandler {
                 .findFirst()
                 .map(error -> error.getDefaultMessage())
                 .orElse("요청 값이 올바르지 않습니다.");
-
+        log.info(message);
         return ResponseEntity
                 .badRequest()
                 .body(new ErrorDto(ErrorCode.INVALID_PARAMETER.getStatus(), message));
@@ -34,6 +37,7 @@ public class CustomGlobalExceptionHandler {
     // 나머지 도메인 모듈 400 처리 부분
     @ExceptionHandler({BaseCustomException.class})
     protected ResponseEntity<ErrorDto> HandleCustomException(BaseCustomException ex) {
+        log.info("400 error",ex);
         return ResponseEntity
                 .status(ex.getErrorCode().getHttpStatus())
                 .body(new ErrorDto(ex.getErrorCode().getCode(), ex.getMessage()));
@@ -43,7 +47,7 @@ public class CustomGlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorDto> handleUnexpected(RuntimeException ex) {
         // 로그는 꼭 찍어야 함
-        ex.printStackTrace(); // 실제로는 Logger.error()로
+        log.error("처리되지 않은 런타임 예외", ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(

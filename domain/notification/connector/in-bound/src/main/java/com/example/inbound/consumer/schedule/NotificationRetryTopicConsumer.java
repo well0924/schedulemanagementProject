@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -35,14 +36,17 @@ public class NotificationRetryTopicConsumer {
     private final FailedMessageService failedMessageService;
 
     @KafkaListener(topics = "notification-events.retry.5s", groupId = "retry-group-5s")
-    public void retry5s(String message) {
+    public void retry5s(String message, Acknowledgment ack) {
         try {
             NotificationEvents event = objectMapper.readValue(message, NotificationEvents.class);
             meterRegistry.counter("kafka.retry.notification.success", "delay", "5s").increment();
             KafkaMDCUtil.initMDC(event);
             kafkaTemplate.send("notification-events", event);
             log.info("5초 딜레이 후 재전송 완료: {}", event);
+            ack.acknowledge();
         } catch (JsonProcessingException e) {
+            // 역직렬화 불가 메시지는 재시도해도 실패하므로 커밋하고 넘어간다
+            ack.acknowledge();
             meterRegistry.counter("kafka.retry.notification.failure", "delay", "5s").increment();
             log.error("Kafka DLQ 재처리 - 역직렬화 실패: {}", message, e);
         } finally {
@@ -51,14 +55,17 @@ public class NotificationRetryTopicConsumer {
     }
 
     @KafkaListener(topics = "notification-events.retry.10s", groupId = "retry-group-10s")
-    public void retry10s(String message) {
+    public void retry10s(String message, Acknowledgment ack) {
         try{
             NotificationEvents event = objectMapper.readValue(message, NotificationEvents.class);
             meterRegistry.counter("kafka.retry.notification.success", "delay", "10s").increment();
             KafkaMDCUtil.initMDC(event);
             kafkaTemplate.send("notification-events", event);
             log.info("10초 딜레이 후 재전송 완료: {}", event);
+            ack.acknowledge();
         } catch (JsonProcessingException e) {
+            // 역직렬화 불가 메시지는 재시도해도 실패하므로 커밋하고 넘어간다
+            ack.acknowledge();
             meterRegistry.counter("kafka.retry.notification.failure", "delay", "10s").increment();
             log.error("Kafka DLQ 재처리 - 역직렬화 실패: {}", message, e);
         } finally {
@@ -67,14 +74,17 @@ public class NotificationRetryTopicConsumer {
     }
 
     @KafkaListener(topics = "notification-events.retry.30s", groupId = "retry-group-30s")
-    public void retry30s(String message) {
+    public void retry30s(String message, Acknowledgment ack) {
         try {
             NotificationEvents event = objectMapper.readValue(message, NotificationEvents.class);
             meterRegistry.counter("kafka.retry.notification.success", "delay", "30s").increment();
             KafkaMDCUtil.initMDC(event);
             kafkaTemplate.send("notification-events", event);
             log.info("30초 딜레이 후 재전송 완료: {}", event);
+            ack.acknowledge();
         } catch (JsonProcessingException e) {
+            // 역직렬화 불가 메시지는 재시도해도 실패하므로 커밋하고 넘어간다
+            ack.acknowledge();
             meterRegistry.counter("kafka.retry.notification.failure", "delay", "30s").increment();
             log.error("Kafka DLQ 재처리 - 역직렬화 실패: {}", message, e);
         } finally {
@@ -83,7 +93,7 @@ public class NotificationRetryTopicConsumer {
     }
 
     @KafkaListener(topics = "notification-events.retry.60s", groupId = "retry-group-60s")
-    public void retry60s(String message) {
+    public void retry60s(String message, Acknowledgment ack) {
         try{
             NotificationEvents event = objectMapper.readValue(message, NotificationEvents.class);
             meterRegistry.counter("kafka.retry.notification.success", "delay", "60s").increment();
@@ -91,7 +101,10 @@ public class NotificationRetryTopicConsumer {
             kafkaTemplate.send("notification-events", event);
             log.info("60초 딜레이 후 재전송 완료: {}", event);
 
+            ack.acknowledge();
         } catch (JsonProcessingException e) {
+            // 역직렬화 불가 메시지는 재시도해도 실패하므로 커밋하고 넘어간다
+            ack.acknowledge();
             meterRegistry.counter("kafka.retry.notification.failure", "delay", "60s").increment();
             log.error("Kafka DLQ 재처리 - 역직렬화 실패: {}", message, e);
         } finally {
@@ -100,7 +113,7 @@ public class NotificationRetryTopicConsumer {
     }
 
     @KafkaListener(topics = "notification-events.retry.final", groupId = "retry-group-final")
-    public void retryFinal(String message) {
+    public void retryFinal(String message, Acknowledgment ack) {
         try {
             NotificationEvents event = objectMapper.readValue(message, NotificationEvents.class);
             KafkaMDCUtil.initMDC(event);
@@ -111,7 +124,10 @@ public class NotificationRetryTopicConsumer {
             meterRegistry.counter("kafka.retry.notification.failure.final").increment();
             slackNotifier.send("Dlq_Notification", event.getMessage());
             log.warn("최종 재전송 도달 - 후속조치 필요: {}", text);
+            ack.acknowledge();
         } catch (JsonProcessingException e) {
+            // 역직렬화 불가 메시지는 재시도해도 실패하므로 커밋하고 넘어간다
+            ack.acknowledge();
             log.error("Kafka DLQ 재처리 - 역직렬화 실패: {}", message, e);
         } finally {
             KafkaMDCUtil.clear();

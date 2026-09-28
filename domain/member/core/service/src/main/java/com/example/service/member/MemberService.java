@@ -59,6 +59,10 @@ public class MemberService {
         if (!memberModel.isValidEmail()) throw new MemberCustomException(MemberErrorCode.INVALID_EMAIL_FORMAT);
         if (!memberModel.isValidPhoneNumber()) throw new MemberCustomException(MemberErrorCode.INVALID_PHONE_FORMAT);
         if (!memberModel.isValidUserId()) throw new MemberCustomException(MemberErrorCode.INVALID_USERID_LENGTH);
+        // 아이디 중복 확인. 동시에 들어온 중복 요청(더블 클릭 등)은 DB의 uk_member_user_id 제약이 막는다.
+        if (memberRepositoryPort.existsByUserId(memberModel.getUserId())) {
+            throw new MemberCustomException(MemberErrorCode.USERID_DUPLICATE);
+        }
         MemberModel createdResult = memberRepositoryPort.createMember(memberModel);
         logger.debug("createdResult::"+createdResult);
 

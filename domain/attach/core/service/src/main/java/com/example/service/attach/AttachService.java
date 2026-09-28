@@ -88,12 +88,15 @@ public class AttachService {
         return urls;
     }
 
+    // storedFileName: S3 object key (final/...) / originFileName: 다운로드 시 보여줄 파일명
     @Transactional(readOnly = true)
-    public String generateDownloadPreSignedUrl(String fileName) {
+    public String generateDownloadPreSignedUrl(String storedFileName, String originFileName) {
         try {
-            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
-            //첨부파일 다운로드
-            URL url = amazonS3.generateDownloadPresignedUrl(bucketName,encodedFileName,1000 * 60 * 30L);
+            // 기존 데이터는 originFileName에 경로(final/...)가 들어 있어 파일명만 사용
+            String displayName = originFileName.substring(originFileName.lastIndexOf('/') + 1);
+            String encodedFileName = URLEncoder.encode(displayName, StandardCharsets.UTF_8);
+            //첨부파일 다운로드 (key 자리에 버킷명이 아니라 실제 object key를 넘겨야 한다)
+            URL url = amazonS3.generateDownloadPresignedUrl(storedFileName,encodedFileName,1000 * 60 * 30L);
             return url.toString();
         } catch (Exception e) {
             throw new AttachCustomExceptionHandler(AttachErrorCode.S3_OPERATION_FAIL);
@@ -106,7 +109,11 @@ public class AttachService {
 
         List<AttachModel> savedAttachModels = new ArrayList<>();
 
-        for (String tempStoredFileName : uploadedFileNames) {
+        for (String uploadedFileName : uploadedFileNames) {
+            // presigned URL은 "temp/" + 파일명으로 발급되지만 클라이언트는 파일명만 보낼 수 있다.
+            // 두 형태 모두 받아서 같은 temp key로 맞춘다.
+            String tempStoredFileName = uploadedFileName.startsWith("temp/") ? uploadedFileName : "temp/" + uploadedFileName;
+            String originFileName = tempStoredFileName.substring("temp/".length());
             try {
                 String finalStoredFileName = tempStoredFileName.replaceFirst("^temp/", "final/");
                 log.info(finalStoredFileName);
@@ -121,7 +128,7 @@ public class AttachService {
                 long fileSize = amazonS3.fileSize(finalStoredFileName);
 
                 AttachModel attachModel = AttachModel.builder()
-                        .originFileName(finalStoredFileName)
+                        .originFileName(originFileName)
                         .storedFileName(finalStoredFileName)
                         .filePath(fileUrl)
                         .fileSize(fileSize)

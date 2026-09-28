@@ -54,8 +54,8 @@ public class AttachInConnector implements AttachInterfaces {
     }
 
     @Override
-    public String generateDownloadPreSignedUrl(String fileName) {
-        return attachService.generateDownloadPreSignedUrl(fileName);
+    public String generateDownloadPreSignedUrl(String storedFileName, String originFileName) {
+        return attachService.generateDownloadPreSignedUrl(storedFileName, originFileName);
     }
 
     //업로드 + 섬네일 생성

@@ -16,6 +16,6 @@ public interface AttachInterfaces {
     void deleteAttach(Long attachId);
     void updateScheduleId(List<Long> fileIds, Long scheduleId);
     List<String> generatePreSignedUrls(List<String> fileNames);  // 업로드용 Presigned URL
-    String generateDownloadPreSignedUrl(String fileName);
+    String generateDownloadPreSignedUrl(String storedFileName, String originFileName);
     List<AttachResponse> uploadDirect(List<MultipartFile>files) throws IOException;
 }

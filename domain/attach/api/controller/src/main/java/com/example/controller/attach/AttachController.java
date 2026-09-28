@@ -42,7 +42,7 @@ public class AttachController {
     public ResponseEntity<String> getPreSignedDownloadUrl(@PathVariable("id") Long attachId) {
         try {
             AttachResponse attach = attachInterfaces.findById(attachId);
-            String preSignedUrl = attachInterfaces.generateDownloadPreSignedUrl(attach.originFileName());
+            String preSignedUrl = attachInterfaces.generateDownloadPreSignedUrl(attach.storedFileName(), attach.originFileName());
             return ResponseEntity.ok(preSignedUrl);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Presigned Download URL 생성 실패");

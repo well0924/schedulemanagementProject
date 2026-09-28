@@ -1,4 +1,5 @@
 dependencies {
+    implementation project(':common:security')
     implementation project(':common:redis')
     implementation project(':common:events')
     implementation project(':domain:attach:connector:out-bound')

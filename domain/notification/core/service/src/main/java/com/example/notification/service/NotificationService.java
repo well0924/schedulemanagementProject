@@ -1,7 +1,10 @@
 package com.example.notification.service;
 
+import com.example.exception.notification.dto.NotificationErrorCode;
+import com.example.exception.notification.exception.NotificationCustomException;
 import com.example.notification.model.NotificationModel;
 import com.example.outbound.notification.NotificationOutConnector;
+import com.example.security.config.SecurityUtil;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -9,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @Transactional
@@ -49,6 +53,11 @@ public class NotificationService {
     }
 
     public void markAsRead(Long id) {
+        // 본인 알림만 읽음 처리 가능 (관리자 예외)
+        Long ownerId = notificationOutConnector.findUserIdById(id);
+        if (!SecurityUtil.hasRole("ADMIN") && !Objects.equals(ownerId, SecurityUtil.currentUserId())) {
+            throw new NotificationCustomException(NotificationErrorCode.NOT_NOTIFICATION_OWNER);
+        }
         notificationOutConnector.markAsRead(id); // 다시 저장 (업데이트)
     }
 

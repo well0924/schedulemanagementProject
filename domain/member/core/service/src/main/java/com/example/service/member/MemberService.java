@@ -49,6 +49,8 @@ public class MemberService {
 
     @Transactional(readOnly = true)
     public MemberModel findById(Long id) {
+        // 회원 상세(이메일·전화번호 등)는 본인이나 관리자만 조회 가능
+        memberGuard.assertOwnerOrAdmin(id);
         MemberModel memberDetailResult = memberRepositoryPort.findById(id);
         logger.debug("memberDetailResult::"+memberDetailResult);
         return memberDetailResult;

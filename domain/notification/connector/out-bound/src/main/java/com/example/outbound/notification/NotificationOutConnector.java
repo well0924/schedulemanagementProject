@@ -65,6 +65,14 @@ public class NotificationOutConnector implements NotificationRepositoryPort {
                         .findByMessageAndUserId(message,userId));
     }
 
+    // 알림 수신자(회원 번호) 조회 - 읽음 처리 권한 확인용
+    public Long findUserIdById(Long id) {
+        return notificationRepository
+                .findById(id)
+                .orElseThrow(() -> new NotificationCustomException(NotificationErrorCode.INVALID_NOTIFICATION))
+                .getUserId();
+    }
+
     public void markAsRead(Long id) {
         Notification notification = notificationRepository
                 .findById(id)

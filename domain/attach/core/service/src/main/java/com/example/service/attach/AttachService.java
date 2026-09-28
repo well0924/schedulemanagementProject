@@ -8,6 +8,7 @@ import com.example.events.spring.AttachCreatedEvent;
 import com.example.interfaces.attach.AmazonS3Port;
 import com.example.interfaces.attach.AttachRepositoryPort;
 import com.example.model.attach.AttachModel;
+import com.example.security.config.SecurityUtil;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -175,6 +177,12 @@ public class AttachService {
     @Transactional
     public void deleteAttachAndFile(Long attachId) {
         AttachModel attachModel = attachRepository.findById(attachId);
+
+        // 본인이 올린 첨부파일만 삭제 가능 (created_by = 업로드한 회원의 로그인 아이디, 관리자 예외)
+        if (!SecurityUtil.hasRole("ADMIN")
+                && !Objects.equals(attachModel.getCreatedBy(), SecurityUtil.currentUserName())) {
+            throw new AttachCustomExceptionHandler(AttachErrorCode.NOT_ATTACH_OWNER);
+        }
 
         // S3에서 파일 삭제
         deleteFileFromS3(attachModel.getStoredFileName());

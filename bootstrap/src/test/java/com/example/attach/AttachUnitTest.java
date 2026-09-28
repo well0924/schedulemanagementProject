@@ -248,12 +248,24 @@ public class AttachUnitTest {
         AttachModel attachModel = AttachModel.builder()
                 .id(1L)
                 .storedFileName("final/test-image.jpg")
+                .createdBy("tester") // 업로드한 회원 (본인만 삭제 가능)
                 .build();
 
         when(attachOutConnector.findById(1L)).thenReturn(attachModel);
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        com.example.model.auth.CustomMemberDetails.builder()
+                                .memberModel(com.example.model.member.MemberModel.builder().id(1L).userId("tester").build())
+                                .build(),
+                        null,
+                        java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER"))));
 
         // when
-        attachService.deleteAttachAndFile(1L);
+        try {
+            attachService.deleteAttachAndFile(1L);
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
 
         // then
         verify(amazonS3).delete("final/test-image.jpg");

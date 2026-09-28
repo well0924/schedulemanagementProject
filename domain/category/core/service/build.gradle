@@ -1,4 +1,5 @@
 dependencies {
+    implementation project(':common:security')
     implementation project(':common:redis')
     implementation project(':common:exception')
     implementation project(':domain:category:core:exception')

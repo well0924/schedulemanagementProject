@@ -1,4 +1,6 @@
 dependencies {
+    implementation project(':common:security')
+    implementation project(':domain:notification:core:exception')
     implementation project(':common:events')
     implementation project(':common:exception')
     implementation project(':domain:member:core:service')

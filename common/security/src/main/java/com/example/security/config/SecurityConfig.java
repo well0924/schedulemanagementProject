@@ -105,7 +105,12 @@ public class SecurityConfig {
                 .addFilterAfter(new MDCFilter(), JwtAuthenticationFilter.class)
                 // 경로별 인가 규칙은 ApiAuthorizationRules에 모아 두고 테스트에서도 같은 규칙을 검증한다
                 .authorizeHttpRequests(ApiAuthorizationRules::apply)
-                .oauth2Login(oauth2-> oauth2.userInfoEndpoint(userInfo->userInfo.userService(customOAuth2OutConnector))
+                // 소셜 로그인 경로를 /api 아래로 둔다. nginx가 /api/, /ws/만 백엔드로 넘기므로
+                // 기본 경로(/oauth2/**, /login/oauth2/**)는 운영에서 백엔드까지 오지 않는다.
+                .oauth2Login(oauth2-> oauth2
+                        .authorizationEndpoint(endpoint -> endpoint.baseUri("/api/oauth2/authorization"))
+                        .redirectionEndpoint(endpoint -> endpoint.baseUri("/api/login/oauth2/code/*"))
+                        .userInfoEndpoint(userInfo->userInfo.userService(customOAuth2OutConnector))
                         .successHandler(auth2AuthenticationSuccessHandler)
                         .failureHandler(auth2AuthenticationFailureHandler))
                 .exceptionHandling(httpSecurityExceptionHandlingConfigurer -> httpSecurityExceptionHandlingConfigurer

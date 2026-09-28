@@ -113,7 +113,7 @@ public class ScheduleOutConnector implements ScheduleRepositoryPort {
     //일정 단일 조회 (첨부파일 포함)
     public SchedulesModel findById(Long scheduleId) {
         return Optional.ofNullable(scheduleRepository.findByScheduleId(scheduleId))
-                .orElseThrow(()-> new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_NOT_FOUND));
+                .orElseThrow(()-> new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_NOT_FOUND, scheduleId));
     }
 
     //오늘일정 목록 보여주기.
@@ -261,7 +261,7 @@ public class ScheduleOutConnector implements ScheduleRepositoryPort {
 
     private Schedules getScheduleById(Long scheduleId) {
         return scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_NOT_FOUND));
+                .orElseThrow(() -> new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_NOT_FOUND, scheduleId));
     }
 
 }

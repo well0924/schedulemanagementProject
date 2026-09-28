@@ -105,4 +105,9 @@ public class MemberOutConnector implements MemberRepositoryPort {
         return memberRepository.existsById(id);
     }
 
+    @Override
+    public boolean existsByUserId(String userId) {
+        return memberRepository.existsByUserId(userId);
+    }
+
 }

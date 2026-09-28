@@ -13,4 +13,5 @@ public interface MemberRepositoryPort {
     MemberModel updateMember(Long id, MemberModel memberModel);
     void deleteMember(Long id);
     boolean existsById(Long id);
+    boolean existsByUserId(String userId);
 }

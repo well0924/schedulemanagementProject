@@ -90,9 +90,4 @@ public class ScheduleManageController {
         scheduleServiceConnector.deleteSchedules(scheduleIds);
         return "Bulk delete completed.";
     }
-
-    @DeleteMapping("/old-schedules")
-    public void deleteAllSchedule() {
-        scheduleServiceConnector.deleteOldSchedules();
-    }
 }

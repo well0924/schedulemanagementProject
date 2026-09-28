@@ -12,7 +12,6 @@ import com.example.service.auth.oauth2.OAuth2AuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -104,23 +103,8 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, redisService), UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(new MDCFilter(), JwtAuthenticationFilter.class)
-                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry
-                        -> authorizationManagerRequestMatcherRegistry
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 프리플라이트 전부 허용
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/member/**").permitAll() // 회원가입만 공개
-                        .requestMatchers("/api/member/**").authenticated() // 조회/수정/삭제는 로그인 필요
-                        .requestMatchers("/api/notice/**").permitAll()
-                        .requestMatchers("/api/category/**").permitAll()
-                        .requestMatchers("/api/attach/**").permitAll()
-                        .requestMatchers("/api/schedule/**").permitAll()
-                        .requestMatchers("/api/actuator/**").permitAll()
-                        .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/api/actuator/prometheus").permitAll()
-                        .requestMatchers("/actuator/prometheus").permitAll()
-                        .requestMatchers("/ws/**", "/topic/**").permitAll()
-                        .anyRequest()
-                        .authenticated())
+                // 경로별 인가 규칙은 ApiAuthorizationRules에 모아 두고 테스트에서도 같은 규칙을 검증한다
+                .authorizeHttpRequests(ApiAuthorizationRules::apply)
                 .oauth2Login(oauth2-> oauth2.userInfoEndpoint(userInfo->userInfo.userService(customOAuth2OutConnector))
                         .successHandler(auth2AuthenticationSuccessHandler)
                         .failureHandler(auth2AuthenticationFailureHandler))

@@ -1,5 +1,7 @@
 package com.example.events.outbox;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -19,6 +21,8 @@ public class OutboxDlqProcessor {
 
     private final OutboxEventRepository repository;
 
+    private final ObjectMapper objectMapper;
+
     /**
      * retryCount > 5 이고 sent=false인 이벤트를 DLQ로 이동한다.
      */
@@ -36,7 +40,10 @@ public class OutboxDlqProcessor {
     private void sendToDlq(OutboxEventEntity event) {
         try {
             String dlqTopic = resolveDlqTopic(event);
-            kafkaTemplate.send(dlqTopic, event.getId().toString(), event.getPayload())
+            // payload는 이미 JSON 문자열이라 그대로 보내면 JsonSerializer가 한 번 더 감싼다("{\"...\"}").
+            // JsonNode로 넘겨 원본 JSON 그대로 전송 (이벤트 클래스로 역직렬화하지 않으므로 원본 보존)
+            JsonNode payload = objectMapper.readTree(event.getPayload());
+            kafkaTemplate.send(dlqTopic, event.getId().toString(), payload)
                     .whenComplete((result, ex) -> handleDlqResult(event, dlqTopic, ex));
         } catch (Exception e) {
             log.error("DLQ 처리 중 예외 - eventId={}, error={}",

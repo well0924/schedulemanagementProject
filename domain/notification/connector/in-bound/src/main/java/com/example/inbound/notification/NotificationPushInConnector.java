@@ -1,5 +1,6 @@
 package com.example.inbound.notification;
 
+import com.example.security.config.SecurityUtil;
 import com.example.apimodel.notification.NotificationPushApiModel;
 import com.example.interfaces.notification.push.NotificationPushInterfaces;
 import com.example.notification.mapper.NotificationMapper;
@@ -20,8 +21,9 @@ public class NotificationPushInConnector implements NotificationPushInterfaces {
 
     @Override
     public NotificationPushApiModel.NotificationPushResponse subscribe(NotificationPushApiModel.NotificationPushRequest request) {
+        // 구독 대상 회원은 요청 body가 아니라 로그인한 회원으로 고정 (남의 번호로 구독 등록 방지)
         return notificationMapper.toApiModel(pushSubscriptionService
-                .saveSubscription(request.memberId(),
+                .saveSubscription(SecurityUtil.currentUserId(),
                         request.endpoint(),
                         request.p256dh(),
                         request.auth(),

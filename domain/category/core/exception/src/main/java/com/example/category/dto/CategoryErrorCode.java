@@ -13,7 +13,8 @@ public enum CategoryErrorCode implements BaseErrorCode {
     NOT_FOUND_CATEGORY(HttpStatus.NOT_FOUND,40009, "카테고리 '%s'를 찾을 수 없습니다."),
     DUPLICATED_CATEGORY_NAME(HttpStatus.CONFLICT,40010, "카테고리 이름 '%s'이(가) 중복됩니다."),
     INVALID_PARENT_CATEGORY(HttpStatus.BAD_REQUEST,40011, "유효하지 않은 부모 카테고리입니다."),
-    CANNOT_DELETE_CATEGORY_WITH_CHILDREN(HttpStatus.BAD_REQUEST,40012, "자식 카테고리와 함께 삭제할 수 없습니다.");
+    CANNOT_DELETE_CATEGORY_WITH_CHILDREN(HttpStatus.BAD_REQUEST,40012, "자식 카테고리와 함께 삭제할 수 없습니다."),
+    NOT_CATEGORY_OWNER(HttpStatus.FORBIDDEN,40304, "본인이 만든 카테고리만 수정·삭제할 수 있습니다.");
 
     private final HttpStatus httpStatus;
 

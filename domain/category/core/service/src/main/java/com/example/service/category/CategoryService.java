@@ -1,9 +1,12 @@
 package com.example.service.category;
 
+import com.example.category.dto.CategoryErrorCode;
+import com.example.category.exception.CategoryCustomException;
 import com.example.interfaces.category.CategoryRepositoryPort;
 import com.example.model.category.CategoryModel;
 import com.example.outbound.category.CategoryOutConnector;
 import com.example.redis.config.cachekey.CacheKey;
+import com.example.security.config.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -11,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @Transactional
@@ -49,6 +53,7 @@ public class CategoryService {
     public CategoryModel updateCategory(Long categoryId,CategoryModel categoryModel) {
         // 기존 카테고리 조회
         CategoryModel existingCategory = category.findById(categoryId);
+        assertCreatorOrAdmin(existingCategory);
         // 카테고리 이름 중복 확인
         if (categoryModel.getName() != null && !categoryModel.getName().equals(existingCategory.getName())) {
             category.validateCategoryNameNotExists(categoryModel.getName());
@@ -71,6 +76,15 @@ public class CategoryService {
 
     @CacheEvict(value = CacheKey.CATEGORY_KEY, key = "'allCategories'")
     public void deleteCategory(Long categoryId) {
+        assertCreatorOrAdmin(category.findById(categoryId));
         category.deleteCategory(categoryId);
+    }
+
+    // 카테고리는 공용이지만 수정·삭제는 만든 사람(created_by = 로그인 아이디)이나 관리자만 가능
+    private void assertCreatorOrAdmin(CategoryModel target) {
+        if (SecurityUtil.hasRole("ADMIN")) return;
+        if (!Objects.equals(target.getCreatedBy(), SecurityUtil.currentUserName())) {
+            throw new CategoryCustomException(CategoryErrorCode.NOT_CATEGORY_OWNER);
+        }
     }
 }

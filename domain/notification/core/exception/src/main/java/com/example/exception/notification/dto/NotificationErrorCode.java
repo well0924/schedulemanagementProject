@@ -10,7 +10,8 @@ import org.springframework.http.HttpStatus;
 public enum NotificationErrorCode implements BaseErrorCode {
 
     NOTIFICATION_EMPTY(HttpStatus.NOT_FOUND,40025,"알림목록이 없습니다"),
-    INVALID_NOTIFICATION(HttpStatus.NOT_FOUND,40026,"알림을 찾을 수 없습니다.");
+    INVALID_NOTIFICATION(HttpStatus.NOT_FOUND,40026,"알림을 찾을 수 없습니다."),
+    NOT_NOTIFICATION_OWNER(HttpStatus.FORBIDDEN,40302,"본인의 알림만 처리할 수 있습니다.");
 
 
     private final HttpStatus httpStatus;

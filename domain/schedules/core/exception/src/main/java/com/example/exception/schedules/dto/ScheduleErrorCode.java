@@ -22,7 +22,8 @@ public enum ScheduleErrorCode {
     NOT_START_TIME_AND_END_TIME(HttpStatus.INTERNAL_SERVER_ERROR, 50021, "시작 시간과 종료 시간이 설정되지 않았습니다."),
     START_TIME_AFTER_END_TIME_EXCEPTION(HttpStatus.INTERNAL_SERVER_ERROR, 50022, "시작 시간은 종료 시간보다 이후일 수 없습니다."),
     INVALID_DELETE_TYPE_FOR_NON_REPEATED(HttpStatus.INTERNAL_SERVER_ERROR, 50023, "유효하지 않은 삭제 유형입니다."),
-    NOT_SCHEDULE_OWNER(HttpStatus.INTERNAL_SERVER_ERROR, 50024, "현재 사용자가 아닙니다."),
+    // 소유자 아닌 요청은 클라이언트 권한 문제 → 403 (코드값은 기존 호환 위해 유지)
+    NOT_SCHEDULE_OWNER(HttpStatus.FORBIDDEN, 50024, "현재 사용자가 아닙니다."),
     INVALID_OWNER_FOR_BULK(HttpStatus.INTERNAL_SERVER_ERROR, 50025, "일정선택삭제에 유효하지 않은 사용자입니다."),
     SCHEDULE_UPDATED_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, 50026, "일정 수정에 실패했습니다."),
     SCHEDULE_DELETE_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, 50027, "일정 삭제에 실패했습니다.");

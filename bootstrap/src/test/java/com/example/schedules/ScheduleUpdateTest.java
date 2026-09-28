@@ -1,8 +1,11 @@
 package com.example.schedules;
 
+import com.example.enumerate.schedules.PROGRESS_STATUS;
 import com.example.enumerate.schedules.RepeatType;
 import com.example.enumerate.schedules.RepeatUpdateType;
 import com.example.events.enums.ScheduleActionType;
+import com.example.exception.schedules.dto.ScheduleErrorCode;
+import com.example.exception.schedules.exception.ScheduleCustomException;
 import com.example.inbound.schedules.ScheduleRepositoryPort;
 import com.example.interfaces.notification.notification.NotificationInterfaces;
 import com.example.model.schedules.SchedulesModel;
@@ -25,6 +28,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -108,5 +114,44 @@ public class ScheduleUpdateTest {
         assertThat(result.getContents()).isEqualTo("p");
         verify(repeatUpdate).dispatch(RepeatUpdateType.AFTER_THIS, existing, patch);
         verify(domainEventPublisher, times(1)).publish(anyList(), eq(ScheduleActionType.SCHEDULE_UPDATE));
+    }
+
+    @Test
+    @DisplayName("일정 상태 변경 성공 - 소유자")
+    public void updateProgressStatus_success_owner(){
+        SchedulesModel existing = SchedulesModel.builder().id(3L).memberId(100L).build();
+        when(scheduleRepositoryPort.findById(3L)).thenReturn(existing);
+
+        PROGRESS_STATUS result = svc.updateProgressStatus(3L, PROGRESS_STATUS.COMPLETE);
+
+        assertThat(result).isEqualTo(PROGRESS_STATUS.COMPLETE);
+        verify(guard).assertOwnerOrAdmin(existing);
+        verify(scheduleRepositoryPort).updateStatusOnly(3L, PROGRESS_STATUS.COMPLETE);
+    }
+
+    @Test
+    @DisplayName("일정 상태 변경 실패 - 소유자가 아니면 변경하지 않는다")
+    public void updateProgressStatus_fail_notOwner(){
+        SchedulesModel existing = SchedulesModel.builder().id(4L).memberId(100L).build();
+        when(scheduleRepositoryPort.findById(4L)).thenReturn(existing);
+        doThrow(new ScheduleCustomException(ScheduleErrorCode.NOT_SCHEDULE_OWNER))
+                .when(guard).assertOwnerOrAdmin(existing);
+
+        assertThatThrownBy(() -> svc.updateProgressStatus(4L, PROGRESS_STATUS.COMPLETE))
+                .isInstanceOf(ScheduleCustomException.class);
+
+        verify(scheduleRepositoryPort, never()).updateStatusOnly(anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("일정 상태 변경 실패 - 없는 일정이면 변경하지 않는다")
+    public void updateProgressStatus_fail_notFound(){
+        when(scheduleRepositoryPort.findById(999L))
+                .thenThrow(new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_NOT_FOUND));
+
+        assertThatThrownBy(() -> svc.updateProgressStatus(999L, PROGRESS_STATUS.COMPLETE))
+                .isInstanceOf(ScheduleCustomException.class);
+
+        verify(scheduleRepositoryPort, never()).updateStatusOnly(anyLong(), any());
     }
 }

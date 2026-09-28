@@ -40,6 +40,10 @@ public class ScheduleUpdateService {
     }
 
     public PROGRESS_STATUS updateProgressStatus(Long scheduleId, PROGRESS_STATUS newStatus) {
+        // 존재 확인(없으면 SCHEDULE_NOT_FOUND) + 소유자/관리자만 상태 변경 가능
+        SchedulesModel existing = scheduleRepositoryPort.findById(scheduleId);
+        scheduleGuard.assertOwnerOrAdmin(existing);
+
         scheduleRepositoryPort.updateStatusOnly(scheduleId, newStatus);
         return newStatus;
     }

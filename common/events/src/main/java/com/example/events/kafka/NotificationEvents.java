@@ -6,11 +6,13 @@ import com.example.events.spring.ScheduleEvents;
 import com.example.notification.model.NotificationModel;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import lombok.extern.jackson.Jacksonized;
 
 import java.time.LocalDateTime;
 
 @Getter
 @SuperBuilder
+@Jacksonized // Jackson이 SuperBuilder로 역직렬화 (기본 생성자 없음)
 public class NotificationEvents extends BaseKafkaEvent{
     private Long receiverId; // memberId 회원 번호
     private Long scheduleId; //일정 번호

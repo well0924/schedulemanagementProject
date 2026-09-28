@@ -2,11 +2,13 @@ package com.example.events.kafka;
 
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import lombok.extern.jackson.Jacksonized;
 
 import java.time.LocalDateTime;
 
 @Getter
 @SuperBuilder
+@Jacksonized // Jackson이 SuperBuilder로 역직렬화 (기본 생성자 없음)
 public class MemberSignUpKafkaEvent extends BaseKafkaEvent {
     private Long receiverId;
     private String username;

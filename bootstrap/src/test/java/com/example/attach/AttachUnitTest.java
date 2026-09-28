@@ -177,6 +177,53 @@ public class AttachUnitTest {
     }
 
     @Test
+    @DisplayName("createAttach - 프론트처럼 파일명만 보내도 temp/ key로 처리하고 원본 파일명을 저장")
+    void createAttach_파일명만_전달() {
+        // given: 프론트는 presigned 발급 때와 같은 파일명만 보낸다 (temp/ 없음)
+        when(amazonS3.fileSize("final/photo.jpg")).thenReturn(123L);
+        when(amazonS3.getFileUrl("final/photo.jpg")).thenReturn("https://dummy.com/final/photo.jpg");
+        when(attachOutConnector.createAttach(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        List<AttachModel> result = attachService.createAttach(List.of("photo.jpg"));
+
+        // then
+        verify(amazonS3).copy("temp/photo.jpg", "final/photo.jpg");
+        verify(amazonS3).delete("temp/photo.jpg");
+        assertEquals("photo.jpg", result.get(0).getOriginFileName());
+        assertEquals("final/photo.jpg", result.get(0).getStoredFileName());
+    }
+
+    @Test
+    @DisplayName("다운로드 PreSignedUrl - 버킷명이 아니라 실제 저장 경로(key)로 발급하고 원본 파일명으로 내려받기")
+    void generateDownloadPreSignedUrl_key는_저장경로() throws Exception {
+        // given
+        when(amazonS3.generateDownloadPresignedUrl(anyString(), anyString(), anyLong()))
+                .thenAnswer(invocation -> new URL("https://dummy.com/" + invocation.getArgument(0)));
+
+        // when
+        String url = attachService.generateDownloadPreSignedUrl("final/회의록.pdf", "회의록.pdf");
+
+        // then
+        verify(amazonS3).generateDownloadPresignedUrl(
+                eq("final/회의록.pdf"),
+                eq(java.net.URLEncoder.encode("회의록.pdf", java.nio.charset.StandardCharsets.UTF_8)),
+                anyLong());
+        assertTrue(url.endsWith("final/회의록.pdf"));
+    }
+
+    @Test
+    @DisplayName("다운로드 PreSignedUrl - 기존 데이터처럼 originFileName에 경로가 있어도 파일명만 사용")
+    void generateDownloadPreSignedUrl_기존데이터_경로포함() throws Exception {
+        when(amazonS3.generateDownloadPresignedUrl(anyString(), anyString(), anyLong()))
+                .thenReturn(new URL("https://dummy.com/final/photo.jpg"));
+
+        attachService.generateDownloadPreSignedUrl("final/photo.jpg", "final/photo.jpg");
+
+        verify(amazonS3).generateDownloadPresignedUrl(eq("final/photo.jpg"), eq("photo.jpg"), anyLong());
+    }
+
+    @Test
     @DisplayName("PreSignedUrl 발급 테스트")
     void generatePreSignedUrlTest() throws Exception {
         // given

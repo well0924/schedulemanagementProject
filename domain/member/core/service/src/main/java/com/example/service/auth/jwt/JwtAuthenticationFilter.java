@@ -18,6 +18,7 @@ import org.springframework.web.filter.GenericFilterBean;
 import com.example.service.auth.RedisService;
 
 import java.io.IOException;
+import java.util.Set;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -27,12 +28,21 @@ public class JwtAuthenticationFilter extends GenericFilterBean {
 
     private final RedisService redisService;
 
+    private static final Set<String> TOKEN_FREE_PATHS = Set.of("/api/auth/login", "/api/auth/reissue");
+
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
 
         String path = httpRequest.getRequestURI();
         if (path.startsWith("/ws") || path.startsWith("/topic")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // 로그인·토큰 재발급은 액세스 토큰 없이 동작해야 한다.
+        // 만료된 토큰이 Authorization 헤더에 남아 있어도 여기서 401을 내면 재발급 자체가 막힌다.
+        if (TOKEN_FREE_PATHS.contains(path)) {
             chain.doFilter(request, response);
             return;
         }

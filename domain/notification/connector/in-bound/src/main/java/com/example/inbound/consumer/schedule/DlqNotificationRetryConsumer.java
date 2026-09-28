@@ -5,11 +5,13 @@ import com.example.interfaces.notification.kafka.KafkaDlqConsumer;
 import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.model.FailMessageModel;
 import com.example.notification.service.FailedMessageService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.annotation.Timed;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -25,7 +27,7 @@ public class DlqNotificationRetryConsumer implements KafkaDlqConsumer {
     @Timed(value = "kafka.dlq.notification.save.duration", description = "알림 DLQ 저장 처리 시간")
     @KafkaListener(topics = "notification-events.DLQ", groupId = "dlq-retry-group")
     @Override
-    public void consume(String message) {
+    public void consume(String message, Acknowledgment ack) {
 
         try{
             log.info("raw DLQ message: {}", message);
@@ -35,7 +37,10 @@ public class DlqNotificationRetryConsumer implements KafkaDlqConsumer {
             String payload = objectMapper.writeValueAsString(event);
             log.info("DLQ → 객체 변환 완료: {}", payload);
             // 멱등성 체크
-            if (failedMessageService.isAlreadyRecorded(event.getEventId())) return; // 중복 체크 추가
+            if (failedMessageService.isAlreadyRecorded(event.getEventId())) { // 중복 체크 추가
+                ack.acknowledge();
+                return;
+            }
             // 실패 내역 저장
             FailMessageModel failMessageModel = FailMessageModel
                 .builder()
@@ -51,8 +56,14 @@ public class DlqNotificationRetryConsumer implements KafkaDlqConsumer {
 
             failedMessageService.createFailMessage(failMessageModel);
             log.warn("DLQ 메시지 저장 완료: {}", payload);
+            // 실패 내역 저장 성공 시 커밋
+            ack.acknowledge();
+        } catch (JsonProcessingException e) {
+            // 역직렬화 불가 메시지는 재시도해도 실패하므로 커밋하고 넘어간다
+            ack.acknowledge();
+            log.error("DLQ 메시지 역직렬화 실패: {}", message, e);
         } catch (Exception e) {
-            log.error("DLQ 메시지 역직렬화 또는 저장 실패", e);
+            log.error("DLQ 메시지 저장 실패", e);
         } finally {
             KafkaMDCUtil.clear();
         }

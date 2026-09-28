@@ -116,6 +116,7 @@ dependencies {
 	testImplementation 'org.springframework.security:spring-security-test'
 	testImplementation 'org.springframework.security:spring-security-config'
 	testImplementation 'org.springframework.security:spring-security-oauth2-core'
+	testImplementation 'org.springframework.security:spring-security-oauth2-client'
 	testImplementation project(':domain:notification:api:api-model')
 	testImplementation project(':domain:notification:core:mapper')
     // Mockito

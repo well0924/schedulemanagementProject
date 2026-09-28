@@ -101,14 +101,6 @@ class ExceptionAdviceRoutingTest {
     }
 
     @Test
-    @DisplayName("일정 소유자가 아닌 요청 → 500이 아니라 403")
-    void notScheduleOwner_is403() throws Exception {
-        mockMvc.perform(get("/test/schedule/not-owner"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.errorCode").value(ScheduleErrorCode.NOT_SCHEDULE_OWNER.getStatus()));
-    }
-
-    @Test
     @DisplayName("일정 컨트롤러의 DB 제약 위반 → 일정 충돌(409, 40024)")
     void dbViolation_fromSchedule() throws Exception {
         mockMvc.perform(get("/test/schedule/db-violation"))

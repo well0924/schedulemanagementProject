@@ -97,7 +97,19 @@ class ExceptionAdviceRoutingTest {
     void scheduleException_routedToSchedule() throws Exception {
         mockMvc.perform(get("/test/schedule/schedule-exception"))
                 .andExpect(status().is(ScheduleErrorCode.SCHEDULE_NOT_FOUND.getHttpStatus().value()))
-                .andExpect(jsonPath("$.errorCode").value(ScheduleErrorCode.SCHEDULE_NOT_FOUND.getStatus()));
+                .andExpect(jsonPath("$.errorCode").value(ScheduleErrorCode.SCHEDULE_NOT_FOUND.getStatus()))
+                .andExpect(jsonPath("$.message").value("해당 일정(10)을 찾을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("일정 요청 값 오류(시작>종료)는 500이 아니라 400, 일괄 삭제 소유자 불일치는 403")
+    void scheduleClientErrors_are4xx() throws Exception {
+        mockMvc.perform(get("/test/schedule/invalid-time"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value(50022));
+        mockMvc.perform(get("/test/schedule/bulk-not-owner"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value(50025));
     }
 
     @Test

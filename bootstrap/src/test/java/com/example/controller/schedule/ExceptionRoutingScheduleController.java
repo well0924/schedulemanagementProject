@@ -18,7 +18,17 @@ public class ExceptionRoutingScheduleController {
 
     @GetMapping("/schedule-exception")
     public void scheduleException() {
-        throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_NOT_FOUND);
+        throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_NOT_FOUND, 10L);
+    }
+
+    @GetMapping("/invalid-time")
+    public void invalidTime() {
+        throw new ScheduleCustomException(ScheduleErrorCode.START_TIME_AFTER_END_TIME_EXCEPTION);
+    }
+
+    @GetMapping("/bulk-not-owner")
+    public void bulkNotOwner() {
+        throw new ScheduleCustomException(ScheduleErrorCode.INVALID_OWNER_FOR_BULK);
     }
 
     @GetMapping("/not-owner")

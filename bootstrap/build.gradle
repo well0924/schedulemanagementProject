@@ -114,6 +114,8 @@ dependencies {
 	implementation 'org.flywaydb:flyway-mysql'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation 'org.springframework.security:spring-security-config'
+	testImplementation 'org.springframework.security:spring-security-oauth2-core'
     // Mockito
     testImplementation 'org.mockito:mockito-core:5.8.0'
 	testImplementation 'org.testcontainers:testcontainers:1.19.3'

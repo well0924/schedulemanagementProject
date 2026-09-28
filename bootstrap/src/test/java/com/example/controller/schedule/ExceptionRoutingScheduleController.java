@@ -21,6 +21,11 @@ public class ExceptionRoutingScheduleController {
         throw new ScheduleCustomException(ScheduleErrorCode.SCHEDULE_NOT_FOUND);
     }
 
+    @GetMapping("/not-owner")
+    public void notOwner() {
+        throw new ScheduleCustomException(ScheduleErrorCode.NOT_SCHEDULE_OWNER);
+    }
+
     @GetMapping("/db-violation")
     public void dbViolation() {
         throw new DataIntegrityViolationException("uk_member_starttime");

@@ -19,6 +19,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Profile("!test")
@@ -32,6 +33,7 @@ public class NotificationDlqRetryScheduler {
     private final WebPushService webPushService;
     private final ObjectMapper objectMapper;
     private static final int MAX_RETRY_COUNT = 5;
+    private static final Set<String> HANDLED_TYPES = Set.of("NOTIFICATION", "WEB_PUSH");
     public static int EXECUTION_COUNT = 0;
     private final Counter retryCounter = Metrics.counter("kafka.actual.retry.count");
 
@@ -40,9 +42,13 @@ public class NotificationDlqRetryScheduler {
     @SchedulerLock(name = "retryNotificationDlq", lockAtMostFor = "PT10M", lockAtLeastFor = "PT2S")
     public void retryNotifications() {
 
+        // 알림 계열(NOTIFICATION, WEB_PUSH)만 처리. MEMBER_SIGNUP은 MemberSignUpDlqRetryScheduler 담당이며,
+        // 여기서 함께 집으면 NotificationEvents 역직렬화 실패로 재시도 횟수가 이중으로 올라가거나
+        // 두 스케줄러가 같은 행을 저장하면서 성공 처리가 덮어써진다.
         List<FailMessageModel> failMessageModels = failedMessageService
                 .findReadyToRetry()
                 .stream()
+                .filter(e -> HANDLED_TYPES.contains(e.getMessageType()))
                 .toList();
         log.info("List::"+failMessageModels);
         log.info("size:::"+failMessageModels.size());

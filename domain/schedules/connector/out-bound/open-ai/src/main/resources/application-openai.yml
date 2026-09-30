@@ -2,10 +2,17 @@ openai:
   base-url: ${OPENAI_BASE_URL}
   secret-key: ${OPENAI_SECRET_KEY}
   model: ${MODEL}
-  timeout:
-    connect: 3000   # ms
-    read: 10000     # ms
-    write: 10000    # ms
+  # OpenAiWebClientConfig가 읽는 키 (이전의 openai.timeout.* 는 어디에서도 읽지 않아 기본값이 쓰이고 있었다)
+  http:
+    # 같은 WebClient를 쓰는 일정 추천(비스트리밍)은 답변을 다 만든 뒤에야 첫 바이트가 오므로 30초로 둔다.
+    # 스트리밍의 지연 판단은 아래 stream.* 청크 타임아웃이 맡는다.
+    connect-timeout-ms: 3000
+    response-timeout-ms: 30000
+    read-timeout-ms: 30000
+    write-timeout-ms: 10000
+  stream:
+    first-chunk-timeout-ms: 10000  # 첫 SSE 청크까지
+    idle-chunk-timeout-ms: 15000   # 청크 사이 공백
 
 resilience4j:
   circuitbreaker:
@@ -17,3 +24,16 @@ resilience4j:
         waitDurationInOpenState: 10s       # 서킷이 열리고 10초 뒤에 다시 시도(Half-open)
         slowCallDurationThreshold: 3000ms  # 3초 이상 걸리면 느린 호출로 간주
         slowCallRateThreshold: 50          # 느린 호출이 50% 이상이면 서킷 오픈
+      # 챗봇 스트리밍 전용. 스트림은 첫 토큰부터 마지막 토큰까지 전체 시간이 호출 시간으로 잡혀
+      # 긴 답변이 느린 호출로 몰리지 않도록 slow-call 기준을 넉넉히 두고, 지연은 청크 타임아웃으로 판단한다.
+      openAiChat:
+        registerHealthIndicator: true
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5            # 5번 이상 호출된 뒤부터 실패율 판단
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        slowCallDurationThreshold: 60s
+        slowCallRateThreshold: 100

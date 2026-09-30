@@ -35,8 +35,8 @@ public class OpenAiWebClientConfig {
                 .responseTimeout(Duration.ofMillis(responseTimeoutMs))
                 // 3) 소켓 레벨 read/write 타임아웃
                 .doOnConnected(conn -> conn
-                        .addHandlerLast(new ReadTimeoutHandler(readTimeoutMs, TimeUnit.SECONDS) )
-                        .addHandlerLast(new WriteTimeoutHandler(writeTimeoutMs, TimeUnit.SECONDS))
+                        .addHandlerLast(new ReadTimeoutHandler(readTimeoutMs, TimeUnit.MILLISECONDS))
+                        .addHandlerLast(new WriteTimeoutHandler(writeTimeoutMs, TimeUnit.MILLISECONDS))
                 );
 
         return builder

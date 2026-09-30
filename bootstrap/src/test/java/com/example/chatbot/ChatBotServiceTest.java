@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -161,8 +162,8 @@ public class ChatBotServiceTest {
     }
 
     @Test
-    @DisplayName("OpenAI 호출 실패 시 에러 전파")
-    void streamChat_openAiError_propagateError() {
+    @DisplayName("OpenAI 호출 실패 시 대체 응답을 보내고 대화 이력은 저장하지 않음")
+    void streamChat_openAiError_fallbackWithoutHistory() {
         // given
         given(cachePort.getChatHistory(memberId)).willReturn(List.of());
         given(scheduleRepositoryPort.findAllByMemberId(any(), any()))
@@ -174,7 +175,31 @@ public class ChatBotServiceTest {
 
         // when & then
         StepVerifier.create(chatBotService.streamChat(memberId, userMessage))
-                .expectErrorMessage("OpenAI 호출 실패")
-                .verify();
+                .expectNextSequence(ChatBotService.FALLBACK_TOKENS)
+                .verifyComplete();
+
+        verify(chatEventPort, never()).publish(any());
+    }
+
+    @Test
+    @DisplayName("답변 도중 스트림이 끊기면 받은 토큰 뒤에 대체 응답을 붙이고, 불완전한 답변은 저장하지 않음")
+    void streamChat_midStreamError_noPartialHistory() {
+        // given
+        given(cachePort.getChatHistory(memberId)).willReturn(List.of());
+        given(scheduleRepositoryPort.findAllByMemberId(any(), any()))
+                .willReturn(new PageImpl<>(List.of()));
+        given(openAiRequestBuilder.buildWithMessages(any()))
+                .willReturn(OpenAiRequest.builder().model("gpt-4o").messages(List.of()).build());
+        given(openAiWebClient.streamChatCompletion(any()))
+                .willReturn(Flux.concat(Flux.just("이번 주 ", "일정은"),
+                        Flux.error(new RuntimeException("연결 끊김"))));
+
+        // when & then
+        StepVerifier.create(chatBotService.streamChat(memberId, userMessage))
+                .expectNext("이번 주 ", "일정은")
+                .expectNextSequence(ChatBotService.FALLBACK_TOKENS)
+                .verifyComplete();
+
+        verify(chatEventPort, never()).publish(any());
     }
 }

@@ -17,6 +17,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+
 @Slf4j
 @Component
 public class OpenAiWebClient {
@@ -28,15 +30,25 @@ public class OpenAiWebClient {
 
     private final ObjectMapper objectMapper;
 
+    // 스트리밍 전용 서킷브레이커 (application-openai.yml의 instances.openAiChat 설정을 사용)
+    public static final String CHAT_CIRCUIT_BREAKER = "openAiChat";
+
     private final CircuitBreaker circuitBreaker;
 
+    // 첫 SSE 청크까지 허용 시간, 이후 청크 사이 허용 시간
+    private final Duration firstChunkTimeout;
+    private final Duration idleChunkTimeout;
 
     public OpenAiWebClient(@Qualifier("openAiWebClientInternal") WebClient openAiWebClient,
                            ObjectMapper objectMapper,
-                           CircuitBreakerRegistry registry) {
+                           CircuitBreakerRegistry registry,
+                           @Value("${openai.stream.first-chunk-timeout-ms:10000}") long firstChunkTimeoutMs,
+                           @Value("${openai.stream.idle-chunk-timeout-ms:15000}") long idleChunkTimeoutMs) {
         this.openAiWebClient = openAiWebClient;
         this.objectMapper = objectMapper;
-        this.circuitBreaker = registry.circuitBreaker("openai.yml");
+        this.circuitBreaker = registry.circuitBreaker(CHAT_CIRCUIT_BREAKER);
+        this.firstChunkTimeout = Duration.ofMillis(firstChunkTimeoutMs);
+        this.idleChunkTimeout = Duration.ofMillis(idleChunkTimeoutMs);
     }
 
     public Mono<OpenAiResponse> getChatCompletion(OpenAiRequest request) {
@@ -59,6 +71,9 @@ public class OpenAiWebClient {
     }
 
     // 챗봇 스트리밍
+    // 실패(HTTP 오류, 청크 타임아웃, 서킷 OPEN)는 그대로 에러로 내보낸다.
+    // 대체 응답은 호출하는 쪽(ChatBotService)이 만든다. 여기서 대체 토큰을 섞으면
+    // 정상 응답처럼 흘러가 대화 이력에 AI 답변으로 저장되기 때문이다.
     public Flux<String> streamChatCompletion(OpenAiRequest request) {
         Flux<String> chatFlux = openAiWebClient.post()
                 .uri("/chat/completions")
@@ -72,16 +87,15 @@ public class OpenAiWebClient {
                                 .flatMap(body -> Mono.error(new RuntimeException("OpenAI 오류: " + body)))
                 )
                 .bodyToFlux(String.class)
+                // 첫 청크가 늦거나 도중에 끊기면 실패로 본다 (서킷브레이커 실패로 집계되도록 CB보다 앞에 둔다)
+                .timeout(Mono.delay(firstChunkTimeout), chunk -> Mono.delay(idleChunkTimeout))
                 .filter(data -> !data.isBlank() && !data.equals("[DONE]"))
                 .mapNotNull(this::extractToken);
-        // Flux 전체 스트림에 대해 서킷 브레이커 적용
+
         return chatFlux
-                .transformDeferred(CircuitBreakerOperator.of(circuitBreaker)) // 서킷 브레이커 적용
-                .onErrorResume(e -> {
-                    log.error("[OpenAI 서킷 오픈 또는 에러 발생] Fallback 메시지 반환. 사유: {}", e.getMessage());
-                    return Flux.just("죄송합니다. ", "현재 ", "AI ", "연결이 ", "원활하지 ", "않습니다. ",
-                            "잠시 ", "후 ", "다시 ", "시도해 ", "주세요.");
-                });
+                .transformDeferred(CircuitBreakerOperator.of(circuitBreaker))
+                .doOnError(e -> log.warn("[OpenAI 스트리밍 실패] circuit={}, reason={}",
+                        circuitBreaker.getState(), e.toString()));
     }
 
     // SSE 데이터에서 텍스트 토큰만 추출

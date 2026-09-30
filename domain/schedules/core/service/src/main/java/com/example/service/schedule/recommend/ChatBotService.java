@@ -163,8 +163,9 @@ public class ChatBotService {
                                         .subscribeOn(Schedulers.boundedElastic()))
                                 .timeout(Duration.ofSeconds(5)) // 저장 프로세스에 타임아웃 부여
                                 .onErrorResume(e -> {
-                                    // 저장 실패 시 로그만 남기고 사용자 응답은 유지
-                                    log.error("[Outbox 저장 실패] memberId={}, reason={}", memberId, e.getMessage());
+                                    // 스트림이 실패하면 collect도 실패해 여기로 온다 → 불완전한 답변은 저장하지 않는다.
+                                    // 저장 자체가 실패한 경우에도 로그만 남기고 사용자 응답은 유지
+                                    log.warn("[대화 이력 저장 생략] memberId={}, reason={}", memberId, e.toString());
                                     return Mono.empty();
                                 })
                                 .then();
@@ -172,8 +173,16 @@ public class ChatBotService {
                                 .thenMany(Flux.empty()));
                     });
 
+        }).onErrorResume(e -> {
+            // OpenAI 실패·서킷 OPEN 시 사용자에게는 안내 문구를 보내되, 이력으로는 남기지 않는다
+            log.warn("[챗봇 대체 응답] memberId={}, reason={}", memberId, e.toString());
+            return Flux.fromIterable(FALLBACK_TOKENS);
         });
     }
+
+    public static final List<String> FALLBACK_TOKENS = List.of(
+            "죄송합니다. ", "현재 ", "AI ", "연결이 ", "원활하지 ", "않습니다. ",
+            "잠시 ", "후 ", "다시 ", "시도해 ", "주세요.");
 
     /**
      * 최근 일정 + 카테고리 빈도에 등장하는 categoryId들의 이름을 조회한다.

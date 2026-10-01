@@ -25,6 +25,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PatternAnalysisConsume implements KafkaEventConsumer<ChatCompletedEvent> {
 
+    // 중복 처리 판단 단위. 리스너 groupId와 같은 값이어야 한다.
+    private static final String CONSUMER = "pattern-analysis";
 
     private final ScheduleRecommendationCachePort scheduleRecommendationCachePort;
     private final ScheduleRepositoryPort scheduleRepositoryPort;
@@ -35,7 +37,7 @@ public class PatternAnalysisConsume implements KafkaEventConsumer<ChatCompletedE
     @Counted(value = "kafak.consumer.chat.pattern.count", description = "사용자 패턴 처리 횟수")
     @KafkaListener(
             topics = "chat-history",
-            groupId = "pattern-analysis",  // groupId 다르면 같은 토픽 독립 소비
+            groupId = CONSUMER,  // groupId 다르면 같은 토픽 독립 소비
             containerFactory = "chatKafkaListenerFactory"
     )
     @Override
@@ -43,7 +45,7 @@ public class PatternAnalysisConsume implements KafkaEventConsumer<ChatCompletedE
     public void handle(ChatCompletedEvent event, Acknowledgment ack) {
         log.info("[HistorySaveConsumer] memberId={}", event.getMemberId());
 
-        if (processedEventService.isAlreadyProcessed(event.getEventId())) {
+        if (processedEventService.isAlreadyProcessed(CONSUMER, event.getEventId())) {
             log.info("⚠️ 이미 처리된 이벤트 (Skip): {}", event.getEventId());
             ack.acknowledge(); // 중복은 성공으로 간주하고 넘김
             return;
@@ -51,7 +53,7 @@ public class PatternAnalysisConsume implements KafkaEventConsumer<ChatCompletedE
 
         try {
             KafkaMDCUtil.initMDC(event);
-            processedEventService.saveProcessedEvent(event.getEventId());
+            processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
 
             // 핵심 분석 로직들을 private 메서드로 격리
             // 1. 시간대 선호도 누적 분석

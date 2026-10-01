@@ -44,7 +44,7 @@ public class ChatHistorySaveConsumerTest {
 
     @BeforeEach
     void setUp() {
-        when(processedEventService.isAlreadyProcessed(anyString())).thenReturn(false);
+        when(processedEventService.isAlreadyProcessed(anyString(), anyString())).thenReturn(false);
     }
 
     @Test

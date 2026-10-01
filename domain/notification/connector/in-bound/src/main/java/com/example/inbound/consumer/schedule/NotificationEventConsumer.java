@@ -33,6 +33,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class NotificationEventConsumer implements KafkaEventConsumer<NotificationEvents> {
 
+    // 중복 처리 판단 단위. 리스너 groupId와 같은 값이어야 한다.
+    private static final String CONSUMER = "notification-group";
+
     private final NotificationService notificationService;
 
     private final WebPushService webPushService;
@@ -51,7 +54,7 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
     @Counted(value = "kafka.consumer.notification.count", description = "알림 Kafka 메시지 처리 횟수")
     @KafkaListener(
             topics = "notification-events",
-            groupId = "notification-group",
+            groupId = CONSUMER,
             containerFactory = "notificationKafkaListenerFactory",
             concurrency = "3")
     public void handle(NotificationEvents event, Acknowledgment ack) {
@@ -77,7 +80,7 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
             }
 
             // EOS 중복 체크
-            if (processedEventService.isAlreadyProcessed(event.getEventId())) {
+            if (processedEventService.isAlreadyProcessed(CONSUMER, event.getEventId())) {
                 log.info("⚠️ 이미 처리된 이벤트 무시: {}", event.getEventId());
                 ack.acknowledge();
                 return;
@@ -111,7 +114,7 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
                 }
             }
             // 처리 완료후 이벤트 저장
-            processedEventService.saveProcessedEvent(event.getEventId());
+            processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
             // 비지니스 로직 완료후 카프카 커밋
             ack.acknowledge();
         } catch (CustomExceptionHandler ex) {

@@ -798,7 +798,7 @@ public class KafkaIntegrationTest {
             executorService.execute(() -> {
                 try {
                     // 멱등성 로직 호출 (eventId 기반 저장)
-                    processedEventService.saveProcessedEvent(duplicateEventId);
+                    processedEventService.saveProcessedEvent("notification-group", duplicateEventId);
                     successCount.getAndIncrement();
                 } catch (Exception e) {
                     // Unique 제약 조건 위반 등으로 에러가 나야 정상

@@ -43,6 +43,12 @@ public class OutboxEventEntity {
 
     private LocalDateTime sentAt;
 
+    // 발행 선점 정보. 한 번의 UPDATE로 여러 건을 선점할 때 이번 실행의 배치 ID를 찍는다.
+    // claimedAt이 오래된 선점(발행 중 서버가 죽은 경우)은 다음 실행이 다시 가져간다.
+    private String claimId;
+
+    private LocalDateTime claimedAt;
+
     public void increaseRetryCount() {
         this.retryCount++;
     }

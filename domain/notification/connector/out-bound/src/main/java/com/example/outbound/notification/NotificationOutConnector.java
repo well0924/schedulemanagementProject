@@ -89,6 +89,11 @@ public class NotificationOutConnector implements NotificationRepositoryPort {
         notificationRepository.markAsReminderSent(id);
     }
 
+    // 리마인드 발송 선점. true면 이 호출이 발송 권한을 얻었다.
+    public boolean claimReminder(Long id) {
+        return notificationRepository.claimReminder(id) == 1;
+    }
+
     public void deleteOldSentReminders(String type,LocalDateTime threshold) {
         notificationRepository.deleteOldSentReminders(type,threshold);
     }

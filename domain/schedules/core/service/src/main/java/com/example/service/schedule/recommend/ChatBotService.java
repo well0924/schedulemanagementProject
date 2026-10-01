@@ -160,8 +160,11 @@ public class ChatBotService {
                                             log.info("발행될 이벤트 ID: {}", event.getEventId());
                                             chatEventPort.publish(event);
                                         })
-                                        .subscribeOn(Schedulers.boundedElastic()))
-                                .timeout(Duration.ofSeconds(5)) // 저장 프로세스에 타임아웃 부여
+                                        .subscribeOn(Schedulers.boundedElastic())
+                                        // 타임아웃은 저장 단계에만 건다. 체인 끝에 두면 답변을 모으는 시간까지 포함돼
+                                        // 5초 넘게 스트리밍되는 긴 답변은 이력이 저장되지 않았다.
+                                        // (답변 스트림 자체의 지연은 OpenAiWebClient의 청크 타임아웃이 판단한다)
+                                        .timeout(Duration.ofSeconds(5)))
                                 .onErrorResume(e -> {
                                     // 스트림이 실패하면 collect도 실패해 여기로 온다 → 불완전한 답변은 저장하지 않는다.
                                     // 저장 자체가 실패한 경우에도 로그만 남기고 사용자 응답은 유지

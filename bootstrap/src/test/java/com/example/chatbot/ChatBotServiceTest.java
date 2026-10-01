@@ -23,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -159,6 +160,31 @@ public class ChatBotServiceTest {
         assertThat(event.getMemberId()).isEqualTo(memberId);
         assertThat(event.getUserMessage()).isEqualTo(userMessage);
         assertThat(event.getAssistantResponse()).isEqualTo("안녕하세요"); // 누적값
+    }
+
+    @Test
+    @DisplayName("답변 스트리밍이 5초를 넘겨도 끝나면 대화 이력을 저장한다")
+    void streamChat_longStream_stillPublishesHistory() {
+        // given
+        given(cachePort.getChatHistory(memberId)).willReturn(List.of());
+        given(scheduleRepositoryPort.findAllByMemberId(any(), any()))
+                .willReturn(new PageImpl<>(List.of()));
+        given(openAiRequestBuilder.buildWithMessages(any()))
+                .willReturn(OpenAiRequest.builder().model("gpt-4o").messages(List.of()).build());
+        // 토큰 3개가 2.1초 간격으로 와서 전체 약 6.3초 (예전에는 체인 끝 5초 타임아웃에 걸려 저장이 생략됐다)
+        // 저장 타임아웃(5초)과 subscribeOn 스케줄링의 실제 순서를 보려고 가상 시간이 아닌 실제 시간으로 돌린다.
+        given(openAiWebClient.streamChatCompletion(any()))
+                .willReturn(Flux.just("긴 ", "답변 ", "입니다").delayElements(Duration.ofMillis(2100)));
+
+        // when & then
+        StepVerifier.create(chatBotService.streamChat(memberId, userMessage))
+                .expectNext("긴 ", "답변 ", "입니다")
+                .expectComplete()
+                .verify(Duration.ofSeconds(15));
+
+        ArgumentCaptor<ChatCompletedEvent> eventCaptor = ArgumentCaptor.forClass(ChatCompletedEvent.class);
+        verify(chatEventPort, times(1)).publish(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().getAssistantResponse()).isEqualTo("긴 답변 입니다");
     }
 
     @Test

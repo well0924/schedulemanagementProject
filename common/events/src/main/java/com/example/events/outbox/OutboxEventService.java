@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -126,5 +127,35 @@ public class OutboxEventService {
         // 1을 반환하면 락 성공, 0이면 이미 다른 곳에서 선점 중
         int updatedRows = outboxEventRepository.tryLockAndIncrement(id);
         return updatedRows > 0;
+    }
+
+    // ---- 배치 선점 방식 (2026-10-02) ----
+    // 각 단계는 짧은 트랜잭션으로 끝내고 커밋한다. Kafka 전송은 트랜잭션 밖에서 하므로
+    // 발행 중에 DB 커넥션이나 행 락을 잡고 있지 않는다.
+
+    /**
+     * 미발행 이벤트를 최대 limit건 선점하고, 선점한 행을 돌려준다.
+     * staleAfter보다 오래 선점된 채 남은 행(발행 도중 서버가 죽은 경우)도 다시 가져온다.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public List<OutboxEventEntity> claimBatch(String claimId, int limit, Duration staleAfter) {
+        LocalDateTime now = LocalDateTime.now();
+        int claimed = outboxEventRepository.claimBatch(claimId, now, now.minus(staleAfter), limit);
+        if (claimed == 0) {
+            return List.of();
+        }
+        return outboxEventRepository.findByClaimIdOrderByCreatedAtAsc(claimId);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markSent(List<String> ids) {
+        if (ids.isEmpty()) return;
+        outboxEventRepository.markSentByIds(ids, LocalDateTime.now());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void releaseClaims(List<String> ids) {
+        if (ids.isEmpty()) return;
+        outboxEventRepository.releaseClaims(ids);
     }
 }

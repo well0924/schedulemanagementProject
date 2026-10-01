@@ -49,4 +49,10 @@ public interface NotificationRepository extends JpaRepository<Notification,Long>
     @Modifying
     @Query("update Notification n set n.isReminderSent = true where n.id = :id")
     void markAsReminderSent(@Param("id")  Long id);
+
+    // 9. 리마인드 발송 선점 (아직 안 보낸 것만 true로 바꾼다)
+    // 바뀐 행이 1이면 이 실행이 발송 권한을 얻은 것이고, 0이면 다른 서버가 이미 가져간 것이다.
+    @Modifying
+    @Query("update Notification n set n.isReminderSent = true where n.id = :id and n.isReminderSent = false")
+    int claimReminder(@Param("id") Long id);
 }

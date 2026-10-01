@@ -132,6 +132,7 @@ dependencies {
 	testImplementation 'org.testcontainers:mysql:1.19.3'
 	testImplementation 'com.github.tomakehurst:wiremock-jre8-standalone:2.35.0'
 	testImplementation 'io.projectreactor:reactor-test'
+	testImplementation 'io.jsonwebtoken:jjwt-api:0.11.5' // WebSocketAuthInterceptorTest에서 Claims 목 생성
 	// Redis
 	testImplementation 'com.redis:testcontainers-redis:2.2.2'
 	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.3'

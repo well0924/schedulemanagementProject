@@ -10,6 +10,7 @@ import com.example.notification.model.NotificationModel;
 import com.example.outbound.notification.NotificationOutConnector;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.MDC;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -28,7 +29,10 @@ public class ReminderNotificationService {
     private final OutboxEventService outboxEventService;
 
 
+    // 앱 서버가 여러 대라 락 없이 돌면 같은 리마인드를 서버마다 한 번씩 보낸다(실제로 2번 발송됨).
+    // ShedLock으로 한 서버만 실행하고, 락이 겹치는 순간에 대비해 행 단위 선점(claimReminder)도 함께 건다.
     @Scheduled(cron = "0 * * * * *")
+    @SchedulerLock(name = "reminderNotificationLock", lockAtMostFor = "PT50S", lockAtLeastFor = "PT5S")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void sendReminderNotifications() {
         LocalDateTime now = LocalDateTime.now();
@@ -38,6 +42,11 @@ public class ReminderNotificationService {
         for (NotificationModel model : dueReminders) {
             try {
                 if (model.isReadyToSend(now)) {
+                    // 먼저 선점한다. 다른 서버가 이미 가져갔으면(0행) 건너뛴다.
+                    if (!notificationOutConnector.claimReminder(model.getId())) {
+                        log.info("리마인드 선점 실패(다른 실행이 처리 중): notificationId={}", model.getId());
+                        continue;
+                    }
                     MDC.put("receiverId", String.valueOf(model.getUserId()));
                     MDC.put("scheduleId", String.valueOf(model.getScheduleId()));
                     MDC.put("notificationType", String.valueOf(ScheduleActionType.SCHEDULE_REMINDER));
@@ -52,7 +61,6 @@ public class ReminderNotificationService {
                             model.getId().toString(),
                             event.getNotificationType().name()
                     );
-                    notificationOutConnector.markAsReminderSent(model.getId());
                     notificationOutConnector.markAsSent(model.getId());
                 }
             } finally {

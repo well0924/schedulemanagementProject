@@ -36,6 +36,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.enableSimpleBroker("/topic");
         registry.setApplicationDestinationPrefixes("/app");
+        // 브로커가 스레드 풀로 내보내면 같은 세션에 가는 메시지도 순서가 바뀐다(챗봇 토큰 글자 뒤섞임).
+        // 세션별로 발행 순서를 지키게 한다.
+        registry.setPreservePublishOrder(true);
     }
 
     @Override

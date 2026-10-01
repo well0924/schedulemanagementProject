@@ -30,6 +30,9 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<MemberSignUpKafkaEvent> {
 
+    // 중복 처리 판단 단위. 리스너 groupId와 같은 값이어야 한다.
+    private static final String CONSUMER = "member-group";
+
     private final EmailService emailService;
 
     private final NotificationService notificationService;
@@ -44,7 +47,7 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
     @Counted(value = "kafka.consumer.signup.count", description = "회원가입 Kafka 메시지 수신 횟수")
     @KafkaListener(
             topics = "member-signup-events",
-            groupId = "member-group",
+            groupId = CONSUMER,
             containerFactory = "memberKafkaListenerFactory"
     )
     @Override
@@ -53,7 +56,7 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
         try {
             KafkaMDCUtil.initMDC(event);
             //3. 멱등성 중복 처리 로직
-            if (processedEventService.isAlreadyProcessed(event.getEventId())) {
+            if (processedEventService.isAlreadyProcessed(CONSUMER, event.getEventId())) {
                 log.info("⚠️ 이미 처리된 이벤트 무시: {}", event.getEventId());
                 throw new CustomExceptionHandler("중복 이벤트 처리됨: " + event.getEventId(), ErrorCode.EVENT_DUPLICATE);
             }
@@ -70,7 +73,7 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
             String message = objectMapper.writeValueAsString(event);
             simpMessagingTemplate.convertAndSend("/topic/memberSignUp/" + event.getReceiverId(), message);
             //6.이벤트 저장
-            processedEventService.saveProcessedEvent(event.getEventId());
+            processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
             //7.최종 성공 커밋
             ack.acknowledge();
         } catch (CustomExceptionHandler ex) {

@@ -12,6 +12,8 @@ import com.example.model.schedules.SchedulesModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -73,7 +75,10 @@ public class ScheduleEventListener {
     // (메인 트랜잭션의 커넥션 점유시간 단축 목적, 2026-09-11).
     // 트레이드오프: 커밋 이후 실패하면 자동 재시도가 없다 - 실패 시 로그로만 추적한다.
     // 기존 direct-call 동작과 동일하게 첫 번째 스케줄에 대해서만 리마인더를 생성한다.
+    // AFTER_COMMIT 시점에는 원래 트랜잭션이 이미 커밋됐지만 아직 묶여 있어서, 기본 전파(REQUIRED)로 저장하면
+    // 그 끝난 트랜잭션에 참여한 채 커밋되지 않고 버려진다(예외도 없음). 반드시 새 트랜잭션에서 저장한다.
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleReminderRegistration(ScheduleDomainEvent event) {
         if (event.actionType() != ScheduleActionType.SCHEDULE_CREATED
                 && event.actionType() != ScheduleActionType.SCHEDULE_UPDATE) {

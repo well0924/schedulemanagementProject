@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ChatHistorySaveConsumer implements KafkaEventConsumer<ChatCompletedEvent> {
 
+    // 중복 처리 판단 단위. 리스너 groupId와 같은 값이어야 한다.
+    private static final String CONSUMER = "chat-history-save";
+
     private final ChatHistoryPort chatHistoryRepository;
     private final ScheduleRecommendationCachePort cacheService;
     private final ProcessedEventService processedEventService;
@@ -30,7 +33,7 @@ public class ChatHistorySaveConsumer implements KafkaEventConsumer<ChatCompleted
     @Counted(value = "kafka.consumer.chat.save.count", description = "이력 저장 처리 횟수")
     @KafkaListener(
             topics = "chat-history",
-            groupId = "chat-history-save",
+            groupId = CONSUMER,
             containerFactory = "chatKafkaListenerFactory"
     )
     @Override
@@ -38,7 +41,7 @@ public class ChatHistorySaveConsumer implements KafkaEventConsumer<ChatCompleted
     public void handle(ChatCompletedEvent event, Acknowledgment ack) {
         log.info("[ChatHistorySaveConsumer] memberId={}", event.getMemberId());
 
-        if (processedEventService.isAlreadyProcessed(event.getEventId())) {
+        if (processedEventService.isAlreadyProcessed(CONSUMER, event.getEventId())) {
             log.info("⚠️ 이미 처리된 이벤트 (Skip): {}", event.getEventId());
             ack.acknowledge(); // 중복은 성공으로 간주하고 넘김
             return;
@@ -47,7 +50,7 @@ public class ChatHistorySaveConsumer implements KafkaEventConsumer<ChatCompleted
         try {
             KafkaMDCUtil.initMDC(event);
 
-            processedEventService.saveProcessedEvent(event.getEventId());
+            processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
             // MySQL 영구 저장
             chatHistoryRepository.save(ChatHistoryModel.builder()
                     .memberId(event.getMemberId())

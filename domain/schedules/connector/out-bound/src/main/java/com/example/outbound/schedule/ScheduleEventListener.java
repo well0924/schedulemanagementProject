@@ -12,8 +12,6 @@ import com.example.model.schedules.SchedulesModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -71,14 +69,12 @@ public class ScheduleEventListener {
         }
     }
 
-    // 리마인더는 outbox처럼 원자성이 필요하지 않은 부가 기능이라 AFTER_COMMIT으로 분리
-    // (메인 트랜잭션의 커넥션 점유시간 단축 목적, 2026-09-11).
-    // 트레이드오프: 커밋 이후 실패하면 자동 재시도가 없다 - 실패 시 로그로만 추적한다.
+    // 리마인더는 Outbox와 같은 트랜잭션(BEFORE_COMMIT)에서 저장한다 (2026-10-03).
+    // 이전 AFTER_COMMIT + REQUIRES_NEW 방식은 원래 커넥션을 반납하기 전에 커넥션을 하나 더 요청해,
+    // 요청 하나가 커넥션 2개를 잡았다. 490VU에서 풀이 바닥나 15초 타임아웃과 502가 발생했다.
+    // 생성은 INSERT 1건이라 트랜잭션 안에 둬도 부담이 작고, 일정과 리마인더가 함께 커밋/롤백된다.
     // 기존 direct-call 동작과 동일하게 첫 번째 스케줄에 대해서만 리마인더를 생성한다.
-    // AFTER_COMMIT 시점에는 원래 트랜잭션이 이미 커밋됐지만 아직 묶여 있어서, 기본 전파(REQUIRED)로 저장하면
-    // 그 끝난 트랜잭션에 참여한 채 커밋되지 않고 버려진다(예외도 없음). 반드시 새 트랜잭션에서 저장한다.
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void handleReminderRegistration(ScheduleDomainEvent event) {
         if (event.actionType() != ScheduleActionType.SCHEDULE_CREATED
                 && event.actionType() != ScheduleActionType.SCHEDULE_UPDATE) {
@@ -88,16 +84,12 @@ public class ScheduleEventListener {
             return;
         }
 
+        // 같은 트랜잭션이라 예외를 삼키지 않는다. 실패하면 일정 저장도 함께 롤백된다.
         SchedulesModel target = event.schedules().get(0);
-        try {
-            if (event.actionType() == ScheduleActionType.SCHEDULE_CREATED) {
-                notificationInterfaces.createReminder(target); // DELETE 없이 INSERT만
-            } else {
-                notificationInterfaces.upsertReminder(target); // 기존 DELETE+INSERT
-            }
-        } catch (Exception e) {
-            log.error("[리마인더 생성 실패] AFTER_COMMIT이라 자동 재시도 없음 - scheduleId={}, memberId={}, error={}",
-                    target.getId(), target.getMemberId(), e.getMessage(), e);
+        if (event.actionType() == ScheduleActionType.SCHEDULE_CREATED) {
+            notificationInterfaces.createReminder(target); // DELETE 없이 INSERT만
+        } else {
+            notificationInterfaces.upsertReminder(target); // 기존 DELETE+INSERT
         }
     }
 

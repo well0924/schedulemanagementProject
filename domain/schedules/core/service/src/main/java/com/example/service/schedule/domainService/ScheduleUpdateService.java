@@ -34,7 +34,7 @@ public class ScheduleUpdateService {
         RepeatUpdateType t = Optional.ofNullable(updateType).orElse(RepeatUpdateType.SINGLE);
         List<SchedulesModel> result = repeatUpdateRegistry.dispatch(t, existing, model);
 
-        // 리마인드 알림은 ScheduleEventListener의 AFTER_COMMIT 단계에서 처리 (2026-09-11)
+        // 리마인드 알림은 ScheduleEventListener에서 같은 트랜잭션(BEFORE_COMMIT)으로 저장 (2026-10-03)
         domainEventPublisher.publish(result, ScheduleActionType.SCHEDULE_UPDATE);
         return result.get(0);
     }

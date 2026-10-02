@@ -3,43 +3,28 @@ Daily Line은 사용자의 행동 패턴과 빈 시간을 분석해 최적의 �
 > 
 > 본 프로젝트는 단순 CRUD 구현을 넘어, 제한된 자원 환경에서 **시스템 임계점(Limit)을 파악하고, 데이터 정합성 보장 및 외부 API 장애 격리**를 목표로 아키텍처를 고도화한 프로젝트입니다.
 
-**제작 기간:** 2025.01 ~ 2026.09
+**제작 기간:** 2025.01 ~ 2026.10
 
 - MVP 기본 구현: 2025.01 ~ 2025.03
 - 1차 고도화 (메시지 무결성): 2025.04 ~ 2025.09
 - 2차 고도화 (분산 환경 전환): 2026.04 ~ 2026.06
 - 3차 고도화 (병목 재규명 및 성능 개선): 2026.09
+- 4차 고도화 (Mixed-flow 부하 테스트 및 운영 점검): 2026.09 ~ 2026.10
 
-**배포 환경:** AWS EC2 + GitHub Actions
-
-**모니터링:** Grafana, Prometheus, Loki, OpenTelemetry, Tempo
-
----
-
-## 📌 핵심 성과 요약
-
-90VU 부하 환경에서 CAS 도입과 5차례의 근본 원인 추적(트랜잭션 점유시간, 인덱스 불일치, 테스트 데이터 오염, Outbox 폴러 드레인 한계)을 거쳐, **동일 인프라 조건에서 붕괴 없이 3배 처리량을 달성**했습니다. 상세 과정은 아래 "성능 검증" 섹션과 [트러블슈팅 시리즈](https://codingweb.tistory.com/325)에 있습니다.
-
-| 지표 | 3편 (CAS 도입 전, 90VU 한계) | 최종 (CAS + 전체 개선 적용) |
-|------|------|------|
-| 처리량 | 84.3 TPS | **248.9 req/s** (2.9배) |
-| 에러율 | 8.04% | **0.00%** |
-| 평균 응답시간 | 1,225ms | **277ms** |
-| 붕괴 여부 | 1분 37초에 붕괴 | **재현되지 않음** |
-
-- **CAS 정합성 검증**: 새 테스트 없이 도입 이후(2026년 9월) 실제 데이터 전체 감사 → 중복/Stuck/유실 이벤트 **0건**
-- **Outbox 백로그**: 순간 2,000건까지 쌓여도 개선된 폴러가 정상 소화, 0으로 완전 수렴 확인
+- **프론트엔드:** [schedulemanagement-front](https://github.com/well0924/schedulemanagement-front)
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Language & Framework:** Java 17, Spring Boot, Spring Data JPA
-- **Database & Cache:** MySQL 8.0, Redis
-- **Message Broker:** Apache Kafka (KRaft mode, 3-Broker Cluster)
+- **Language & Framework:** Java 17, Spring Boot 3.2, Spring Data JPA
+- **Database & Cache:** MySQL 8, Redis, Flyway
+- **Message Broker:** Apache Kafka (KRaft mode, 3-Broker Cluster), ShedLock (Redis)
+- **Realtime & External:** WebSocket(STOMP), Web Push(VAPID), OpenAI API + Resilience4j, AWS S3 (PreSigned URL)
 - **Infra & CI/CD:** AWS EC2 (t3.micro 2GB), GitHub Actions, Docker(Google Jib을 통한 컨테이너 빌드 최적화), Nginx
-- **Observability:** OpenTelemetry, Prometheus, Grafana, Loki, Tempo,  (LGTM Stack)
-- **Test:** JMeter, TestContainers
+- **Observability:** OpenTelemetry, Prometheus, Grafana, Loki, Tempo (LGTM Stack)
+- **Test:** JUnit 5, TestContainers, WireMock, JMeter
+
 ---
 
 ## 🧱 아키텍처
@@ -62,244 +47,207 @@ AI 추천 엔진(OpenAI API)은 외부 의존성이 크고 모델 스펙이 수�
 
 <img width="953" height="641" alt="Image" src="https://github.com/user-attachments/assets/abb12326-8951-471f-96c9-42677dc6726f" />
 
-##  성능 검증 — 분산 아키텍처 한계 측정
+### 이벤트 로직
 
-App 2대 + Kafka 3-Broker 분산 환경에서 단계적으로 트래픽을 높이며
-시스템 임계점을 직접 찾아냈습니다.
+도메인 변경과 이벤트를 하나의 트랜잭션에 Outbox로 저장하고, 발행기가 Kafka로 전달합니다.  후속 처리(알림, 이메일, 챗봇 이력)는 컨슈머가 비동기로 맡습니다.
 
-> **스트레스 테스트로 진행한 이유:** 아래 모든 라운드는 think-time 없이 단일 API(일정 생성)를 반복 호출하는 **스트레스 테스트(한계점 규명)**입니다. 정상 트래픽 패턴을 재현하는 부하 테스트(Load Test)와는 목적이 다릅니다 — 먼저 시스템이 어디서, 왜 무너지는지를 극한 조건에서 찾아낸 뒤, 그 원인들을 걷어내고 나서야 여러 API가 think-time과 함께 섞이는 **Mixed-flow 부하 테스트**로 넘어가는 순서를 의도적으로 택했습니다(진행 예정).
-
-### 1단계: 50VU → 30VU → 50VU (안정 구간 확보)
-
-최초 50VU 시도에서 에러율 99.89% 발생.
-30VU로 후퇴하여 병목을 하나씩 제거한 뒤 50VU를 재달성했습니다.
-
-| 발견 병목 | 원인 | 해결 |
-|-----------|------|------|
-| HikariCP 포화 | 커넥션 풀 2대 합산 100개로 DB 임계치 초과 | 풀 사이즈 하향 + 빠른 회전 전략 |
-| Nginx 로드밸런싱 불균형 | keepalive로 한쪽 서버에만 부하 집중 | least_conn 알고리즘 도입 |
-| 인증 쿼리 미캐싱 | JwtFilter의 DB 조회가 캐싱 없이 반복되며 풀 경합 심화 | Redis 캐싱 도입으로 쿼리 자체 제거 |
-| Nginx FD 한계 | worker_connections 기본값(1024) 초과 | 4096으로 상향 + epoll 적용 |
-
-**50VU 최종 결과: 에러율 0.35%, 처리량 30 req/s**
-
-### 2단계: 60VU (에러율 16.35% → 0.05%)
-
-50VU 성공 후 60VU 도전. 6차례 실패와 개선을 반복했습니다.
-
-| 차수 | 조치 내역 | 에러율 | 조치 트리거 및 인과관계 |
-|:-----|:----------|:------:|:----------------------|
-| **1차** | 최초 60VU 테스트 (App 2대, Kafka 3대) | **16.35%** | 동시 요청 시 대량 에러 발생 및 병목 지점 탐색 시작 |
-| **2~3차** | **DB 데드락(Gap Lock) 해결:** Lock Ordering + Unique Index 설계 개선 | **8.1%** | **[트리거]** 동일 사용자의 동시 요청 시 무작위 Gap Lock 경합 관측<br>→ 인덱스 정렬 및 유니크 제약으로 에러율 절반 반감 |
-| **4차** | **트랜잭션 내 외부 I/O 격리:** 외부 API 호출 `@Async` 분리 + 재처리 테이블 구축 | **2.4%** | **[트리거]** 외부 API 응답 지연 시 HikariCP 커넥션 풀이 반환되지 않고 스레드가 묶이는 지표 확인<br>→ 트랜잭션 범위를 좁히고 외부 I/O 격리하여 커넥션 고갈 해소 |
-| **5~6차** | **Redis Pre-check 도입:** 불필요한 트랜잭션 인입 차단 + 쿼리 튜닝 | **0.05%** | **[트리거]** 중복 동시 요청이 DB 레이어까지 인입되어 자원 낭비 유발<br>→ 캐시 계층에서 1차 차단하여 **핵심 도메인 에러 0%** 달성 |
-
-> 에러율 0.05% 해설: 발생한 소수의 에러는 외부 OpenAI API 타임아웃 예외 상황에서 발생한 **의도된 가용성 에러**입니다. 핵심 일정 도메인(생성·조회·알림)의 에러율은 **0%** 입니다.
-
-**60VU 최종 결과**
-
-| 지표 | 결과 | 의미 |
-|------|------|------|
-| 에러율 | 16.35% → 0.05% | 6단계 아키텍처 튜닝으로 99.7% 감소 |
-| 처리량 | 15.7 → 42.5 req/s | 스펙업 없이 2.7배 향상 |
-| DLQ Retry Count | 0건 | 재처리 큐로 넘어간 건 단 한 건도 없음 |
-| Outbox Publish Latency | 평균 0.05~0.1ms | 이벤트 발행 로직이 메인 비즈니스 로직에 부하를 주지 않음 |
-| HikariCP Active Connections | 25~30개 (max 60) | 풀의 절반 이하로 운용, 추가 트래픽 대응 여력 확보 |
-| Kafka Consumer Lag | 순간 발생 후 즉시 0 수렴 | 컨슈머 처리 속도가 프로듀서 속도를 충분히 감당 |
-
-### 3단계: 90VU 한계 임계점 규명
-
-3만 명의 고유 유저 CSV 데이터로 순수 I/O 가용성 기준 측정.
-4차례의 실패와 튜닝을 거쳐 1분 37초 지점에서 인프라 도미노 붕괴 메커니즘을 팩트 기반으로 규명했습니다.
-
-| 차수 | 조치 | 에러율 | 원인 |
-|------|------|--------|------|
-| **1차** | 최초 90VU 테스트 | **3.24%** | 409 Conflict 대량 발생 → 동일 유저 데이터 Lock 경합 |
-| **2차** | 30,000명 CSV 데이터셋 구축 + 스레드 풀 조절 | **실패** | JMeter EOF 레이스 컨디션 → `${endTime}` 생 문자열 발송 |
-| **3차** | CSV 경로 로컬 이관 + HikariCP 튜닝 | **41.40%** | Tomcat(90) vs HikariCP(60) 불균형 → connection-timeout 3초에 연쇄 폭발 |
-| **4차** | connection-timeout 3초 → 15초, minimum-idle = max 동기화 | **8.04%** | 1분 37초 버팀 후 Outbox 폴링 + INSERT 경합으로 Nginx 붕괴 |
-
-**4차 최종 붕괴 순서:**
 ```
-90VU 쓰기 폭주 (초당 80건+ INSERT)
-→ 1분 후 Outbox 테이블 수만 건 비대화
-→ 폴링 스케줄러 SELECT + INSERT 배타 락 경합 극에 달함
-→ HikariCP 풀 한계치 수평 횡보 (반납 불가)
-→ Tomcat 스레드 + accept-count(200) 대기열 도미노 포화
-→ Nginx 504 Gateway Timeout + 502 Bad Gateway 연쇄 발생
+[저장] 하나의 트랜잭션
+  일정 변경 / 회원가입 / 챗봇 응답 완료
+    → 도메인 데이터 저장
+    → Outbox 저장 (BEFORE_COMMIT)
+  커밋 이후 (AFTER_COMMIT + REQUIRES_NEW)
+    → 리마인더 알림 저장  ← 부가 기능이라 메인 트랜잭션에서 분리
+
+[발행] OutboxEventPublisher, 1초 간격
+  → UPDATE 한 번으로 최대 200건 선점 (claim_id, 30초 지나면 다른 실행이 회수)
+  → 비동기 발행 (key = aggregate_id, acks=all, 멱등 프로듀서)
+  → 성공 건 일괄 sent=true / 실패 건 선점 해제 (5회 초과 시 DLQ)
+
+[소비] 토픽별 컨슈머 (수동 커밋)
+  notification-events  → 알림 컨슈머 → WebSocket(STOMP) / Web Push
+  member-signup-events → 가입 컨슈머 → 환영 이메일
+  chat-history         → 이력 저장 컨슈머 → MySQL + Redis 대화 맥락
+                       → 패턴 분석 컨슈머
+
+  처리 순서: Redis 필터 → (consumer, event_id) 멱등성 확인 → 처리
+            → processed_event 저장 → 오프셋 커밋
+
+[실패]
+  retry 토픽 5s → 10s → 30s → 60s → final → DLQ
+  → failed_message 기록 → 스케줄러 재처리
 ```
-
-**핵심 튜닝 설정 (3차 → 4차):**
-```yaml
-spring:
-  datasource:
-    hikari:
-      maximum-pool-size: 40    # 서버 2대 합산 80개, DB max_connections 초과 방지
-      minimum-idle: 40         # 풀 생성 오버헤드 원천 차단
-      connection-timeout: 15000 # 3초 → 15초, 정체 구간 끈질기게 버티도록
-```
-
-> ※ connection-timeout 완화(3초→15초)는 에러율을 낮췄지만 평균 응답시간(856ms→1,225ms)은 늘어난 트레이드오프였습니다. 근본 원인(Tomcat-Hikari 불균형)은 이후 hold-time 축소 작업에서 다룹니다.
-
-| 측정 항목 | 값 | 분석 |
-|-----------|-----|------|
-| 최대 안정 수용력 | 60~70VU | 안정적 트랜잭션 유지 |
-| 한계 임계점 | 90VU (TPS 84.3) | 1분 37초 시점 Nginx / WAS 대기열 동시 포화 |
-| 주요 병목 지점 | RDB 동기식 쓰기 | 일정 Insert + Outbox 폴링 배타 락 동시 경합 |
-| 99% Line Latency | 10,040ms | HikariCP 풀 점유 장기화에 따른 지연 누적 |
-| DLQ Retry Count | 0건 | 붕괴 직전까지 메시지 유실 0건 |
-
-> **※ 이 시점의 진단과 이후 정정**
-> 위 표의 "주요 병목 지점(Outbox 폴링 배타 락 경합)"과 "99% Line 10,040ms 해석
-> (HikariCP 점유 장기화)"은 **4단계 재검증에서 두 건 모두 기각되었습니다.**
-> slow query log(long_query_time=0.05) 실측에서 폴러 UPDATE는 한 건도 검출되지 않았고,
-> HikariCP Pending Threads가 Outbox backlog 급증보다 약 90초 먼저 반응해 폴러는
-> 원인이 아니라 결과였습니다. 10초 캡 역시 실제 지연이 아니라 nginx
-> proxy_next_upstream의 조용한 failover가 잘라낸 값이었습니다. (→ 4단계 참조)
-
-> **아키텍처 트레이드오프:**
-> 데이터 정합성을 위해 선택한 Transactional Outbox 패턴이,
-> 역설적으로 고부하에서는 RDB 병목의 주범이 될 수 있다는 것을 데이터로 직접 확인했습니다.
-> 기술 도입 시 장점뿐만 아니라 시스템이 무너질 때 치러야 할 비용까지 계산해야 함을 배웠습니다.
-> 이후 Kafka 콜백 기반 dirty-check 갱신 방식을 **CAS 기반 원자적 UPDATE**로 교체해, 폴링 주기와 콜백 시점 불일치로 인한 재처리 경합 자체를 제거했습니다.
-
-### 4단계: CAS 도입 후 재검증 — 원자적 UPDATE는 재처리 경합을 없앴는가
-
-3단계에서 Kafka 콜백 기반 dirty-check 갱신 방식을 CAS 기반 원자적 UPDATE로 교체한 뒤, 실제 90VU 부하 환경에서 이 교체가 유효했는지 검증했습니다. 5회의 재측정을 거치며 CAS와는 무관한 병목들(트랜잭션 길이, nginx의 조용한 failover, 리마인더 로직, 인덱스와 안 맞는 범위 쿼리, 테스트 데이터 누적)을 하나씩 걷어냈고, 최종적으로 원래 질문에 대한 답을 실데이터로 확인했습니다.
-
-| 차수 | 조치 | 에러율 | 발견 |
-|------|------|--------|------|
-| **1차** | CAS 적용 후 첫 90VU 재현 | 32.30% | Outbox backlog 계측 실패(No data)로 재측정 필요 |
-| **2차** | 계측 이슈 해결 후 재현 | 6.13% | Max Latency가 매번 정확히 10초에서 끊기는 패턴 발견 → 트랜잭션 안 중복 쿼리(알림 채널 조회 2회) + nginx `proxy_next_upstream`의 조용한 failover가 원인으로 특정 |
-| **3차** | 인덱스 추가, Redis 캐싱, 리마인더 AFTER_COMMIT 분리 | **0.00%** | 에러는 사라졌지만 그 여파로 Outbox 폴러의 처리 용량 한계가 처음 노출(backlog 900건) |
-| **4~5차** | 리마인더 생성/수정 로직 분리(불필요한 DELETE 제거), 충돌체크 쿼리의 인덱스 불일치 및 테스트 데이터(10,272건) 정리 | **0.00%** | 평균 응답시간 1,463ms → 278ms, Throughput 55.8 → 249.2 req/s. 그 결과 실제 생성 속도(249건/초)가 폴러 이론상 처리 한계(33.3건/초)를 크게 초과하는 스케일링 이슈를 새로 발견 |
-
-**CAS 정합성 최종 검증**
-
-새로운 스트레스 테스트를 추가로 설계하지 않고, CAS 도입 이후(2026년 9월) 실제로 쌓인 이벤트 데이터 전체를 감사하는 방식으로 검증했습니다.
-
-| 항목 | 결과 |
-|------|------|
-| 중복 이벤트 | CAS 도입 이전(4월) 데이터에서는 존재(레이스 컨디션 흔적, 타임스탬프 초 단위까지 동일) → CAS 도입 이후 9월 데이터 전체에서 **0건** |
-| Stuck 이벤트 (`sent=false, retry_count≥3`) | **0건** (backlog 11,000건까지 치솟은 최악의 조건 포함) |
-| 유실 이벤트 (스케줄은 있으나 대응 Outbox row 없음) | **0건** |
-
-> CAS 기반 원자적 UPDATE는 재처리 경합을 실제로 없앴습니다. 다만 앞단 병목을 걷어낼수록 뒷단(Outbox 폴러)의 처리 용량 한계가 더 뚜렷하게 드러나는 트레이드오프도 함께 확인했으며, 폴러 스케일링(배치 크기/주기 조정)은 다음 단계로 진행 중입니다.
-
-### 5단계: 폴러 스케일링 개선과 328번 베이스라인 최종 대조
-
-4단계에서 드러난 폴러 처리 한계(이론상 33.3건/초 vs 실제 생성 249건/초)를 해소하고, CAS 도입 이전(3편·328번 글, 84.3 TPS·8.04% 에러율·1분 37초 붕괴)과 동일한 인프라 조건(pool 40, connection-timeout 15초, nginx read timeout 10초)에서 최종 회귀 테스트를 진행했습니다.
-
-**폴러 개선**
-
-벌크 UPDATE·병렬화(SKIP LOCKED)·CDC 세 가지 방안을 검토한 뒤, 가장 저비용인 파라미터 튜닝(`fixedDelay` 3000→1000ms, 배치 크기 100→200건)부터 적용해 검증하는 방식을 택했습니다. 적용 과정에서 `@SchedulerLock(lockAtLeastFor = "PT500MS")` 표기가 ShedLock이 지원하지 않는 형식(ISO-8601의 밀리초 단위 `MS`는 미지원 — 순수 숫자 또는 초 단위 `S`만 지원)이라는 걸 뒤늦게 발견해 `"500"`으로 수정했습니다. 이 오류로 인해 폴러가 매 실행마다 예외를 던지며 실패하고 있었고, 회귀 테스트 도중 이를 Prometheus 메트릭(`hikaricp_connections_*`, `tasks_scheduled_execution_seconds_count`)과 Loki 로그로 함께 확인해 원인을 특정했습니다.
-
-**최종 회귀 테스트 결과**
-
-| 지표 | 3편 (CAS 도입 전) | 최종 (CAS + 전체 개선 적용) |
-|------|------|------|
-| 처리량 | 84.3 TPS | **248.9 req/s** |
-| 에러율 | 8.04% | **0.00%** |
-| 평균 응답시간 | 1,225ms | **277ms** |
-| 붕괴 여부 | 1분 37초에 붕괴 | **재현되지 않음** |
-
-Outbox Pending Backlog는 테스트 중 순간적으로 2,000건까지 쌓였지만, 개선된 폴러가 정상적으로 소화하며 0으로 완전히 수렴하는 것까지 확인했습니다.
-
-상세 트러블슈팅 기록: [1편](https://codingweb.tistory.com/325) · [2편](https://codingweb.tistory.com/326) · [3편](https://codingweb.tistory.com/328) · [4편](https://codingweb.tistory.com/353) · [5편](https://codingweb.tistory.com/354) · [6편](https://codingweb.tistory.com/355)
-
 ---
+## 설계 과정 의사결정
 
-## Kafka + Outbox Pattern — 핵심 설계
+일정 생성 한 건이 끝나면 알림 발송, 챗봇 이력 저장, 패턴 분석이 이어집니다.
+이를 동기로 처리하면 응답 시간이 후속 작업 수만큼 늘고, 후속 처리 하나가 실패해도 일정 저장까지 롤백됩니다.
 
-일정 생성 API 하나가 완료되면 **알림 발송 / 챗봇 데이터 파이프라인 / 패턴 분석**이 동시에 발생합니다.
-이를 동기 방식으로 처리하면 응답 지연이 선형으로 증가하고, 후속 처리 실패 시 전체 롤백 문제가 생깁니다.
-
-### @Async / ApplicationEvent 대신 Kafka를 선택한 이유
+### 1. @Async / ApplicationEvent 대신 Kafka를 선택한 이유
 
 | 요구사항 | @Async / ApplicationEvent | Kafka |
-|---------|--------------------------|-------|
-| **이벤트 재처리(Replay)** | 처리 실패 시 이벤트 유실, 복구 불가 | 오프셋 기반으로 실패 구간부터 재처리 가능 |
-| **멀티 컨슈머 독립 구독** | 단일 리스너 구조 | 알림 Consumer / 분석 Consumer가 동일 이벤트를 독립 구독 |
-| **파이프라인 확장** | 신규 처리 추가 시 기존 코드 수정 필요 | 신규 Consumer 추가만으로 기능 확장, 기존 로직 무영향 |
+|---|---|---|
+| 이벤트 보존 | 메모리 안에서만 전달, 서버 재시작·장애 시 유실 | 브로커에 저장, 오프셋 기준으로 실패 구간부터 재처리 |
+| 서버 간 전달 | 같은 JVM 안에서만 동작 | App 2대 어느 쪽에서 발행해도 컨슈머 그룹이 나눠 처리 |
+| 처리 속도 분리 | 발행 서버의 스레드 풀을 함께 사용 | 컨슈머 그룹마다 오프셋이 따로 있어 각자 속도로 처리 |
 
-### 데이터 유실 제로(At-Least-Once) 및 멱등성 보장
+### 2. Outbox 패턴을 선택한 이유
 
 ```
-[기존 방식의 문제]
-① DB 저장 (성공)
-② Kafka 발행 (실패) → 알림 유실, 복구 불가
- 
-[Outbox Pattern 적용]
-① DB 저장 + Outbox 테이블 저장 (하나의 트랜잭션)
-② ShedLock Polling → Kafka 발행
-→ ②가 실패해도 Outbox 레코드가 남아 있어 재시도 가능
+[문제] DB 저장과 Kafka 발행은 하나의 트랜잭션으로 묶을 수 없다
+  ① 일정 저장 (성공) → ② Kafka 발행 (실패) → 알림 유실
+
+[Outbox] 이벤트를 같은 트랜잭션에 DB로 먼저 저장
+  ① 일정 저장 + Outbox 저장 (하나의 트랜잭션)
+  ② 발행기가 Outbox를 읽어 Kafka로 발행
+  → ②가 실패해도 Outbox 행이 남아 있어 다시 발행
 ```
 
-- **Producer (`acks=all`, `enable.idempotence=true`):** 브로커 장애 시 데이터 유실 방지 + 네트워크 재시도 시 중복 발행 차단
-- **Consumer (`ErrorHandlingDeserializer` + DLQ):** Poison Pill로 인한 무한 루프 방지, 실패 메시지를 `.DLQ` 토픽으로 격리 후 `DeadLetterPublishingRecoverer`로 사후 재처리
-- **`AckMode.MANUAL_IMMEDIATE`:** `eventId` 기반 멱등성 검증 성공 시점에만 오프셋 커밋하여 확실한 At-Least-Once 보장
-- **ShedLock:** 다중 서버 환경에서 Outbox Polling 중복 실행 방지 (추가 인프라 없이 MySQL 재활용)
+- **발행기:** UPDATE 한 번으로 최대 200건을 선점(`claim_id`)한 뒤 발행합니다. 성공 건은 일괄 `sent=true`로, 실패 건은 선점을 해제해 다음 주기에 다시 발행합니다.
+- **ShedLock (Redis):** App 2대 중 한 대만 발행기를 실행합니다.
+- **Producer `acks=all` + `enable.idempotence=true`:** 브로커 장애에도 유실되지 않고, 재전송으로 인한 중복 기록을 막습니다.
+
+### 3. 멱등성 + DLQ
+
+Outbox는 "최소 한 번" 발행을 보장하므로 같은 이벤트가 두 번 올 수 있습니다. 중복은 컨슈머가 막습니다.
+
+- **멱등성:** `processed_event`에 `(consumer, event_id)`를 기록합니다. 하나의 이벤트를 여러 컨슈머 그룹이 각자 처리하므로 키에 컨슈머를 포함했습니다.
+- **`AckMode.MANUAL_IMMEDIATE`:** 처리와 기록이 끝난 뒤에만 오프셋을 커밋합니다.
+- **`ErrorHandlingDeserializer`:** 역직렬화할 수 없는 메시지(Poison Pill)가 컨슈머를 멈추지 않게 합니다.
+- **재시도 → DLQ:** retry 토픽(5s → 10s → 30s → 60s)을 거쳐도 실패하면 `DeadLetterPublishingRecoverer`로 DLQ에 보내고, `failed_message`에 기록한 뒤 스케줄러가 재처리합니다.
+
+### 4. 외부 API 격리 — 챗봇 서킷브레이커
+
+OpenAI 장애나 지연이 일정 서비스로 번지지 않도록 Resilience4j 서킷브레이커로 격리했습니다.
+
+- **타임아웃:** 첫 응답 대기와 스트리밍 중 무응답 시간을 따로 제한합니다.
+- **차단:** 실패율이 기준을 넘으면 회로를 열어, OpenAI를 호출하지 않고 즉시 대체 응답을 돌려줍니다.
+- **대체 응답은 이력에 저장하지 않습니다:** 장애 중 안내 문구가 대화 맥락에 섞이지 않게 했습니다.
+
 ---
 
-## 🔧 주요 트러블슈팅
+## 성능 결과
 
-### 1. Gap Lock 데드락
-동일 사용자의 동시 요청 시 Gap Lock 경합 확인 → Lock Ordering + Unique Index + COUNT 쿼리 교체로 해결.
-Redis 분산락은 DB 계층의 문제를 애플리케이션 계층에서 우회하는 오버엔지니어링으로 판단, DB 계층에서 직접 해결했습니다.
+모든 테스트는 App 2대 + Kafka 3-Broker 운영 환경에서 JMeter로 진행했습니다.
+먼저 스트레스 테스트로 시스템이 어디서 무너지는지 찾아 원인을 걷어냈고,
+그다음 실제 사용 패턴에 가까운 Mixed-flow 부하 테스트로 검증했습니다.
 
-### 2. HikariCP 커넥션 고갈
-`@Transactional` 내부에서 외부 OpenAI API를 동기 호출하여 커넥션이 점유된 채 대기하는 문제 발견.
-`@Async`로 외부 I/O를 트랜잭션 범위 밖으로 분리하여 커넥션 즉시 반납하도록 개선.
+### 스트레스 테스트 — 일정 생성 API, think-time 없음
 
-### 3. S3 고아 객체 누적
-PreSigned URL 방식은 사용자가 업로드 후 일정 저장을 취소하면 S3에 미등록 파일이 남는 문제가 있습니다.
-임시 테이블에 파일 키와 발급 시각을 기록하고, Spring 스케줄러가 주기적으로 만료된 임시 파일을 자동 삭제합니다.
-멀티스레드 환경 추적성을 위해 `MDC(job, requestId)`를 활용해 로그 가시성을 확보하고, 루프 내 `try-catch` 격리로 개별 실패가 전체 스케줄러에 영향을 주지 않도록 설계했습니다.
+| 단계 | 조건 | 결과 | 핵심 원인 |
+|---|---|---|---|
+| 1 | 30VU → 50VU | 에러율 99.89% → 0.35% | 커넥션 풀 포화, 인증 필터 DB 조회, nginx 부하 쏠림 |
+| 2 | 60VU | 에러율 16% → 0.05% | Gap Lock 데드락, 트랜잭션 안의 외부 API 호출 |
+| 3 | 90VU | 84.3 TPS, 에러율 8.04%, 1분 37초에 붕괴 | 커넥션 풀 고갈 → Tomcat·nginx 연쇄 포화 |
+| 4~6 | 90VU 재검증 | **248.9 TPS, 에러율 0%, 붕괴 재현 안 됨** | 트랜잭션 점유 시간 단축, 쿼리 정리, 폴러 튜닝 |
 
-### 4. Kafka 이벤트 중복 처리
-`eventId` 기반 멱등 처리 + ShedLock으로 다중 서버 환경에서 Outbox Polling 중복 실행 방지.
+같은 인프라 조건에서 처리량이 2.9배, 평균 응답이 1,225ms에서 277ms로 개선됐습니다.
+→ 상세: [분산 환경 스트레스 테스트](docs/performance/distributed-stress-test.md)
 
-### 5. JVM Full GC 반복
+### Mixed-flow 부하 테스트 — 로그인 + 생성 70% / 수정 30%, think-time 1~5초
+
+| 조건 | 처리량 | 에러율 | p95 / p99 |
+|---|---|---|---|
+| 90VU | 23.9 TPS (이론 상한 29.6) | 0.00% | 75ms / 150ms |
+| 490VU | 정상 구간 157~161 TPS (이론 상한 160) | 0.00% | 142ms / 469ms |
+| 490VU, 폴러 개선 후 | (재측정 예정) | | |
+
+- think-time이 있으면 처리량은 `VU ÷ (응답 시간 + think-time)`을 넘을 수 없습니다(Little's Law). 두 테스트 모두 이 상한에 도달했습니다.
+- 490VU에서 API는 안정적이었지만 **Outbox 발행기의 처리 한계(초당 약 50건)**가 드러났습니다. 백로그가 25,000건까지 쌓였고, 유실은 0건이었습니다. → 배치 선점으로 개선 (트러블슈팅 4번)
+
+→ 상세: [Mixed-flow 부하 테스트](docs/performance/mixed-flow-load-test.md)
+
+---
+
+## 트러블슈팅
+
+### 성능 측정 중
+
+#### 1. Gap Lock 데드락 (60VU, 에러율 16%)
+- **원인:** 일정 충돌 검사 쿼리에 `PESSIMISTIC_WRITE`를 걸어, 범위가 겹치는 트랜잭션끼리 Gap Lock 경합 발생
+- **해결:** 비관적 락을 제거하고 COUNT 기반 사전 검사로 교체했습니다. 그 사이의 경쟁 조건은 `(member_id, start_time)` UNIQUE로 막았습니다.
+- **판단:** Redis 분산락도 검토했지만, DB에서 생긴 문제를 애플리케이션 계층에서 우회하는 방식이라 택하지 않았습니다.
+
+#### 2. 커넥션 풀 고갈 — 반쪽짜리 정답에서 근본 원인까지
+- **증상 (30VU):** 트랜잭션이 길어 커넥션 점유 시간이 늘고, 풀이 고갈됨
+- **1차 대응:** JwtFilter의 회원 조회를 Redis로 캐싱해 50VU까지 안정화
+- **한계:** 커넥션을 쓰는 요청 수만 줄였을 뿐, 트랜잭션이 길다는 문제는 그대로였습니다.
+- **근본 해결 (90VU 재검증):** 트랜잭션 안의 중복 조회를 제거하고, 리마인더 저장을 커밋 이후로 분리하고, 불필요한 DELETE와 누적된 테스트 데이터를 정리했습니다. → 평균 응답 1,463ms → 278ms
+
+#### 3. 응답이 매번 정확히 10초에서 끊기는 현상
+- **증상:** 최대 응답 시간이 매번 10초 근처에서 잘리고, 에러는 일부만 기록됨
+- **원인:** nginx `proxy_read_timeout` 10초가 지나면 `proxy_next_upstream`이 요청을 다른 서버로 조용히 재전송해, 실제 지연을 가리고 있었습니다.
+- **배운 점:** 3단계에서 "99% 응답 10초 = 커넥션 점유 장기화"로 해석했던 진단이 틀렸다는 것을 이 현상으로 확인했습니다.
+
+#### 4. 90VU 붕괴 → CAS → 발행기 한계 → 배치 선점
+- **3단계 진단:** Outbox 폴링 락 경합이 붕괴 원인이라고 판단
+- **재검증:** slow query log에서 폴러 UPDATE는 검출되지 않았고, 커넥션 대기가 백로그보다 먼저 증가했습니다. → 폴러는 원인이 아니라 결과
+- **CAS:** Kafka 콜백에서 상태를 바꾸던 방식을 원자적 UPDATE로 교체했습니다. 이후 데이터 전수 감사에서 중복·멈춤·유실 이벤트 모두 0건이었습니다.
+- **발행기 한계 (490VU):** 건마다 선점·완료 UPDATE를 따로 실행해 한 주기에 DB 왕복이 약 400번 → 초당 약 50건이 상한
+- **배치 선점:** UPDATE 한 번으로 200건을 선점하고, 비동기 발행 후 일괄 완료 처리
+
+#### 5. JVM Full GC 반복
 G1GC 튜닝 + 모니터링 서버 분리로 서비스 서버와의 리소스 경쟁 제거.
- 
+<!-- TODO: t3.micro(1GB)에서의 증상 / 힙 768MB·G1GC 조치 / 490VU 결과(Old Gen 평평, GC 7ms 이하)로 보강 -->
+
+### 운영 점검 중 찾은 버그
+
+부하 테스트와 기능 점검을 운영 환경에서 직접 돌리면서, 로컬에서는 보이지 않던 버그를 찾아 고쳤습니다.
+
+| 버그 | 원인 | 해결 |
+|---|---|---|
+| 리마인더 알림이 저장되지 않음 | 커밋 이후 리스너에서 기본 전파(REQUIRED)로 저장 → 이미 끝난 트랜잭션에 참여해 예외 없이 버려짐 | `REQUIRES_NEW`로 새 트랜잭션에서 저장 |
+| 챗봇 이력이 한쪽 컨슈머에만 반영 | 두 컨슈머 그룹이 `event_id`만으로 중복을 막아, 먼저 처리한 그룹이 다른 그룹을 막음 | 멱등성 키를 `(consumer, event_id)`로 변경 |
+| 운영에서 테이블 3개 누락 | 엔티티만 있고 마이그레이션이 없었음. 로컬은 `ddl-auto: update`가 대신 만들어 줘서 드러나지 않음 | Flyway 마이그레이션 추가 |
+| 알림 DLQ 스케줄러가 회원가입 메시지까지 재처리 | 메시지 타입 필터 없음 | 타입 필터 추가 |
+| 챗봇 서킷브레이커 설정이 적용되지 않음 | 코드의 인스턴스 이름과 설정 파일 이름 불일치, 타임아웃 단위 오류 | 이름 통일, 단위 수정, 대체 응답은 이력에서 제외 |
+| WebSocket 구독에 인증이 없음 | 다른 회원의 알림 채널도 구독 가능 | 연결할 때 토큰 검증, 본인 채널만 구독 허용 |
+| 리마인더 중복 발송 | 서버 2대가 같은 리마인더를 동시에 발송 | ShedLock + 행 단위 선점 UPDATE |
+| 같은 아이디로 회원이 2명 생성 | `member.user_id`에 UNIQUE 없음 → 로그인 실패 | UNIQUE 제약 추가 |
+
 ---
 
-## 🗂️ 기술 스택 선택 근거
+## 📈 관측성 & 테스트
 
-| 기술 | 도입 이유 |
-|------|-----------|
-| **Kafka** | 이벤트 재처리(Replay) + 멀티 컨슈머 독립 구독 + 추천 파이프라인 확장 (`@Async`로는 불가) |
-| **Outbox Pattern** | DB 저장과 이벤트 발행을 단일 트랜잭션으로 묶어 이벤트 유실 원천 차단 |
-| **ShedLock** | 다중 서버 환경에서 Outbox Polling 중복 실행 방지 (추가 인프라 없이 MySQL 재활용) |
-| **Redis** | AI 추천 결과 캐싱(OpenAI 재호출 비용 절감) + JWT Refresh Token TTL 관리 + 중복 이벤트 Pre-check |
-| **WebSocket + Web Push** | 브라우저 활성/비활성 상태 모두 커버하는 이중 채널로 알림 도달률 극대화 |
-| **Hexagonal Architecture** | AI API 교체·장애에도 일정 도메인 로직 수정 없이 Adapter만 교체 가능 |
-| **S3 PreSigned URL** | 파일 업로드 트래픽을 서버가 중계하지 않아 서버 I/O 부하 절감 |
- 
+### 관측성
+
+- **메트릭 (Prometheus + Grafana):** HikariCP 커넥션, JVM 힙·GC, Outbox 백로그, Kafka 컨슈머 지연, 서킷브레이커 상태를 대시보드로 확인합니다. 부하 테스트의 병목은 모두 이 지표로 찾았습니다.
+- **로그 (Loki):** MDC로 요청·이벤트 ID를 남겨, Kafka 컨슈머와 스케줄러 로그를 요청 단위로 추적합니다.
+- **트레이싱 (OpenTelemetry + Tempo):** 요청 흐름(TraceID)별로 어느 구간에서 시간이 걸렸는지 확인합니다.
+- **slow query log:** 지표만으로 확정하기 어려운 DB 병목을 검증할 때 사용했습니다(폴러 원인 가설 기각, 리마인더 DELETE 발견).
+
+### 테스트
+
+- **통합 테스트 (TestContainers):** Kafka / Redis / MySQL을 컨테이너로 띄워 실제와 같은 조건에서 검증합니다.
+- **외부 API 테스트 (WireMock):** OpenAI 지연·오류를 재현해 서킷브레이커와 타임아웃 동작을 검증합니다.
+- **동시성·정합성 테스트:** 배치 선점, 리마인더 선점, 컨슈머별 멱등성, WebSocket 구독 권한 등 운영 점검에서 고친 버그마다 재현 테스트를 추가했습니다.
+- **부하 테스트 (JMeter):** 스트레스 테스트(30~90VU)와 Mixed-flow 부하 테스트(90·490VU). 테스트 후 데이터 전수 감사로 유실 0건, 중복 처리 0건을 확인했습니다.
+
 ---
 
-## 📈 Observability & Monitoring
+## ⚠️ 한계점과 다음 단계
 
-- **Prometheus & Grafana:** HikariCP Connection Count, JVM Memory, CPU Usage 실시간 모니터링 및 Alertmanager 연동
-- **Loki & Promtail & Tempo:** Distributed Tracing 환경 구축, 사용자 요청 흐름(TraceID)별 병목 구간 실시간 추적 및 MDC 파일명 매핑 로그 가시성 확보
----
+| 한계 | 영향 | 다음 단계 |
+|---|---|---|
+| 소셜 로그인이 nginx `ip_hash`에 의존 | OAuth2 인증 요청을 서버 세션에 저장해, 같은 서버로 돌아와야만 로그인이 완료됨 | 서명된 쿠키 기반 저장소로 바꿔 서버 간 상태 공유 제거 |
+| 실시간 알림이 서버별로 분리 | WebSocket 브로커가 서버마다 따로 있어, 다른 서버에 연결된 사용자에게는 실시간 알림이 가지 않음(알림 내역은 저장됨) | Redis Pub/Sub 또는 Kafka 브로드캐스트로 서버 간 전달 |
+| Redis 단일 장애점 | 캐시, ShedLock, 중복 사전 검사가 모두 Redis에 의존 | Redis Sentinel 또는 장애 시 동작 정의 |
+| `TIMESTAMP` 2038년 한계 | 2038-01-19 이후 시각의 일정을 저장할 수 없음 (490VU 테스트 중 발견) | `DATETIME`으로 전환하는 마이그레이션 |
+| 커밋 이후 리마인더 저장은 재시도 없음 | 커밋 이후 저장이 실패하면 로그로만 남음 | Outbox로 옮기거나 재처리 테이블 추가 |
 
-## 🧪 품질 보증
-
-- TestContainers 기반 Kafka / Redis / MySQL 통합 테스트
-- JMeter 스트레스 테스트 (50VU ~ 90VU, 총 7,000건+)
-  - 메시지 유실: 0건
-  - 중복 처리율: 0% (eventId 기반 멱등 처리)
-  - DLQ → 재처리 후 최종 정상 처리율: 100%
-  - 90VU 한계 임계점 및 붕괴 메커니즘 데이터 기반 규명
 ---
 
 ## 📚 상세 문서
 
-- 분산 환경 병목 트러블슈팅: [1편](https://codingweb.tistory.com/325) · [2편](https://codingweb.tistory.com/326) · [3편](https://codingweb.tistory.com/328)
+**블로그**
+- 분산 환경 병목 트러블슈팅: [1편](https://codingweb.tistory.com/325) · [2편](https://codingweb.tistory.com/326) · [3편](https://codingweb.tistory.com/328) · [4편](https://codingweb.tistory.com/353) · [5편](https://codingweb.tistory.com/354) · [6편](https://codingweb.tistory.com/355)
+- Mixed-flow 부하 테스트: [블로그](https://codingweb.tistory.com/356)
+- Kafka 장애 주입 테스트 (ISR): [블로그](https://codingweb.tistory.com/327)
 - 챗봇 고도화 설계: [블로그](https://codingweb.tistory.com/324)
----
 
-## 🔗 관련 저장소
-
-- **프론트엔드:** [schedulemanagement-front](https://github.com/well0924/schedulemanagement-front)
+**프로젝트 문서**
+- 성능 측정: [분산 환경 스트레스 테스트](docs/performance/distributed-stress-test.md) · [Mixed-flow 부하 테스트](docs/performance/mixed-flow-load-test.md) · [단일 인스턴스 시절 테스트](docs/performance)
+- 아키텍처: [전체 구성](docs/architecture/architecture-overview.md) · [헥사고날 설계](docs/architecture/hexagonal-design.md) · [CI/CD](docs/architecture/ci-cd-pipeline.md)
+- 데이터 모델: [ERD와 설계 원칙](docs/database/erd.md)
+- 인증: [인증 구조](docs/auth/auth-overview.md) · [JWT](docs/auth/jwt-authentication.md)
+- 모니터링: [모니터링](docs/monitoring/monitoring.md) · [로깅](docs/monitoring/logging.md)

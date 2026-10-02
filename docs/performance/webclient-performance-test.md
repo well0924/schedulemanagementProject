@@ -1,5 +1,7 @@
 ## WebClient 기반 일정 추천 API 성능 검증
 
+> 분산 환경 전환(2026.04) 이전, 단일 인스턴스 환경에서 측정한 결과입니다. 분산 환경(App 2대 + Kafka 3-Broker) 결과는 [분산 환경 스트레스 테스트](distributed-stress-test.md), [Mixed-flow 부하 테스트](mixed-flow-load-test.md)에 있습니다.
+
 ### 테스트 목적
 
 - WebClient 기반 비동기 호출이 실제 부하 환경에서도 안정적으로 동작하는지

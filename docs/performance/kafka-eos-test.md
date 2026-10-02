@@ -1,5 +1,7 @@
 ## Kafka eos 검증
 
+> 분산 환경 전환(2026.04) 이전, 단일 인스턴스 환경에서 측정한 결과입니다. 분산 환경(App 2대 + Kafka 3-Broker) 결과는 [분산 환경 스트레스 테스트](distributed-stress-test.md), [Mixed-flow 부하 테스트](mixed-flow-load-test.md)에 있습니다.
+
 ### 테스트 목적
 
 Outbox + DLQ + Retry 기반 Kafka 이벤트 처리 구조에 eventId 기반 멱등 처리(EOS) 적용 후, 중복 처리 0% 유실 0건

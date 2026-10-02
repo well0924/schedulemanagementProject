@@ -58,7 +58,7 @@ Outbox, FailMessage(실패 기록), ProcessedEvent(멱등성 처리) 테이블�
 | 2026-09-28 | `member.user_id` UNIQUE 추가 | 중복 가입 시 같은 아이디 회원이 2명 생겨 로그인이 실패하던 문제 |
 | 2026-10-01 | `chat_history`, `push_subscription`, `outbox_event_entity` 마이그레이션 추가 | 엔티티만 있고 마이그레이션이 없어, 로컬(ddl-auto: update)에서는 보이지 않던 테이블 누락이 운영에서 드러남 |
 | 2026-10-01 | `processed_event`에 `consumer` 컬럼, 유니크 키를 `(consumer, event_id)`로 변경 | 컨슈머 그룹 간 중복 처리 충돌 |
-| 2026-10-02 | `outbox_event_entity`에 `claim_id`, `claimed_at` 컬럼과 `(sent, created_at)`, `(claim_id)` 인덱스 추가 | 발행을 건별 선점에서 배치 선점으로 변경 (490VU에서 발행 한계 약 50 events/s) |
+| 2026-10-02 | `outbox_event_entity`에 `claim_id`, `claimed_at` 컬럼과 `(sent, created_at)`, `(claim_id)` 인덱스 추가 | 발행을 건별 선점에서 배치 선점으로 변경 (490VU에서 발행 한계 약 60~70 events/s) |
 
 ### 알려진 한계
 

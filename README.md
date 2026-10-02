@@ -144,7 +144,7 @@ OpenAI 장애나 지연이 일정 서비스로 번지지 않도록 Resilience4j 
 같은 인프라 조건에서 처리량이 2.9배, 평균 응답이 1,225ms에서 277ms로 개선됐습니다.
 → 상세: [분산 환경 스트레스 테스트](docs/performance/distributed-stress-test.md)
 
-### Mixed-flow 부하 테스트 — 로그인 + 생성 70% / 수정 30%, think-time 1~5초
+### Mixed-flow 부하 테스트 로그인 + 생성 70% / 수정 30%, think-time 1~5초
 
 | 조건 | 처리량 | 에러율 | p95 / p99 |
 |---|---|---|---|
@@ -240,14 +240,14 @@ G1GC 튜닝 + 모니터링 서버 분리로 서비스 서버와의 리소스 경
 ## 📚 상세 문서
 
 **블로그**
-- 분산 환경 병목 트러블슈팅: [1편](https://codingweb.tistory.com/325) · [2편](https://codingweb.tistory.com/326) · [3편](https://codingweb.tistory.com/328) · [4편](https://codingweb.tistory.com/353) · [5편](https://codingweb.tistory.com/354) · [6편](https://codingweb.tistory.com/355)
+- 분산 환경 병목 트러블슈팅: [1편](https://codingweb.tistory.com/325), [2편](https://codingweb.tistory.com/326), [3편](https://codingweb.tistory.com/328), [4편](https://codingweb.tistory.com/353), [5편](https://codingweb.tistory.com/354), [6편](https://codingweb.tistory.com/355)
 - Mixed-flow 부하 테스트: [블로그](https://codingweb.tistory.com/356)
 - Kafka 장애 주입 테스트 (ISR): [블로그](https://codingweb.tistory.com/327)
 - 챗봇 고도화 설계: [블로그](https://codingweb.tistory.com/324)
 
 **프로젝트 문서**
-- 성능 측정: [분산 환경 스트레스 테스트](docs/performance/distributed-stress-test.md) · [Mixed-flow 부하 테스트](docs/performance/mixed-flow-load-test.md) · [단일 인스턴스 시절 테스트](docs/performance)
-- 아키텍처: [전체 구성](docs/architecture/architecture-overview.md) · [헥사고날 설계](docs/architecture/hexagonal-design.md) · [CI/CD](docs/architecture/ci-cd-pipeline.md)
+- 성능 측정: [분산 환경 스트레스 테스트](docs/performance/distributed-stress-test.md), [Mixed-flow 부하 테스트](docs/performance/mixed-flow-load-test.md), [단일 인스턴스 시절 테스트](docs/performance)
+- 아키텍처: [전체 구성](docs/architecture/architecture-overview.md), [헥사고날 설계](docs/architecture/hexagonal-design.md), [CI/CD](docs/architecture/ci-cd-pipeline.md)
 - 데이터 모델: [ERD와 설계 원칙](docs/database/erd.md)
-- 인증: [인증 구조](docs/auth/auth-overview.md) · [JWT](docs/auth/jwt-authentication.md)
-- 모니터링: [모니터링](docs/monitoring/monitoring.md) · [로깅](docs/monitoring/logging.md)
+- 인증: [인증 구조](docs/auth/auth-overview.md), [JWT](docs/auth/jwt-authentication.md)
+- 모니터링: [모니터링](docs/monitoring/monitoring.md), [로깅](docs/monitoring/logging.md)

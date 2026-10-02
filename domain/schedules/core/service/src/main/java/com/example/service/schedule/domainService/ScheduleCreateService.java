@@ -70,7 +70,7 @@ public class ScheduleCreateService {
                     .build();
         }
 
-        // 리마인드 알림은 ScheduleEventListener의 AFTER_COMMIT 단계에서 처리 (2026-09-11)
+        // 리마인드 알림은 ScheduleEventListener에서 같은 트랜잭션(BEFORE_COMMIT)으로 저장 (2026-10-03)
         domainEventPublisher.publish(List.of(firstSchedule), ScheduleActionType.SCHEDULE_CREATED);
         return firstSchedule;
     }

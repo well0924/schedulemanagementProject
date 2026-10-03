@@ -14,6 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -136,8 +137,12 @@ public class OutboxEventService {
     /**
      * 미발행 이벤트를 최대 limit건 선점하고, 선점한 행을 돌려준다.
      * staleAfter보다 오래 선점된 채 남은 행(발행 도중 서버가 죽은 경우)도 다시 가져온다.
+     *
+     * REPEATABLE READ에서는 이 범위 UPDATE가 스캔 범위와 그 끝의 간격까지 잠가,
+     * 새 Outbox 행이 들어가는 자리(미발행 구간 끝)의 INSERT를 막을 수 있다.
+     * READ COMMITTED는 간격 잠금을 걸지 않고, 커밋되지 않은 행은 기다리지 않고 건너뛴다 (2026-10-03).
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
     public List<OutboxEventEntity> claimBatch(String claimId, int limit, Duration staleAfter) {
         LocalDateTime now = LocalDateTime.now();
         int claimed = outboxEventRepository.claimBatch(claimId, now, now.minus(staleAfter), limit);

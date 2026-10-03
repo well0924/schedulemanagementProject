@@ -79,7 +79,7 @@
 
 - **원인:** 조건부 UPDATE 경합이 아니라 `saveSchedule()` 트랜잭션 안에서 DB 왕복이 순차로 쌓인 구조. 알림 채널을 정하면서 `isEnabled(WEB)`, `isEnabled(PUSH)`를 따로 조회했습니다.
 - **최대 응답이 10초에서 끊긴 이유:** nginx `proxy_read_timeout` 10초가 지나면 `proxy_next_upstream`이 요청을 다른 서버로 조용히 재전송했습니다.
-- **조치:** 알림 `schedule_id` 인덱스, 카테고리 Redis 캐싱, 리마인더 생성을 AFTER_COMMIT으로 분리
+- **조치:** 알림 `schedule_id` 인덱스, 카테고리 Redis 캐싱, 리마인더 생성을 AFTER_COMMIT으로 분리 (이 분리 이후 리마인더가 저장되지 않는 버그가 있어, 이후 측정은 리마인더 INSERT가 빠진 상태였습니다. 2026-10-03에 같은 트랜잭션으로 되돌림 → [Mixed-flow 부하 테스트](mixed-flow-load-test.md))
 - **새 병목:** 에러가 사라지자 Outbox 폴러의 처리 한계가 드러났습니다(1회 실행 최대 7.5초, 백로그 900건).
 
 ### 5단계: 쿼리 정리와 이벤트 데이터 점검

@@ -35,7 +35,7 @@
 
 #### 이벤트 처리 인프라의 독립성
 
-Outbox, FailMessage(실패 기록), ProcessedEvent(멱등성 처리) 테이블을 독립적으로 설계했습니다. 특정 기능의 실패가 전체 시스템으로 전이되지 않도록 격리하여, DLQ 재처리나 EOS(Exactly-Once Semantic) 상황에서도 안정적인 복구가 가능합니다.
+Outbox, FailMessage(실패 기록), ProcessedEvent(멱등성 처리) 테이블을 독립적으로 설계했습니다. 특정 기능의 실패가 전체 시스템으로 전이되지 않도록 격리하여, DLQ 재처리나 중복 전달 상황에서도 안정적인 복구가 가능합니다.
 
 ---
 

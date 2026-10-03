@@ -1,6 +1,8 @@
 ## Kafka eos 검증
 
 > 분산 환경 전환(2026.04) 이전, 단일 인스턴스 환경에서 측정한 결과입니다. 분산 환경(App 2대 + Kafka 3-Broker) 결과는 [분산 환경 스트레스 테스트](distributed-stress-test.md), [Mixed-flow 부하 테스트](mixed-flow-load-test.md)에 있습니다.
+>
+> 용어 정정: 이 문서의 "EOS"는 Kafka 트랜잭션 프로듀서의 exactly-once가 아니라, 최소 한 번 전달(at-least-once)에 컨슈머 멱등 처리를 더해 결과적으로 한 번만 반영되게 한 구조를 뜻합니다. 멱등성 키는 이후 `(consumer, event_id)`로 바뀌었습니다(2026-10-01).
 
 ### 테스트 목적
 

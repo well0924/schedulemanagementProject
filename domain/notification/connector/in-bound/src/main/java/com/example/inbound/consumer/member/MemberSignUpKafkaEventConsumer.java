@@ -2,26 +2,22 @@ package com.example.inbound.consumer.member;
 
 import com.example.events.kafka.MemberSignUpKafkaEvent;
 import com.example.events.process.ProcessedEventService;
-import com.example.exception.dto.ErrorCode;
-import com.example.exception.global.CustomExceptionHandler;
 import com.example.interfaces.notification.kafka.KafkaEventConsumer;
 import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.NotificationType;
 import com.example.notification.email.EmailService;
 import com.example.notification.model.NotificationModel;
 import com.example.notification.service.NotificationService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.annotation.Counted;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 
@@ -43,6 +39,14 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
 
     private final ObjectMapper objectMapper;
 
+    private final TransactionTemplate transactionTemplate;
+
+    /**
+     * 알림 내역과 처리 기록은 한 트랜잭션으로 저장하고, 메일·실시간 알림과 오프셋 커밋은
+     * 그 트랜잭션이 끝나 커넥션을 반납한 뒤에 한다. 저장 중 예외는 전파해 재시도 → DLQ로 보낸다.
+     * 메일을 저장 뒤로 둔 이유: 저장 실패로 재시도될 때마다 환영 메일이 다시 나가지 않게 하려고.
+     * 메일은 재시도(최대 3회, 2초 간격)와 실패 기록 저장이 있어 트랜잭션 밖에서 보내야 한다.
+     */
     @Timed(value = "kafka.consumer.signup.duration", description = "회원가입 Kafka 메시지 처리 시간")
     @Counted(value = "kafka.consumer.signup.count", description = "회원가입 Kafka 메시지 수신 횟수")
     @KafkaListener(
@@ -51,71 +55,60 @@ public class MemberSignUpKafkaEventConsumer implements KafkaEventConsumer<Member
             containerFactory = "memberKafkaListenerFactory"
     )
     @Override
-    @Transactional //1.비즈니스 로직과 멱등성 저장을 한 원자성으로 묶음
-    public void handle(MemberSignUpKafkaEvent event, Acknowledgment ack) { //2.Acknowledgment 추가
+    public void handle(MemberSignUpKafkaEvent event, Acknowledgment ack) {
         try {
             KafkaMDCUtil.initMDC(event);
-            //3. 멱등성 중복 처리 로직
+            // 1. 멱등성 확인
             if (processedEventService.isAlreadyProcessed(CONSUMER, event.getEventId())) {
                 log.info("⚠️ 이미 처리된 이벤트 무시: {}", event.getEventId());
-                throw new CustomExceptionHandler("중복 이벤트 처리됨: " + event.getEventId(), ErrorCode.EVENT_DUPLICATE);
-            }
-            //4. 이메일 발송 (실패해도 서비스 진행은 계속)
-            try {
-                emailService.sendHtmlEmail(event.getEmail(), "🎉 회원가입을 환영합니다!", buildWelcomeEmailContent(event.getUsername()));
-                log.info("회원가입 환영 메일 발송 성공: {}", event.getEmail());
-            } catch (Exception emailEx) {
-                log.error("이메일 발송 실패 (계속 진행): {}", emailEx.getMessage(), emailEx);
-            }
-            //4.알림 내역 저장
-            saveNotificationToDatabase(event);
-            //5.알림 발송.
-            String message = objectMapper.writeValueAsString(event);
-            simpMessagingTemplate.convertAndSend("/topic/memberSignUp/" + event.getReceiverId(), message);
-            //6.이벤트 저장
-            processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
-            //7.최종 성공 커밋
-            ack.acknowledge();
-        } catch (CustomExceptionHandler ex) {
-            if(ex.getErrorCode()==ErrorCode.EVENT_DUPLICATE) {
-                log.warn("[Kafka Non-Retry Error] code={}, msg={}", ex.getErrorCode(), ex.getMessage());
-                // 중복이 된 경우 카프카에게 중복된 메시지라고 알리기
                 ack.acknowledge();
-            } else {
-                log.error("기타 비즈니스 예외: {}", ex.getMessage());
-                throw ex;
+                return;
             }
-        } catch (DataIntegrityViolationException e) {
-            // 이미 처리된 이벤트라면 무시
-            log.warn("이벤트 중복 저장 시도 감지됨: {}", event.getEventId());
-        } catch(JsonProcessingException e) {
-            log.error("Kafka 메시지 직렬화 오류: {}", e.getMessage());
+            // 2. 알림 내역 + 처리 기록 저장 (같은 트랜잭션)
+            transactionTemplate.executeWithoutResult(status -> {
+                saveNotificationToDatabase(event);
+                processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
+            });
+
+            // 3. 커밋·커넥션 반납 후: 메일·실시간 알림 → 오프셋 커밋
+            sendWelcomeEmail(event);
+            sendRealtimeNotification(event);
             ack.acknowledge();
-            throw new CustomExceptionHandler("이벤트 직렬화 실패: " + event.getEventId(), ErrorCode.EVENT_SERIALIZATION_ERROR);
-        } catch (Exception e) {
-            log.error("WebSocket 전송 실패 (DLQ 안 보냄)", e);
         } finally {
             KafkaMDCUtil.clear();
         }
     }
 
     private void saveNotificationToDatabase(MemberSignUpKafkaEvent event) {
+        NotificationModel notification = NotificationModel
+                .builder()
+                .userId(event.getReceiverId()) // 알림을 받을 사용자 ID
+                .message("🎉 환영합니다, " + event.getUsername() + "님! 회원가입이 완료되었습니다.") // 알림 메시지
+                .notificationType(NotificationType.SIGN_UP_WELCOME) // 알림 타입
+                .createdTime(LocalDateTime.now()) // 알림 생성 시간
+                .isRead(false) // 기본값은 false
+                .build();
+
+        notificationService.createNotification(notification);
+        log.info("회원가입 알림 저장 성공: {}", event.getReceiverId());
+    }
+
+    // 메일 실패는 재시도하지 않는다 (알림 내역은 이미 저장됨)
+    private void sendWelcomeEmail(MemberSignUpKafkaEvent event) {
         try {
+            emailService.sendHtmlEmail(event.getEmail(), "🎉 회원가입을 환영합니다!", buildWelcomeEmailContent(event.getUsername()));
+            log.info("회원가입 환영 메일 발송 성공: {}", event.getEmail());
+        } catch (Exception emailEx) {
+            log.error("이메일 발송 실패 (재시도 안 함): {}", emailEx.getMessage(), emailEx);
+        }
+    }
 
-            NotificationModel notification = NotificationModel
-                    .builder()
-                    .userId(event.getReceiverId()) // 알림을 받을 사용자 ID
-                    .message("🎉 환영합니다, " + event.getUsername() + "님! 회원가입이 완료되었습니다.") // 알림 메시지
-                    .notificationType(NotificationType.SIGN_UP_WELCOME) // 알림 타입
-                    .createdTime(LocalDateTime.now()) // 알림 생성 시간
-                    .isRead(false) // 기본값은 false
-                    .build();
-
-            notificationService.createNotification(notification);
-
-            log.info("회원가입 알림 저장 성공: {}", event.getReceiverId());
+    private void sendRealtimeNotification(MemberSignUpKafkaEvent event) {
+        try {
+            String message = objectMapper.writeValueAsString(event);
+            simpMessagingTemplate.convertAndSend("/topic/memberSignUp/" + event.getReceiverId(), message);
         } catch (Exception e) {
-            log.error("회원가입 알림 저장 실패: {}", e.getMessage());
+            log.error("회원가입 실시간 알림 전달 실패 (내역은 저장됨): eventId={}", event.getEventId(), e);
         }
     }
 

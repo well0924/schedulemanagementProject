@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,7 +40,6 @@ public class PatternAnalysisConsume implements KafkaEventConsumer<ChatCompletedE
             containerFactory = "chatKafkaListenerFactory"
     )
     @Override
-    @Transactional
     public void handle(ChatCompletedEvent event, Acknowledgment ack) {
         log.info("[HistorySaveConsumer] memberId={}", event.getMemberId());
 
@@ -53,7 +51,6 @@ public class PatternAnalysisConsume implements KafkaEventConsumer<ChatCompletedE
 
         try {
             KafkaMDCUtil.initMDC(event);
-            processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
 
             // 핵심 분석 로직들을 private 메서드로 격리
             // 1. 시간대 선호도 누적 분석
@@ -61,6 +58,10 @@ public class PatternAnalysisConsume implements KafkaEventConsumer<ChatCompletedE
 
             // 2. 대화 키워드 기반 관심사 추출
             analyzeMessageContext(event.getMemberId(), event.getUserMessage());
+
+            // 분석이 끝난 뒤에 처리 기록을 남긴다. 먼저 남기면 분석이 실패해도 재시도가 건너뛴다.
+            // (분석 결과는 Redis 누적이라, 기록 직전에 서버가 죽으면 재처리로 한 번 더 누적될 수 있다)
+            processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
 
             ack.acknowledge();
 

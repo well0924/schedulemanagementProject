@@ -72,9 +72,9 @@ AI 추천 엔진(OpenAI API)은 외부 의존성이 크고 모델 스펙이 수�
   처리 순서: Redis 필터 → (consumer, event_id) 멱등성 확인 → 처리
             → processed_event 저장 → 오프셋 커밋
 
-[실패]
-  retry 토픽 5s → 10s → 30s → 60s → final → DLQ
-  → failed_message 기록 → 스케줄러 재처리
+[실패] (알림·회원가입 이벤트. 챗봇 이벤트는 DLQ까지만)
+  즉시 재시도 3회(2초 간격) → DLQ → failed_message 기록
+  → 재처리 스케줄러(30초 주기)가 재시도 횟수별 토픽으로 재발행 → 원본 토픽 (최대 5회)
 ```
 ---
 ## 설계 과정 의사결정
@@ -113,7 +113,7 @@ Outbox는 "최소 한 번" 발행을 보장하므로 같은 이벤트가 두 번
 - **멱등성:** `processed_event`에 `(consumer, event_id)`를 기록합니다. 하나의 이벤트를 여러 컨슈머 그룹이 각자 처리하므로 키에 컨슈머를 포함했습니다.
 - **`AckMode.MANUAL_IMMEDIATE`:** 처리와 기록이 끝난 뒤에만 오프셋을 커밋합니다.
 - **`ErrorHandlingDeserializer`:** 역직렬화할 수 없는 메시지(Poison Pill)가 컨슈머를 멈추지 않게 합니다.
-- **재시도 → DLQ:** retry 토픽(5s → 10s → 30s → 60s)을 거쳐도 실패하면 `DeadLetterPublishingRecoverer`로 DLQ에 보내고, `failed_message`에 기록한 뒤 스케줄러가 재처리합니다.
+- **재시도 → DLQ → 재처리:** 컨슈머가 실패하면 `DefaultErrorHandler`가 2초 간격으로 3번 재시도하고, 그래도 실패하면 `DeadLetterPublishingRecoverer`로 DLQ에 보냅니다. DLQ 컨슈머가 `failed_message`에 기록하면, 30초 주기 스케줄러가 재시도 횟수별 토픽으로 다시 발행해 원본 토픽으로 돌려보냅니다(최대 5회). 대상은 알림·회원가입 이벤트이고, 챗봇 이벤트는 DLQ까지만 보냅니다.
 
 ### 4. 외부 API 격리 — 챗봇 서킷브레이커
 
@@ -177,7 +177,7 @@ OpenAI 장애나 지연이 일정 서비스로 번지지 않도록 Resilience4j 
 
 #### 3. 응답이 매번 정확히 10초에서 끊기는 현상
 - **증상:** 최대 응답 시간이 매번 10초 근처에서 잘리고, 에러는 일부만 기록됨
-- **원인:** nginx `proxy_read_timeout` 10초가 지나면 `proxy_next_upstream`이 요청을 다른 서버로 조용히 재전송해, 실제 지연을 가리고 있었습니다.
+- **원인:** 실제 지연이 아니라 nginx `proxy_read_timeout`(10초)에 걸려 504로 끊긴 것이었습니다. 처음엔 `proxy_next_upstream`의 다른 서버 재시도로 해석했지만, 재시도였다면 두 번째 서버까지 기다려 약 20초에서 끊겼어야 합니다. nginx는 `non_idempotent` 없이는 이미 보낸 POST를 다른 서버로 재시도하지 않습니다. 타임아웃을 늘려 실제 최악 응답(19.5초)을 확인했습니다.
 - **배운 점:** 3단계에서 "99% 응답 10초 = 커넥션 점유 장기화"로 해석했던 진단이 틀렸다는 것을 이 현상으로 확인했습니다.
 
 #### 4. 90VU 붕괴 → 원인 범위 축소 → 발행기 한계 → 배치 선점

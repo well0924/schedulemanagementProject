@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 @Component
@@ -28,6 +28,7 @@ public class ChatHistorySaveConsumer implements KafkaEventConsumer<ChatCompleted
     private final ChatHistoryPort chatHistoryRepository;
     private final ScheduleRecommendationCachePort cacheService;
     private final ProcessedEventService processedEventService;
+    private final TransactionTemplate transactionTemplate;
 
     @Timed(value = "kafka.consumer.chat.save.time", description = "이력 저장 소요 시간")
     @Counted(value = "kafka.consumer.chat.save.count", description = "이력 저장 처리 횟수")
@@ -37,7 +38,6 @@ public class ChatHistorySaveConsumer implements KafkaEventConsumer<ChatCompleted
             containerFactory = "chatKafkaListenerFactory"
     )
     @Override
-    @Transactional
     public void handle(ChatCompletedEvent event, Acknowledgment ack) {
         log.info("[ChatHistorySaveConsumer] memberId={}", event.getMemberId());
 
@@ -50,16 +50,33 @@ public class ChatHistorySaveConsumer implements KafkaEventConsumer<ChatCompleted
         try {
             KafkaMDCUtil.initMDC(event);
 
-            processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
-            // MySQL 영구 저장
-            chatHistoryRepository.save(ChatHistoryModel.builder()
-                    .memberId(event.getMemberId())
-                    .userMessage(event.getUserMessage())
-                    .assistantResponse(event.getAssistantResponse())
-                    .createdAt(event.getCreatedAt())
-                    .build());
+            // MySQL 영구 저장 + 처리 기록 (같은 트랜잭션).
+            // 처리 기록을 먼저 따로 커밋하면 이력 저장이 실패해도 재시도가 "처리됨"으로 건너뛴다.
+            transactionTemplate.executeWithoutResult(status -> {
+                chatHistoryRepository.save(ChatHistoryModel.builder()
+                        .memberId(event.getMemberId())
+                        .userMessage(event.getUserMessage())
+                        .assistantResponse(event.getAssistantResponse())
+                        .createdAt(event.getCreatedAt())
+                        .build());
+                processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
+            });
 
-            // Redis 이력 갱신 (다음 대화 맥락용)
+            // 커밋 후: Redis 이력 갱신(다음 대화 맥락용) → 오프셋 커밋
+            appendToChatContext(event);
+            ack.acknowledge();
+
+        } catch (Exception e) {
+            log.error("[ChatHistorySaveConsumer] 실패: {}", e.getMessage(), e);
+            throw e;  // DLQ로 이동
+        } finally {
+            KafkaMDCUtil.clear();
+        }
+    }
+
+    // Redis 맥락은 캐시라 실패해도 재시도하지 않는다 (이력은 MySQL에 저장됨)
+    private void appendToChatContext(ChatCompletedEvent event) {
+        try {
             cacheService.appendChatMessage(event.getMemberId(),
                     ChatMessage
                             .builder()
@@ -75,14 +92,8 @@ public class ChatHistorySaveConsumer implements KafkaEventConsumer<ChatCompleted
                             .content(event.getAssistantResponse())
                             .createdAt(event.getCreatedAt())
                             .build());
-
-            ack.acknowledge();  // 수동 커밋
-
         } catch (Exception e) {
-            log.error("[ChatHistorySaveConsumer] 실패: {}", e.getMessage(), e);
-            throw e;  // DLQ로 이동
-        } finally {
-            KafkaMDCUtil.clear();
+            log.error("[ChatHistorySaveConsumer] Redis 맥락 갱신 실패 (이력은 저장됨): memberId={}", event.getMemberId(), e);
         }
     }
 }

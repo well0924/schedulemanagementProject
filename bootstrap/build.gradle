@@ -133,6 +133,7 @@ dependencies {
 	testImplementation 'com.github.tomakehurst:wiremock-jre8-standalone:2.35.0'
 	testImplementation 'io.projectreactor:reactor-test'
 	testImplementation 'io.jsonwebtoken:jjwt-api:0.11.5' // WebSocketAuthInterceptorTest에서 Claims 목 생성
+	testImplementation 'org.springframework.boot:spring-boot-starter-mail' // MemberSignUpKafkaEventConsumerTest에서 EmailService 목 검증 (MessagingException)
 	// Redis
 	testImplementation 'com.redis:testcontainers-redis:2.2.2'
 	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.3'
@@ -209,6 +210,11 @@ tasks.withType(Test).configureEach {
 	// GitHub Actions 러너에서 confluentinc/cp-kafka 컨테이너 기동이 3분 타임아웃 x 3회
 	// 재시도까지 다 써도 실패할 만큼 느려 CI를 안정적으로 통과하지 못한다
 	exclude '**/AttachIntegrateTest*'
+	// 같은 이유(cp-kafka 컨테이너 기동)로 CI에서는 제외. 로컬에서는 -Pit 를 붙여 실행한다
+	// 예) ./gradlew :bootstrap:test --tests 'com.example.kafka.NotificationConsumerFailureIT' -Pit
+	if (!project.hasProperty('it')) {
+		exclude '**/NotificationConsumerFailureIT*'
+	}
 	// application.yml의 spring.profiles.include로 email 프로필이 항상 포함되어
 	// 테스트 컨텍스트 로딩 시에도 MAIL_TEST_* placeholder가 해석되어야 함
 	environment 'MAIL_TEST_HOST', findProperty('MAIL_TEST_HOST') ?: 'localhost'

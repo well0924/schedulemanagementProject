@@ -14,6 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 
@@ -38,6 +40,10 @@ public class ChatHistorySaveConsumerTest {
     // handle()이 제일 먼저 호출하는 의존성인데 기존 테스트엔 없어서 NPE가 나던 부분
     @Mock
     private ProcessedEventService processedEventService;
+
+    // 저장 구간을 감싸는 트랜잭션. 목 트랜잭션 매니저라 콜백만 그대로 실행된다.
+    @Spy
+    private TransactionTemplate transactionTemplate = new TransactionTemplate(Mockito.mock(PlatformTransactionManager.class));
 
     @InjectMocks
     private ChatHistorySaveConsumer consumer;
@@ -97,5 +103,7 @@ public class ChatHistorySaveConsumerTest {
 
         // ack 커밋 안 됨 확인
         verify(ack, times(0)).acknowledge();
+        // 처리 기록도 남지 않아야 재시도가 건너뛰지 않는다 (예전엔 저장 전에 따로 커밋돼 이력이 유실됨)
+        verify(processedEventService, never()).saveProcessedEvent(anyString(), anyString());
     }
 }

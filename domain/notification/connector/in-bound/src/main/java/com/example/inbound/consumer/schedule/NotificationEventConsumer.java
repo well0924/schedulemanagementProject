@@ -3,8 +3,6 @@ package com.example.inbound.consumer.schedule;
 import com.example.events.enums.NotificationChannel;
 import com.example.events.kafka.NotificationEvents;
 import com.example.events.process.ProcessedEventService;
-import com.example.exception.dto.ErrorCode;
-import com.example.exception.global.CustomExceptionHandler;
 import com.example.interfaces.notification.kafka.KafkaEventConsumer;
 import com.example.logging.MDC.KafkaMDCUtil;
 import com.example.notification.NotificationType;
@@ -12,18 +10,17 @@ import com.example.notification.model.NotificationModel;
 import com.example.notification.service.NotificationService;
 import com.example.notification.service.NotificationSettingService;
 import com.example.notification.service.WebPushService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.annotation.Counted;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -35,6 +32,11 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
 
     // 중복 처리 판단 단위. 리스너 groupId와 같은 값이어야 한다.
     private static final String CONSUMER = "notification-group";
+
+    // 처리가 끝난 이벤트만 표시하는 Redis 키. 처리 시작 시점에 잡지 않는다.
+    // (예전엔 시작 시점에 "processing"으로 잡아, 처리 중 실패하거나 서버가 죽으면 재시도·재전달이 버려졌다)
+    static final String DONE_KEY_PREFIX = "event:processed:";
+    private static final Duration DONE_KEY_TTL = Duration.ofMinutes(10);
 
     private final NotificationService notificationService;
 
@@ -50,6 +52,14 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
 
     private final RedisTemplate redisTemplate;
 
+    private final TransactionTemplate transactionTemplate;
+
+    /**
+     * 알림 내역과 처리 기록(processed_event)은 한 트랜잭션으로 저장하고,
+     * 실시간 전달과 오프셋 커밋은 그 트랜잭션이 끝나 커넥션을 반납한 뒤에 한다.
+     * (커밋 이후 콜백에서 하면 커넥션이 묶인 채라, 느린 작업이 커넥션을 붙잡고 DB 쓰기는 버려질 수 있다)
+     * 저장 중 예외는 잡지 않고 전파해, 에러 핸들러의 재시도(2초 간격 3회) → DLQ로 가게 한다.
+     */
     @Timed(value = "kafka.consumer.notification.duration", description = "알림 Kafka 메시지 처리 시간")
     @Counted(value = "kafka.consumer.notification.count", description = "알림 Kafka 메시지 처리 횟수")
     @KafkaListener(
@@ -57,6 +67,7 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
             groupId = CONSUMER,
             containerFactory = "notificationKafkaListenerFactory",
             concurrency = "3")
+    @Override
     public void handle(NotificationEvents event, Acknowledgment ack) {
 
         try {
@@ -66,20 +77,16 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
                     .ofNullable(event.getNotificationChannel())
                     .orElse(NotificationChannel.WEB);
 
-            String eventKey = "event:processed:" + event.getEventId();
+            String doneKey = DONE_KEY_PREFIX + event.getEventId();
 
-            // 1. [Redis Pre-check] DB 커넥션을 잡기 전에 Redis로 먼저 거르기
-            // setIfAbsent는 Redis의 SETNX와 같아서, 이미 키가 있으면 false를 반환함
-            Boolean isNewEvent = redisTemplate.opsForValue()
-                    .setIfAbsent(eventKey, "processing", Duration.ofMinutes(10));
-
-            if (Boolean.FALSE.equals(isNewEvent)) {
-                log.info("🚀 [Redis Filter] 이미 처리 중이거나 완료된 이벤트: {}", event.getEventId());
+            // 1. [Redis Pre-check] 처리가 끝난 이벤트면 DB 조회 전에 거른다
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(doneKey))) {
+                log.info("🚀 [Redis Filter] 이미 처리된 이벤트: {}", event.getEventId());
                 ack.acknowledge();
                 return;
             }
 
-            // EOS 중복 체크
+            // 2. DB 기준 중복 확인
             if (processedEventService.isAlreadyProcessed(CONSUMER, event.getEventId())) {
                 log.info("⚠️ 이미 처리된 이벤트 무시: {}", event.getEventId());
                 ack.acknowledge();
@@ -92,81 +99,67 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
                 ack.acknowledge();
                 return;
             }
-          
-            switch (channel) {
-                case WEB -> {
-                    log.info("📩 Kafka 알림 수신: memberId={}, type={}, channel={}", event.getReceiverId(), event.getNotificationType(), channel);
 
-                    //알림 내역 저장
-                    handleWebNotification(event);
-                    String message = objectMapper.writeValueAsString(event);
-                    //알림 발송
-                    simpMessagingTemplate.convertAndSend("/topic/notifications/" + event.getReceiverId(), message);
-                }
+            // 3. 알림 내역 + 처리 기록 저장 (같은 트랜잭션)
+            transactionTemplate.executeWithoutResult(status -> {
+                saveNotification(event, channel);
+                processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
+            });
 
-                case PUSH -> {
-                    log.info("📩 Kafka 알림 수신: memberId={}, type={}, channel={}",
-                            event.getReceiverId(), event.getNotificationType(), channel);
-                    //푸시 알림 내역 저장
-                    handlePushNotification(event);
-                    //푸시 알림 발송
-                    webPushService.sendPush(event.getReceiverId(), event);
-                }
-            }
-            // 처리 완료후 이벤트 저장
-            processedEventService.saveProcessedEvent(CONSUMER, event.getEventId());
-            // 비지니스 로직 완료후 카프카 커밋
+            // 4. 커밋·커넥션 반납 후: 실시간 전달 → 완료 표시 → 오프셋 커밋
+            deliver(event, channel);
+            markDone(doneKey);
             ack.acknowledge();
-        } catch (CustomExceptionHandler ex) {
-            if(ex.getErrorCode() == ErrorCode.EVENT_DUPLICATE) {
-                log.warn("[Kafka Non-Retry Error] code={}, msg={}", ex.getErrorCode(), ex.getMessage());
-                ack.acknowledge();
-            } else {
-                log.error("기타 비즈니스 예외: {}", ex.getMessage());
-                throw ex;
-            }
-        } catch (DataIntegrityViolationException e) {
-            // 이미 처리된 이벤트라면 무시
-            log.warn("이벤트 중복 저장 시도 감지됨: {}", event.getEventId());
-            ack.acknowledge();
-        } catch (JsonProcessingException e) {
-            log.error("Kafka 메시지 직렬화 오류: {}", e.getMessage());
-            ack.acknowledge();
-            throw new CustomExceptionHandler("이벤트 직렬화 실패: " + event.getEventId(), ErrorCode.EVENT_SERIALIZATION_ERROR);
-        } catch (Exception e) {
-            log.error("WebSocket 전송 실패", e);
-            redisTemplate.delete("event:processed:" + event.getEventId());
         } finally {
             KafkaMDCUtil.clear();
         }
     }
 
-
-    private void handleWebNotification(NotificationEvents event) {
-        NotificationType type = mapActionToType(event.getNotificationType().name());
-
-        if (type == NotificationType.SCHEDULE_REMINDER) {
-            try {
-                // 이미 원본 알림의 isReminderSent가 true이므로 추가 저장 없이 통과
-                log.info("🔔 리마인드 웹 알림 발송 완료: scheduleId={}", event.getScheduleId());
-                webPushService.sendPush(event.getReceiverId(), event);
-            } catch(Exception e) {
-                log.error("❌ 리마인드 웹푸시 발송 실패: {}", e.getMessage());
-            }
+    private void saveNotification(NotificationEvents event, NotificationChannel channel) {
+        // 리마인드 웹 알림은 원본 알림 행이 이미 있어 추가 저장하지 않는다
+        if (channel == NotificationChannel.WEB && isReminder(event)) {
             return;
         }
-        // DB 저장
         NotificationModel model = toNotificationModel(event);
-
         // Kafka Consumer에서 전송 직후 저장이므로 isSent = true로 설정
         model.markAsSent();
         notificationService.createNotification(model);
     }
 
-    private void handlePushNotification(NotificationEvents event) {
-        NotificationModel model = toNotificationModel(event);
-        model.markAsSent();
-        notificationService.createNotification(model);
+    /**
+     * 실시간 전달은 재시도하지 않는다. 내역은 이미 저장됐고,
+     * 재시도하면 처리 기록 때문에 어차피 건너뛰므로 실패는 로그로 남긴다.
+     */
+    private void deliver(NotificationEvents event, NotificationChannel channel) {
+        try {
+            switch (channel) {
+                case WEB -> {
+                    if (isReminder(event)) {
+                        webPushService.sendPush(event.getReceiverId(), event);
+                        log.info("🔔 리마인드 웹 알림 발송 완료: scheduleId={}", event.getScheduleId());
+                        return;
+                    }
+                    String message = objectMapper.writeValueAsString(event);
+                    simpMessagingTemplate.convertAndSend("/topic/notifications/" + event.getReceiverId(), message);
+                }
+                case PUSH -> webPushService.sendPush(event.getReceiverId(), event);
+            }
+        } catch (Exception e) {
+            log.error("❌ 알림 실시간 전달 실패 (내역은 저장됨): eventId={}, channel={}", event.getEventId(), channel, e);
+        }
+    }
+
+    // Redis 표시는 DB 조회를 줄이는 용도라, 실패해도 DB 처리 기록이 중복을 막는다
+    private void markDone(String doneKey) {
+        try {
+            redisTemplate.opsForValue().set(doneKey, "done", DONE_KEY_TTL);
+        } catch (Exception e) {
+            log.warn("Redis 처리 완료 표시 실패 (DB 처리 기록으로 중복 방지): key={}", doneKey, e);
+        }
+    }
+
+    private boolean isReminder(NotificationEvents event) {
+        return mapActionToType(event.getNotificationType().name()) == NotificationType.SCHEDULE_REMINDER;
     }
 
     private NotificationModel toNotificationModel(NotificationEvents event) {

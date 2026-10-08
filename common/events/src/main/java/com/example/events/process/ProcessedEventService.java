@@ -2,9 +2,7 @@ package com.example.events.process;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -24,7 +22,8 @@ public class ProcessedEventService {
         return processedEventRepository.existsByConsumerAndEventId(consumer, eventId);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    // 컨슈머의 업무 저장과 같은 트랜잭션에 참여해야 한다.
+    // 따로 커밋되면 업무 저장이 실패해도 "처리됨"만 남아, 재시도가 건너뛰어 메시지가 사라진다.
     public void saveProcessedEvent(String consumer, String eventId) {
             ProcessedEventEntity entity = ProcessedEventEntity.builder()
                     .consumer(consumer)

@@ -7,7 +7,6 @@ import com.example.outbound.notification.NotificationOutConnector;
 import com.example.security.config.SecurityUtil;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -21,7 +20,7 @@ public class NotificationService {
 
     private final NotificationOutConnector notificationOutConnector;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    // 컨슈머가 처리 기록(processed_event)과 한 트랜잭션으로 저장하도록 호출자의 트랜잭션에 참여한다.
     public NotificationModel createNotification(NotificationModel model) {
         NotificationModel notificationModel = NotificationModel.builder()
                 .userId(model.getUserId())

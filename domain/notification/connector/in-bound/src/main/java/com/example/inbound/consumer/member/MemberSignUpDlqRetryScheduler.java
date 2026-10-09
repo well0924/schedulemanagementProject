@@ -54,7 +54,7 @@ public class MemberSignUpDlqRetryScheduler {
                 KafkaMDCUtil.initMDC(event);
                 // 지연 토픽 발행
                 String retryTopic = getRetryTopicByCountForMember(entity.getRetryCount());
-                kafkaTemplate.send(retryTopic, event);
+                kafkaTemplate.send(retryTopic, event.partitionKey(), event);
                 retryCounter.increment(); // dlq가 정상 작동이 되었을때 카운트
                 // 마킹 성공
                 entity.resolveSuccess(event.getNotificationType());

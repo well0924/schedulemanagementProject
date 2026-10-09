@@ -89,8 +89,10 @@ public class KafkaConsumerConfig {
         factory.setCommonErrorHandler(new DefaultErrorHandler(
                 new DeadLetterPublishingRecoverer(
                         kafkaTemplate,
-                        // 원본 토픽명 뒤에 ".DLQ"를 붙여 실패 메시지 격리 (partition 유지)
-                        (record, ex) -> new TopicPartition(record.topic() + ".DLQ", record.partition())
+                        // 원본 토픽명 뒤에 ".DLQ"를 붙여 실패 메시지 격리.
+                        // 파티션은 -1(지정 안 함)로 둬 키 기준으로 고른다. 원본 파티션 번호를 그대로 쓰면
+                        // DLQ 토픽 파티션이 원본보다 적을 때 DLQ 전송 자체가 실패한다.
+                        (record, ex) -> new TopicPartition(record.topic() + ".DLQ", -1)
                 ),
                 // 2초간격으로 3회 재시도 후 DLQ로 전송
                 new FixedBackOff(2000L, 3)
@@ -117,9 +119,9 @@ public class KafkaConsumerConfig {
         factory.setCommonErrorHandler(new DefaultErrorHandler(
                 new DeadLetterPublishingRecoverer(
                         kafkaTemplate,
-                        (record, ex) -> new TopicPartition(record.topic() + ".DLQ", record.partition())
+                        (record, ex) -> new TopicPartition(record.topic() + ".DLQ", -1)
                 ),
-                new FixedBackOff(0L, 3)
+                new FixedBackOff(2000L, 3)  // 2초 간격 3회 재시도 (다른 컨슈머와 동일)
         ));
         //MANUAL_IMMEDIATE: 비즈니스 로직 성공 후 즉시 오프셋을 커밋하여 데이터 정합성 강화
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
@@ -142,7 +144,7 @@ public class KafkaConsumerConfig {
         factory.setCommonErrorHandler(new DefaultErrorHandler(
                 new DeadLetterPublishingRecoverer(
                         kafkaTemplate,
-                        (record, ex) -> new TopicPartition(record.topic() + ".DLQ", record.partition())
+                        (record, ex) -> new TopicPartition(record.topic() + ".DLQ", -1)
                 ),
                 new FixedBackOff(2000L, 3)  // 2초 간격 3회 재시도
         ));

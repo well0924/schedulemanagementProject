@@ -41,7 +41,7 @@ public class NotificationRetryTopicConsumer {
             NotificationEvents event = objectMapper.readValue(message, NotificationEvents.class);
             meterRegistry.counter("kafka.retry.notification.success", "delay", "5s").increment();
             KafkaMDCUtil.initMDC(event);
-            kafkaTemplate.send("notification-events", event);
+            kafkaTemplate.send("notification-events", event.partitionKey(), event);
             log.info("5초 딜레이 후 재전송 완료: {}", event);
             ack.acknowledge();
         } catch (JsonProcessingException e) {
@@ -60,7 +60,7 @@ public class NotificationRetryTopicConsumer {
             NotificationEvents event = objectMapper.readValue(message, NotificationEvents.class);
             meterRegistry.counter("kafka.retry.notification.success", "delay", "10s").increment();
             KafkaMDCUtil.initMDC(event);
-            kafkaTemplate.send("notification-events", event);
+            kafkaTemplate.send("notification-events", event.partitionKey(), event);
             log.info("10초 딜레이 후 재전송 완료: {}", event);
             ack.acknowledge();
         } catch (JsonProcessingException e) {
@@ -79,7 +79,7 @@ public class NotificationRetryTopicConsumer {
             NotificationEvents event = objectMapper.readValue(message, NotificationEvents.class);
             meterRegistry.counter("kafka.retry.notification.success", "delay", "30s").increment();
             KafkaMDCUtil.initMDC(event);
-            kafkaTemplate.send("notification-events", event);
+            kafkaTemplate.send("notification-events", event.partitionKey(), event);
             log.info("30초 딜레이 후 재전송 완료: {}", event);
             ack.acknowledge();
         } catch (JsonProcessingException e) {
@@ -98,7 +98,7 @@ public class NotificationRetryTopicConsumer {
             NotificationEvents event = objectMapper.readValue(message, NotificationEvents.class);
             meterRegistry.counter("kafka.retry.notification.success", "delay", "60s").increment();
             KafkaMDCUtil.initMDC(event);
-            kafkaTemplate.send("notification-events", event);
+            kafkaTemplate.send("notification-events", event.partitionKey(), event);
             log.info("60초 딜레이 후 재전송 완료: {}", event);
 
             ack.acknowledge();

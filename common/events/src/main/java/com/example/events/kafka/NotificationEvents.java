@@ -58,4 +58,12 @@ public class NotificationEvents extends BaseKafkaEvent{
                 .scheduleId(model.getScheduleId())
                 .build();
     }
+
+    /**
+     * Kafka 메시지 키. Outbox 발행 키(aggregateId = 일정 ID)와 같아야 같은 일정의 이벤트가
+     * 재처리로 다시 발행될 때도 같은 파티션으로 간다. 일정이 없는 알림이면 null(키 없음).
+     */
+    public String partitionKey() {
+        return scheduleId == null ? null : String.valueOf(scheduleId);
+    }
 }

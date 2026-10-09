@@ -79,7 +79,7 @@ public class NotificationDlqRetryScheduler {
                     event.setForceSend(true);
                     KafkaMDCUtil.initMDC(event);
                     String retryTopic = getRetryTopicByCount(entity.getRetryCount());
-                    kafkaTemplate.send(retryTopic, event);
+                    kafkaTemplate.send(retryTopic, event.partitionKey(), event);
                     retryCounter.increment(); // dlq가 정상 작동이 되었을때 카운트
                     log.info("재시도 메시지 전송: retryCount={}, topic={}", entity.getRetryCount(), retryTopic);
                     // resolved를 true로 변환

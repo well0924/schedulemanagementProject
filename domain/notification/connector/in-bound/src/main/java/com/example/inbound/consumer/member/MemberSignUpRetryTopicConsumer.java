@@ -38,7 +38,7 @@ public class MemberSignUpRetryTopicConsumer {
             MemberSignUpKafkaEvent event = objectMapper.readValue(message, MemberSignUpKafkaEvent.class);
             KafkaMDCUtil.initMDC(event);
             meterRegistry.counter("kafka.retry.signup.success", "delay", "5s").increment();
-            kafkaTemplate.send("member-signup-events", event);
+            kafkaTemplate.send("member-signup-events", event.partitionKey(), event);
             log.info(" 5초 후 재전송 완료: {}", event.getEmail());
             ack.acknowledge();
         } catch (JsonProcessingException e) {
@@ -57,7 +57,7 @@ public class MemberSignUpRetryTopicConsumer {
             MemberSignUpKafkaEvent event = objectMapper.readValue(message, MemberSignUpKafkaEvent.class);
             KafkaMDCUtil.initMDC(event);
             meterRegistry.counter("kafka.retry.signup.success", "delay", "10s").increment();
-            kafkaTemplate.send("member-signup-events", event);
+            kafkaTemplate.send("member-signup-events", event.partitionKey(), event);
             log.info(" 10초 후 재전송 완료: {}", event.getEmail());
             ack.acknowledge();
         } catch (JsonProcessingException e) {
@@ -76,7 +76,7 @@ public class MemberSignUpRetryTopicConsumer {
             MemberSignUpKafkaEvent event = objectMapper.readValue(message, MemberSignUpKafkaEvent.class);
             KafkaMDCUtil.initMDC(event);
             meterRegistry.counter("kafka.retry.signup.success", "delay", "30s").increment();
-            kafkaTemplate.send("member-signup-events", event);
+            kafkaTemplate.send("member-signup-events", event.partitionKey(), event);
             log.info(" 30초 후 재전송 완료: {}", event.getEmail());
             ack.acknowledge();
         } catch (JsonProcessingException e) {
@@ -95,7 +95,7 @@ public class MemberSignUpRetryTopicConsumer {
             MemberSignUpKafkaEvent event = objectMapper.readValue(message, MemberSignUpKafkaEvent.class);
             KafkaMDCUtil.initMDC(event);
             meterRegistry.counter("kafka.retry.signup.success", "delay", "60s").increment();
-            kafkaTemplate.send("member-signup-events", event);
+            kafkaTemplate.send("member-signup-events", event.partitionKey(), event);
             log.info(" 60초 후 재전송 완료: {}", event.getEmail());
             ack.acknowledge();
         } catch (JsonProcessingException e) {

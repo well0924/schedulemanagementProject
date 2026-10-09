@@ -31,6 +31,11 @@ out/
 **.yml
 # CI에서 테스트 실행 시 필요한 프로필 설정 - 실제 운영 시크릿은 넣지 말 것
 !bootstrap/src/test/resources/application-test.yml
+# CI에서 운영 이미지를 빌드하려면 필요한 설정 - 비밀값은 전부 ${ENV}로만 읽는다 (값은 서버 .env)
+!bootstrap/src/main/resources/application-prod.yml
+!domain/member/connector/out-bound/src/main/resources/application-oauth2.yml
+!domain/notification/connector/in-bound/src/main/resources/application-slack.yml
+!domain/notification/connector/out-bound/api-client/src/main/resources/application-push.yml
 *.env
 # STS 관련
 .apt_generated

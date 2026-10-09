@@ -21,7 +21,7 @@ Daily Line은 사용자의 행동 패턴과 빈 시간을 분석해 최적의 �
 - **Database & Cache:** MySQL 8, Redis, Flyway
 - **Message Broker:** Apache Kafka (KRaft mode, 3-Broker Cluster), ShedLock (Redis)
 - **Realtime & External:** WebSocket(STOMP), Web Push(VAPID), OpenAI API + Resilience4j, AWS S3 (PreSigned URL)
-- **Infra & CI/CD:** AWS EC2 (t3.micro 2GB), GitHub Actions, Docker(Google Jib을 통한 컨테이너 빌드 최적화), Nginx
+- **Infra & CI/CD:** AWS EC2 (t3.micro 2GB), GitHub Actions(테스트 → Jib으로 Docker Hub push → 앱 서버 2대 순차 배포), Docker, Nginx
 - **Observability:** OpenTelemetry, Prometheus, Grafana, Loki, Tempo (LGTM Stack)
 - **Test:** JUnit 5, TestContainers, WireMock, JMeter
 
@@ -69,8 +69,9 @@ AI 추천 엔진(OpenAI API)은 외부 의존성이 크고 모델 스펙이 수�
   chat-history         → 이력 저장 컨슈머 → MySQL + Redis 대화 맥락
                        → 패턴 분석 컨슈머
 
-  처리 순서: Redis 필터 → (consumer, event_id) 멱등성 확인 → 처리
-            → processed_event 저장 → 오프셋 커밋
+  처리 순서: Redis 필터(처리 완료 표시) → (consumer, event_id) 멱등성 확인
+            → [한 트랜잭션] 업무 저장 + processed_event 저장
+            → 트랜잭션 종료 후 전달(WebSocket·Web Push·메일) → 오프셋 커밋
 
 [실패] (알림·회원가입 이벤트. 챗봇 이벤트는 DLQ까지만)
   즉시 재시도 3회(2초 간격) → DLQ → failed_message 기록
@@ -114,6 +115,8 @@ Outbox는 "최소 한 번" 발행을 보장하므로 같은 이벤트가 두 번
 - **`AckMode.MANUAL_IMMEDIATE`:** 처리와 기록이 끝난 뒤에만 오프셋을 커밋합니다.
 - **`ErrorHandlingDeserializer`:** 역직렬화할 수 없는 메시지(Poison Pill)가 컨슈머를 멈추지 않게 합니다.
 - **재시도 → DLQ → 재처리:** 컨슈머가 실패하면 `DefaultErrorHandler`가 2초 간격으로 3번 재시도하고, 그래도 실패하면 `DeadLetterPublishingRecoverer`로 DLQ에 보냅니다. DLQ 컨슈머가 `failed_message`에 기록하면, 30초 주기 스케줄러가 재시도 횟수별 토픽으로 다시 발행해 원본 토픽으로 돌려보냅니다(최대 5회). 대상은 알림·회원가입 이벤트이고, 챗봇 이벤트는 DLQ까지만 보냅니다.
+- **저장 단위와 부수 작업:** 업무 데이터와 `processed_event`는 `TransactionTemplate` 하나로 함께 커밋하고, 저장 중 예외는 전파해 위 재시도 경로를 탑니다. 실시간 전달·메일·오프셋 커밋은 트랜잭션이 끝나 커넥션을 반납한 뒤에 합니다. 커밋 이후 콜백(`afterCommit`)은 커넥션이 묶인 채라, 메일 재시도가 커넥션을 붙잡거나 실패 기록 저장이 버려질 수 있어 쓰지 않았습니다.
+- **순서:** 메시지 키는 대상 ID(일정·회원·채팅 회원)이고, 재처리 재발행도 같은 키로 보내 같은 파티션에서 순서대로 처리됩니다. 단, 발행 실패나 DLQ를 거친 메시지는 뒤 메시지보다 늦게 처리될 수 있습니다. 지금 컨슈머는 알림·이력처럼 기록을 쌓는 처리라 순서가 바뀌어도 데이터가 틀어지지 않으며, 상태를 덮어쓰는 컨슈머가 생기면 이벤트 버전으로 오래된 이벤트를 걸러야 합니다. 유실과 중복은 위 경로와 멱등 처리로 막습니다.
 
 ### 4. 외부 API 격리 — 챗봇 서킷브레이커
 
@@ -210,6 +213,9 @@ G1GC 튜닝 + 모니터링 서버 분리로 서비스 서버와의 리소스 경
 | WebSocket 구독에 인증이 없음 | 다른 회원의 알림 채널도 구독 가능 | 연결할 때 토큰 검증, 본인 채널만 구독 허용 |
 | 리마인더 중복 발송 | 서버 2대가 같은 리마인더를 동시에 발송 | ShedLock + 행 단위 선점 UPDATE |
 | 같은 아이디로 회원이 2명 생성 | `member.user_id`에 UNIQUE 없음 → 로그인 실패 | UNIQUE 제약 추가 |
+| 컨슈머 실패 메시지가 재시도·DLQ 없이 사라짐 | 알림·회원가입 컨슈머가 일반 예외를 삼켰고, 알림 컨슈머는 처리 시작 시점에 Redis "processing" 키를 잡아 재시도를 버렸음. 처리 기록이 `REQUIRES_NEW`로 따로 커밋돼 챗봇 컨슈머는 실패해도 "처리됨"이 먼저 남음 | 업무 저장과 처리 기록을 한 트랜잭션으로, 실패는 예외로 전파, 완료 후에만 Redis 표시. 실제 Kafka 통합 테스트로 수정 전 코드는 DLQ에 도달하지 않고 수정 후엔 재시도 3회 → DLQ, 롤백되는 것을 확인 |
+| 재처리 메시지가 원래와 다른 파티션으로 감 | 재처리 재발행을 키 없이 보냈고, 리마인더는 일정 ID가 아니라 알림 행 ID를 키로 씀 | 재발행에 대상 ID 키 추가, 리마인더 키를 일정 ID로 통일 |
+| CI가 배포 이미지를 만들지 않음 | `jibDockerBuild`라 이미지가 러너 안에서만 만들어지고 사라져, 배포가 Docker Hub의 옛 이미지를 받음. 이미지에 비밀값도 들어 있었음 | main push 때 `jib`으로 push, 비밀값은 서버 `.env`로만 주입, 서버 2대 순차 배포 |
 
 ---
 
@@ -227,6 +233,7 @@ G1GC 튜닝 + 모니터링 서버 분리로 서비스 서버와의 리소스 경
 - **통합 테스트 (TestContainers):** Kafka / Redis / MySQL을 컨테이너로 띄워 실제와 같은 조건에서 검증합니다.
 - **외부 API 테스트 (WireMock):** OpenAI 지연·오류를 재현해 서킷브레이커와 타임아웃 동작을 검증합니다.
 - **동시성·정합성 테스트:** 배치 선점, 리마인더 선점, 컨슈머별 멱등성, WebSocket 구독 권한 등 운영 점검에서 고친 버그마다 재현 테스트를 추가했습니다.
+- **컨슈머 실패 경로 통합 테스트:** 실제 알림 컨슈머를 Kafka·MySQL·Redis 컨테이너로 돌려, 저장 실패 시 재시도 3회 → DLQ, 업무 데이터·처리 기록 롤백, 일시 장애 후 정확히 1건 처리, 전달 시점에 트랜잭션이 끝나 있음을 확인합니다. 수정 전 코드에서는 이 테스트가 실패합니다. (CI 러너의 Kafka 컨테이너 기동이 느려 CI에서는 제외, 로컬에서 `-Pit`로 실행)
 - **부하 테스트 (JMeter):** 스트레스 테스트(30~90VU)와 Mixed-flow 부하 테스트(90·490VU). 테스트가 끝난 뒤 DB를 직접 대조했습니다. 490VU 기준으로 계정별 생성 건수 합계가 JMeter 생성 요청 수(34,300건)와 일치했고, 미발행 Outbox와 재처리 대상(`failed_message`)은 0건이었습니다.
 
 ---
@@ -240,6 +247,7 @@ G1GC 튜닝 + 모니터링 서버 분리로 서비스 서버와의 리소스 경
 | 인프라 서버 단일 호스트 | Kafka 브로커 3개, Redis, Nginx가 EC2 한 대에 있음. 브로커 프로세스 장애에는 복제로 대응하지만, 호스트 장애 시에는 이벤트 발행·캐시·라우팅이 함께 멈춤 (앱 서버 2대 이중화는 애플리케이션 계층에만 해당) | 브로커를 서로 다른 호스트·가용 영역으로 분산 |
 | Redis 단일 장애점 | 캐시, ShedLock, 중복 사전 검사가 모두 Redis에 의존 | Redis Sentinel 또는 장애 시 동작 정의 |
 | `TIMESTAMP` 2038년 한계 | 2038-01-19 이후 시각의 일정을 저장할 수 없음 (490VU 테스트 중 발견) | `DATETIME`으로 전환하는 마이그레이션 |
+| 챗봇 이벤트 DLQ 미처리 | 챗봇 컨슈머 실패는 `chat-history.DLQ`, 발행 실패는 `chat-events.DLQ`로 가지만 둘 다 받는 컨슈머가 없어 재처리되지 않음 | DLQ 토픽 이름을 통일하고 알림처럼 `failed_message` → 재처리 연결 |
 | DB 쓰기 증가로 API 응답 시간 증가 | 배치 선점 후 490VU에서 평균 응답 65ms → 804ms (리마인더 INSERT 추가, 컨슈머 처리량 약 2배) | 원인 분리 측정, 리마인더 생성을 Outbox로 이동, 컨슈머 동시성 조정 |
 
 ---

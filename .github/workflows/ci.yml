@@ -53,5 +53,16 @@ jobs:
           SPRING_PROFILES_ACTIVE: test
           SPRING_SCHEDULING_ENABLED: false
 
-      - name: Build Docker image with Jib
-        run: ./gradlew jibDockerBuild
+      # PR: 이미지가 만들어지는지만 확인 (레지스트리에 올리지 않음)
+      - name: Build image tarball with Jib (PR)
+        if: github.event_name == 'pull_request'
+        run: ./gradlew :bootstrap:jibBuildTar
+
+      # main push: Docker Hub에 latest + 커밋 해시 태그로 올린다. deploy.yml이 이 latest를 받아 배포한다.
+      # (예전엔 jibDockerBuild라 러너 안에서만 이미지가 만들어지고 사라져, 배포가 옛 이미지를 받았다)
+      - name: Build and push image with Jib (main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: ./gradlew :bootstrap:jib -Djib.to.tags=${{ github.sha }}
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}

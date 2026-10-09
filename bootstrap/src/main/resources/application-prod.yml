@@ -1,0 +1,81 @@
+server:
+  tomcat:
+    threads:
+      max: 100 # 60VU~100VU 상황에서 쓰레드 경합을 줄여줌
+    accept-count: 200 # 대기열을 조금 더 넉넉하게
+spring:
+  jackson:
+    time-zone: Asia/Seoul
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+        show_sql: false
+        jdbc.batch_size: 30
+        order_inserts: true
+        order_updates: true
+        jdbc.batch_versioned_data: true
+        dialect: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: none
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}   # compose 네트워크 이름
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 40 # 328번 4차 시도(pool 40) 베이스라인과 조건 맞추기 위해 원복 - CAS 회귀 테스트용 (2026-09-14)
+      minimum-idle: 40 # 풀사이즈에 맞게 같이 수정.
+      idle-timeout: 30000 # 3초에서 10초(10000ms)로 대폭 늘리기 (정체 구간을 견디게 해줌)
+      max-lifetime: 1800000
+      connection-timeout: 15000 # Round 4(90VU) 재검증 조건과 동일하게 복원 (2026-09-09)
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 3
+  data:
+    redis:
+      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST}
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 2
+          max-wait: 5000ms
+management:
+  metrics:
+    enable:
+      all: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,tracing
+      base-path: /actuator
+  security:
+    enabled: false
+  endpoint:
+    prometheus:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      # Tempo 서버 주소
+      endpoint: "http://10.0.1.73:4318/v1/traces"
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-validity-in-seconds: ${ACCESS_TOKEN_VALIDATING_SECONDS}
+  refresh-token-validity-in-seconds: ${REFRESH_TOKEN_VALIDATING_SECONDS}
+
+# 소셜 로그인
+app:
+  oauth2:
+    # nginx 뒤라 {baseUrl}이 내부 주소로 잡혀 구글에 등록한 콜백 주소와 달라지므로 명시
+    callback-base-url: https://api.schedulemanagement.shop
+    # 로그인 후 돌아갈 프론트 주소 (Vercel 배포 전까지는 로컬 프론트)
+    authorized-redirect-uri: http://localhost:3000/auth/callback

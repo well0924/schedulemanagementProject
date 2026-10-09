@@ -171,27 +171,11 @@ jib {
 					'-XX:MaxDirectMemorySize=128m',
 					'-Duser.timezone=Asia/Seoul']
 		//creationTime = 'USE_CURRENT_TIMESTAMP'
+		// 비밀값(DB, JWT, 메일, S3, OpenAI, Slack, Google, VAPID)은 이미지에 넣지 않는다.
+		// 서버의 .env를 docker compose의 env_file로 주입한다. (예전엔 gradle.properties 값을 이미지에 넣었음)
 		environment = [
 				'SPRING_KAFKA_BOOTSTRAP_SERVERS': 'kafka:9092',
-				'SPRING_DATA_REDIS_HOST': 'redis',
-				'SPRING_DATASOURCE_URL'    : findProperty("SPRING_DATASOURCE_URL") ?: "",
-				'SPRING_DATASOURCE_USERNAME': findProperty("SPRING_DATASOURCE_USERNAME") ?: "",
-				'SPRING_DATASOURCE_PASSWORD': findProperty("SPRING_DATASOURCE_PASSWORD") ?: "",
-				'JWT_SECRET'               : findProperty("JWT_SECRET") ?: "",
-				'MAIL_TEST_HOST'                : findProperty("MAIL_TEST_HOST") ?: "",
-				'MAIL_TEST_PORT'                : findProperty("MAIL_TEST_PORT") ?: "",
-				'MAIL_TEST_USERNAME'            : findProperty("MAIL_TEST_USERNAME") ?: "",
-				'MAIL_TEST_PASSWORD'            : findProperty("MAIL_TEST_PASSWORD") ?: "",
-				'BUCKET'     : findProperty("BUCKET") ?: "",
-				'STATIC'     : findProperty("STATIC") ?: "",
-				'ACCESS_KEY' : findProperty("ACCESS_KEY") ?: "",
-				'SECRET_KEY' : findProperty("SECRET_KEY") ?: "",
-				'OPENAI_BASE_URL' : findProperty("OPENAI_BASE_URL") ?: "",
-				'OPENAI_SECRET_KEY' : findProperty("OPENAI_SECRET_KEY") ?: "",
-				'MODEL' : findProperty("MODEL") ?: "",
-				'SLACK_WEB_HOOK' : findProperty("SLACK_WEB_HOOK") ?: "",
-				'GOOGLE_CLIENT_ID' : findProperty("GOOGLE_CLIENT_ID") ?: "",
-				'GOOGLE_CLIENT_SECRET' : findProperty("GOOGLE_CLIENT_SECRET") ?: ""
+				'SPRING_DATA_REDIS_HOST': 'redis'
 		]
 	}
 	// 캐시 비활성화 → 불필요한 레이어 줄이기

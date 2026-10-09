@@ -1,0 +1,5 @@
+webpush:
+  subject: "mailto:admin@schedulemanagement.site"
+  vapid:
+    public: ${VAPID_PUBLIC_KEY}
+    private: ${VAPID_PRIVATE_KEY}

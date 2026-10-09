@@ -1,5 +1,5 @@
 ### CI/CD 파이프라인
-![Image](https://github.com/user-attachments/assets/fcf8cd41-2fbf-44a4-b7ae-1402b5fd85d5)
+![CI/CD 파이프라인](../image/ci-cd-pipeline.png)
 
 **구성 요약**
 - GitHub Actions 기반 빌드·테스트·배포
@@ -12,6 +12,11 @@
 2. main push: 테스트 → `jib`으로 Docker Hub에 `latest`와 커밋 해시 태그로 push
 3. CI 성공 시 `deploy.yml`이 앱 서버에 **한 대씩** SSH 접속해 `docker compose pull && up -d`
 4. 첫 서버가 HTTP에 다시 응답한 뒤 두 번째 서버로 넘어가, 배포 중에도 한 대는 요청을 받음
+
+**실패 시 동작**
+- 테스트나 이미지 push가 실패하면 CI가 실패로 끝나고, Deploy는 실행되지 않는다. Docker Hub의 `latest`도 바뀌지 않는다.
+- 서버 1에서 SSH 접속이나 기동 확인(3분)이 실패하면 그 job이 실패하고, 서버 2 배포는 취소된다.
+- 이때 nginx는 응답하지 않는 서버 대신 다른 서버로 요청을 다시 보낸다 (`proxy_next_upstream error timeout http_500 http_502 http_503`).
 
 **바뀐 점 (2026-10)**
 - 예전 CI는 `jibDockerBuild`라 이미지가 러너 안에서만 만들어지고 사라졌다. 그래서 배포 단계가 Docker Hub의 옛 이미지를 받고 있었고, 실제 반영은 로컬 `./gradlew jib`로 했다.

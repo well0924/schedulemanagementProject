@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="580" viewBox="0 0 1240 580" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect width="1240" height="580" fill="#ffffff"/>
+
+  <!-- 개발자 -->
+  <rect x="30" y="80" width="170" height="100" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
+  <text x="115" y="122" font-size="17" font-weight="700" text-anchor="middle" fill="#24292f">개발자</text>
+  <text x="115" y="148" font-size="13" text-anchor="middle" fill="#57606a">PR 생성 / main 머지</text>
+  <line x1="200" y1="130" x2="246" y2="130" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- CI -->
+  <rect x="250" y="40" width="450" height="180" rx="10" fill="#f6f8fa" stroke="#24292f" stroke-width="2"/>
+  <text x="270" y="72" font-size="17" font-weight="700" fill="#24292f">GitHub Actions · CI</text>
+  <text x="440" y="72" font-size="13" fill="#57606a">(ci.yml)</text>
+  <text x="270" y="110" font-size="14" fill="#24292f">① 테스트  <tspan font-family="Consolas,monospace">./gradlew test</tspan></text>
+  <text x="270" y="145" font-size="14" fill="#24292f">② PR → <tspan font-family="Consolas,monospace">jibBuildTar</tspan>  <tspan fill="#57606a">이미지가 만들어지는지만 확인</tspan></text>
+  <text x="270" y="180" font-size="14" fill="#24292f">③ main push → <tspan font-family="Consolas,monospace">jib</tspan>  <tspan fill="#57606a">Docker Hub로 push</tspan></text>
+
+  <line x1="700" y1="130" x2="776" y2="130" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="738" y="120" font-size="12" text-anchor="middle" fill="#57606a">push</text>
+
+  <!-- Docker Hub -->
+  <rect x="780" y="70" width="320" height="120" rx="10" fill="#eef4ff" stroke="#1d63ed" stroke-width="2"/>
+  <text x="800" y="104" font-size="17" font-weight="700" fill="#1d63ed">Docker Hub <tspan font-size="13" font-weight="400" fill="#57606a">(비공개)</tspan></text>
+  <text x="800" y="134" font-size="13" font-family="Consolas,monospace" fill="#24292f">well4149/schedule-management</text>
+  <text x="800" y="162" font-size="13" fill="#57606a">태그: latest + 커밋 SHA · 비밀값 없음</text>
+
+  <!-- CI → Deploy -->
+  <line x1="380" y1="220" x2="380" y2="316" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="392" y="262" font-size="12" fill="#57606a">CI 성공 + main push일 때</text>
+  <text x="392" y="280" font-size="12" fill="#57606a">(workflow_run)</text>
+
+  <!-- Deploy -->
+  <rect x="250" y="320" width="260" height="150" rx="10" fill="#f6f8fa" stroke="#24292f" stroke-width="2"/>
+  <text x="270" y="352" font-size="17" font-weight="700" fill="#24292f">GitHub Actions · Deploy</text>
+  <text x="270" y="374" font-size="13" fill="#57606a">(deploy.yml)</text>
+  <text x="270" y="406" font-size="14" fill="#24292f">matrix: 서버 1 → 서버 2</text>
+  <text x="270" y="432" font-size="14" fill="#24292f"><tspan font-family="Consolas,monospace">max-parallel: 1</tspan>  <tspan fill="#57606a">한 대씩</tspan></text>
+
+  <line x1="510" y1="395" x2="566" y2="395" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="538" y="385" font-size="12" text-anchor="middle" fill="#57606a">SSH</text>
+
+  <!-- Infra -->
+  <rect x="570" y="335" width="190" height="120" rx="10" fill="#fff8ec" stroke="#ff9900" stroke-width="2"/>
+  <text x="590" y="366" font-size="16" font-weight="700" fill="#24292f">EC2 schedule-infra</text>
+  <text x="590" y="392" font-size="13" fill="#24292f">SSH 점프 서버</text>
+  <text x="590" y="412" font-size="12" fill="#57606a">(EC2_PROXY_HOST, 선택)</text>
+  <text x="590" y="436" font-size="12" fill="#57606a">nginx · Kafka · Redis</text>
+
+  <line x1="760" y1="380" x2="846" y2="330" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="760" y1="410" x2="846" y2="470" stroke="#57606a" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+
+  <!-- Docker Hub → apps -->
+  <line x1="1030" y1="190" x2="1030" y2="266" stroke="#1d63ed" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+  <text x="1042" y="234" font-size="12" fill="#1d63ed">image pull</text>
+
+  <!-- App 1 -->
+  <rect x="850" y="270" width="360" height="115" rx="10" fill="#fff8ec" stroke="#ff9900" stroke-width="2"/>
+  <text x="870" y="300" font-size="16" font-weight="700" fill="#24292f">EC2 app 서버 1 <tspan font-size="12" font-weight="400" fill="#57606a">(schedule-service)</tspan></text>
+  <text x="870" y="326" font-size="13" font-family="Consolas,monospace" fill="#24292f">docker compose pull → up -d</text>
+  <text x="870" y="350" font-size="13" fill="#24292f">:8082 응답 대기 (최대 3분)</text>
+  <text x="870" y="372" font-size="12" fill="#57606a">응답하면 서버 2로, 실패하면 여기서 중단</text>
+
+  <!-- App 2 -->
+  <rect x="850" y="415" width="360" height="115" rx="10" fill="#fff8ec" stroke="#ff9900" stroke-width="2"/>
+  <text x="870" y="445" font-size="16" font-weight="700" fill="#24292f">EC2 app 서버 2 <tspan font-size="12" font-weight="400" fill="#57606a">(schedule-service)</tspan></text>
+  <text x="870" y="471" font-size="13" fill="#24292f">서버 1이 응답한 뒤 같은 순서로 배포</text>
+  <text x="870" y="495" font-size="12" fill="#57606a">배포 중에도 한 대는 계속 요청을 받음</text>
+
+  <!-- secrets note -->
+  <rect x="30" y="500" width="760" height="54" rx="8" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
+  <text x="48" y="524" font-size="13" fill="#24292f">비밀값(DB · JWT · S3 · OpenAI · Google · Slack · VAPID)은 이미지에 넣지 않고</text>
+  <text x="48" y="544" font-size="13" fill="#24292f">각 app 서버의 <tspan font-family="Consolas,monospace">~/.env</tspan>를 docker compose <tspan font-family="Consolas,monospace">env_file</tspan>로 주입 (변수 목록: <tspan font-family="Consolas,monospace">deploy/.env.example</tspan>)</text>
+</svg>

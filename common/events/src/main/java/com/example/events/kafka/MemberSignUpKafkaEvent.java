@@ -28,4 +28,9 @@ public class MemberSignUpKafkaEvent extends BaseKafkaEvent {
                 .createdTime(LocalDateTime.now())
                 .build();
     }
+
+    /** Kafka 메시지 키. Outbox 발행 키(aggregateId = 회원 ID)와 같아야 재처리 때도 같은 파티션으로 간다. */
+    public String partitionKey() {
+        return receiverId == null ? null : String.valueOf(receiverId);
+    }
 }

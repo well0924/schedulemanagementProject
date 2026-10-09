@@ -59,7 +59,7 @@ class NotificationDlqRetrySchedulerTypeFilterTest {
 
         scheduler.retryNotifications();
 
-        verify(kafkaTemplate).send(eq("notification-events.retry.5s"), any(NotificationEvents.class));
+        verify(kafkaTemplate).send(eq("notification-events.retry.5s"), any(), any(NotificationEvents.class));
         verify(failedMessageService, times(1)).updateFailMessage(notification);
         verify(failedMessageService, never()).updateFailMessage(signup);
         assertThat(notification.isResolved()).isTrue();

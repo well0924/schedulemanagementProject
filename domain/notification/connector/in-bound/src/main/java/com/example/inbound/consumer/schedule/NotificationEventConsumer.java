@@ -65,8 +65,7 @@ public class NotificationEventConsumer implements KafkaEventConsumer<Notificatio
     @KafkaListener(
             topics = "notification-events",
             groupId = CONSUMER,
-            containerFactory = "notificationKafkaListenerFactory",
-            concurrency = "3")
+            containerFactory = "notificationKafkaListenerFactory") // 동시성은 팩토리(KafkaConsumerConfig) 한 곳에서 관리
     @Override
     public void handle(NotificationEvents event, Acknowledgment ack) {
 

@@ -58,7 +58,9 @@ public class ReminderNotificationService {
                     outboxEventService.saveEvent(
                             event,
                             AggregateType.SCHEDULE.name(),
-                            model.getId().toString(),
+                            // 메시지 키 = 일정 ID. 같은 일정의 생성·수정 이벤트와 같은 파티션으로 보내 순서를 맞춘다
+                            // (예전엔 리마인더 알림 행 ID를 써서 같은 일정인데도 파티션이 달라질 수 있었다)
+                            event.partitionKey() != null ? event.partitionKey() : model.getId().toString(),
                             event.getNotificationType().name()
                     );
                     notificationOutConnector.markAsSent(model.getId());

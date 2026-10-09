@@ -22,18 +22,8 @@ public class KafkaProducerConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    /**
-     * 알림(Notification) 전송을 위한 Producer 설정
-     */
-    @Bean
-    public ProducerFactory<String, NotificationEvents> notificationProducerFactory() {
-        Map<String, Object> config = new HashMap<>();
-        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-        return new DefaultKafkaProducerFactory<>(config);
-    }
-
+    // 모든 KafkaTemplate은 genericProducerFactory(acks=all, 멱등 프로듀서)를 쓴다.
+    // (예전엔 acks·멱등 설정이 없는 notificationProducerFactory 빈이 있었지만 어디서도 쓰이지 않아 제거)
     @Bean
     public KafkaTemplate<String, NotificationEvents> notificationKafkaTemplate() {
         // 공통 설정이 적용된 genericProducerFactory 사용

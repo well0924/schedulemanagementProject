@@ -137,7 +137,7 @@ class KafkaRetryConsumerWiringTest {
     void memberRetry_resendsAndAcks() throws Exception {
         deliver("member-signup.retry.5s", memberJson());
 
-        verify(memberKafkaTemplate).send(eq("member-signup-events"), any(MemberSignUpKafkaEvent.class));
+        verify(memberKafkaTemplate).send(eq("member-signup-events"), any(), any(MemberSignUpKafkaEvent.class));
         verify(ack).acknowledge();
     }
 
@@ -146,7 +146,7 @@ class KafkaRetryConsumerWiringTest {
     void memberRetry_malformed_acksWithoutResend() {
         deliver("member-signup.retry.5s", "{ not json");
 
-        verify(memberKafkaTemplate, never()).send(anyString(), any(MemberSignUpKafkaEvent.class));
+        verify(memberKafkaTemplate, never()).send(anyString(), any(), any(MemberSignUpKafkaEvent.class));
         verify(ack).acknowledge();
     }
 
@@ -164,7 +164,7 @@ class KafkaRetryConsumerWiringTest {
     void notificationRetry_resendsAndAcks() throws Exception {
         deliver("notification-events.retry.5s", notificationJson());
 
-        verify(notificationKafkaTemplate).send(eq("notification-events"), any(NotificationEvents.class));
+        verify(notificationKafkaTemplate).send(eq("notification-events"), any(), any(NotificationEvents.class));
         verify(ack).acknowledge();
     }
 }

@@ -5,30 +5,58 @@ on:
     workflows: ["Schedule Project CI with Compose"]  # CI yml의 name값
     types:
       - completed
-    branches: 
+    branches:
       - main # main에 merge가 되었을때 cd가 작동
+
+# 앱 서버 2대에 한 대씩 차례로 배포한다. 첫 번째 서버가 다시 응답할 때까지 기다린 뒤 두 번째로 넘어가,
+# 배포 중에도 한 대는 계속 요청을 받는다.
+#
+# 필요한 GitHub Secrets
+#   EC2_APP1_HOST, EC2_APP2_HOST : 앱 서버 접속 주소
+#   EC2_USER, EC2_SSH_KEY        : SSH 사용자와 개인키 (두 서버 공통)
+#   EC2_PROXY_HOST               : (선택) 점프 서버를 거쳐야 할 때만. 비워두면 바로 접속
+#   DOCKER_USERNAME, DOCKER_PASSWORD
+#
+# 서버 준비: 홈 디렉터리에 docker-compose.dev.yml과 .env가 있어야 한다.
+#   비밀값(DB, JWT, 메일, S3, OpenAI, Slack, Google, VAPID)은 이미지에 없고 .env로만 들어간다.
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}  # CI 성공했을때만
+    # CI 성공 + main push일 때만 (PR CI 완료로는 배포하지 않음)
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
     runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1   # 한 대씩
+      matrix:
+        server: [EC2_APP1_HOST, EC2_APP2_HOST]
 
     steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v0.1.10
+      - name: Deploy to ${{ matrix.server }}
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ secrets[matrix.server] }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          proxy_host: ${{ secrets.EC2_PROXY_HOST }}
+          proxy_username: ${{ secrets.EC2_USER }}
+          proxy_key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
           script: |
             cd ~
-            echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-            
-            # 3. 최신 이미지 Pull 및 재기동
-            # 파일 이름이 docker-compose.dev.yml인지 다시 한번 확인해봐!
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+            # 최신 이미지 Pull 및 재기동
             docker compose -f docker-compose.dev.yml pull
             docker compose -f docker-compose.dev.yml up -d --remove-orphans
 
-            # 4. 정리 작업 (프리티어 용량 확보용)
+            # 앱이 다시 HTTP에 응답할 때까지 최대 3분 대기 (응답 코드는 무엇이든 기동 완료로 봄)
+            for i in $(seq 1 36); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8082/ || true)
+              if [ "$code" != "000" ]; then echo "앱 응답 확인 (HTTP $code)"; break; fi
+              if [ "$i" = "36" ]; then echo "3분 안에 앱이 응답하지 않음"; exit 1; fi
+              sleep 5
+            done
+
+            # 정리 작업 (프리티어 용량 확보용)
             docker image prune -f
             sudo journalctl --vacuum-time=2d

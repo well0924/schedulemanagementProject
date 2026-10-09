@@ -1,0 +1,15 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:test-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:test-google-client-secret}
+            redirect-uri: "${app.oauth2.callback-base-url:{baseUrl}}/api/login/oauth2/code/{registrationId}"
+            scope:
+              - email
+              - profile
+        provider:
+          google:
+            user-name-attribute: sub  # Google 기본 식별자

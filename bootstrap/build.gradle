@@ -198,6 +198,7 @@ tasks.withType(Test).configureEach {
 	// 예) ./gradlew :bootstrap:test --tests 'com.example.kafka.NotificationConsumerFailureIT' -Pit
 	if (!project.hasProperty('it')) {
 		exclude '**/NotificationConsumerFailureIT*'
+		exclude '**/DlqReprocessIT*'
 	}
 	// application.yml의 spring.profiles.include로 email 프로필이 항상 포함되어
 	// 테스트 컨텍스트 로딩 시에도 MAIL_TEST_* placeholder가 해석되어야 함

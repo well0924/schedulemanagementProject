@@ -36,12 +36,7 @@ public class DlqNotificationRetryConsumer implements KafkaDlqConsumer {
             KafkaMDCUtil.initMDC(event);
             String payload = objectMapper.writeValueAsString(event);
             log.info("DLQ → 객체 변환 완료: {}", payload);
-            // 멱등성 체크
-            if (failedMessageService.isAlreadyRecorded(event.getEventId())) { // 중복 체크 추가
-                ack.acknowledge();
-                return;
-            }
-            // 실패 내역 저장
+            // 실패 내역 저장 (첫 실패면 새로 저장, 재발행 후 다시 실패했으면 기존 행을 다시 연다)
             FailMessageModel failMessageModel = FailMessageModel
                 .builder()
                 .topic("notification-events.DLQ".replace(".DLQ", ""))
@@ -52,10 +47,12 @@ public class DlqNotificationRetryConsumer implements KafkaDlqConsumer {
                 .eventId(event.getEventId())
                 .exceptionMessage("자동 DLQ 저장")
                 .createdAt(LocalDateTime.now())
+                // 스케줄러는 nextRetryTime <= now인 행만 집는다. 비워 두면 영원히 재처리되지 않는다.
+                .nextRetryTime(LocalDateTime.now().plusSeconds(5))
                 .build();
 
-            failedMessageService.createFailMessage(failMessageModel);
-            log.warn("DLQ 메시지 저장 완료: {}", payload);
+            failedMessageService.recordDlqFailure(failMessageModel);
+            log.warn("DLQ 메시지 기록 완료: {}", payload);
             // 실패 내역 저장 성공 시 커밋
             ack.acknowledge();
         } catch (JsonProcessingException e) {

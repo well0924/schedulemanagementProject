@@ -65,6 +65,7 @@ public class NotificationEntityMapper {
                 .retryCount(failMessageModel.getRetryCount())
                 .nextRetryTime(failMessageModel.getNextRetryTime())
                 .resolved(failMessageModel.isResolved())
+                .dead(failMessageModel.isDead())
                 .createdAt(failMessageModel.getCreatedAt())
                 .resolvedAt(failMessageModel.getResolvedAt())
                 .lastTriedAt(failMessageModel.getLastTriedAt())

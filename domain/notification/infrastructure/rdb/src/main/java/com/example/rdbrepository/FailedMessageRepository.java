@@ -14,9 +14,6 @@ public interface FailedMessageRepository extends JpaRepository<FailedMessage,Lon
     // 아직 해결되지 않은 모든 실패 메시지 조회
     List<FailedMessage> findByResolvedFalse();
 
-    // 고유한 eventId로 존재 여부를 파악
-    boolean existsByEventId(String eventId);
-
     // 성공한 지 오래된(threshold 이전) 데이터를 삭제하여 DB 용량 확보
     @Modifying
     @Query("DELETE FROM FailedMessage e WHERE e.resolved = true AND e.resolvedAt < :threshold")
@@ -27,4 +24,7 @@ public interface FailedMessageRepository extends JpaRepository<FailedMessage,Lon
 
     // 특정 이벤트 ID로 실패 기록 조회 (수동 복구 시 사용)
     Optional<FailedMessage> findByEventId(String eventId);
+
+    // 같은 eventId라도 알림(NOTIFICATION)과 웹 푸시(WEB_PUSH) 실패가 각각 기록될 수 있어 유형까지 함께 찾는다.
+    Optional<FailedMessage> findFirstByEventIdAndMessageTypeOrderByIdDesc(String eventId, String messageType);
 }

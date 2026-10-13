@@ -17,6 +17,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -28,6 +29,8 @@ public class MemberSignUpDlqRetryScheduler {
     private final KafkaTemplate<String, MemberSignUpKafkaEvent> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private static final int MAX_RETRY_COUNT = 5;
+    private static final String FINAL_TOPIC = "member-signup.retry.final";
+    private static final long SEND_TIMEOUT_SECONDS = 10;
     public static int EXECUTION_COUNT = 0;
     private final Counter retryCounter = Metrics.counter("kafka.actual.retry.count");
 
@@ -54,10 +57,16 @@ public class MemberSignUpDlqRetryScheduler {
                 KafkaMDCUtil.initMDC(event);
                 // 지연 토픽 발행
                 String retryTopic = getRetryTopicByCountForMember(entity.getRetryCount());
-                kafkaTemplate.send(retryTopic, event.partitionKey(), event);
+                // 브로커 응답까지 기다린다. 기다리지 않으면 전송이 실패해도 성공으로 기록된다.
+                kafkaTemplate.send(retryTopic, event.partitionKey(), event).get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
                 retryCounter.increment(); // dlq가 정상 작동이 되었을때 카운트
-                // 마킹 성공
-                entity.resolveSuccess(event.getNotificationType());
+                if (FINAL_TOPIC.equals(retryTopic)) {
+                    // 최종 단계는 포기 처리. resolved=true로 저장하면 retry.final 컨슈머의 dead=true를 덮어쓸 수 있다.
+                    entity.markAsDead();
+                } else {
+                    // 재발행까지 성공. 다시 실패해 DLQ로 오면 DLQ 컨슈머가 이 행을 다시 연다(reopen).
+                    entity.resolveSuccess();
+                }
                 log.info(" DLQ 재처리 성공 - member signup: id={}", entity.getId());
             } catch (Exception ex) {
                 entity.resolveFailure(ex);
@@ -76,7 +85,7 @@ public class MemberSignUpDlqRetryScheduler {
             case 1 -> "member-signup.retry.10s";
             case 2 -> "member-signup.retry.30s";
             case 3 -> "member-signup.retry.60s";
-            default -> "member-signup.retry.final";
+            default -> FINAL_TOPIC;
         };
     }
 }

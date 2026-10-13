@@ -114,7 +114,7 @@ public class MemberSignUpRetryTopicConsumer {
             MemberSignUpKafkaEvent event = objectMapper.readValue(message, MemberSignUpKafkaEvent.class);
             KafkaMDCUtil.initMDC(event);
             // 죽여줘야 스케줄러가 다시 안 긁음.
-            failedMessageService.markAsDeadByEventId(event.getEventId());
+            failedMessageService.markAsDeadByEventId(event.getEventId(), "MEMBER_SIGNUP");
             String test = String.format("- EventId: %s%n- Topic: %s%n- Exception: %s",
                     event.getEventId(),event.getNotificationType(),event.getMessage());
             // 최종 실패 → Slack 알림처리하기.(추후 구현)

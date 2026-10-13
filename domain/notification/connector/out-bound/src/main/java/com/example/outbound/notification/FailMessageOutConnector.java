@@ -53,9 +53,10 @@ public class FailMessageOutConnector {
                 .map(notificationMapper::toModel);
     }
 
-    // DLQ에 중복 저장되는 것을 방지하기 위해 boolean값만 빠르게 리턴함
-    public boolean isAlreadyRecorded(String eventId) {
-        return failedMessageRepository.existsByEventId(eventId);
+    // DLQ로 다시 들어온 이벤트의 기존 실패 기록 조회 (같은 eventId의 다른 유형 기록과 섞이지 않도록 유형까지 지정)
+    public Optional<FailMessageModel> findByEventIdAndMessageType(String eventId, String messageType) {
+        return failedMessageRepository.findFirstByEventIdAndMessageTypeOrderByIdDesc(eventId, messageType)
+                .map(notificationMapper::toModel);
     }
 
     // 성공한 지 오래된(threshold 이전) 데이터를 지움.

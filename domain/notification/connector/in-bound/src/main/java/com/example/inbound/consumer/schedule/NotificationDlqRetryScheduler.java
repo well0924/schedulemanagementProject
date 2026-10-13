@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Profile("!test")
@@ -33,6 +34,8 @@ public class NotificationDlqRetryScheduler {
     private final WebPushService webPushService;
     private final ObjectMapper objectMapper;
     private static final int MAX_RETRY_COUNT = 5;
+    private static final String FINAL_TOPIC = "notification-events.retry.final";
+    private static final long SEND_TIMEOUT_SECONDS = 10;
     private static final Set<String> HANDLED_TYPES = Set.of("NOTIFICATION", "WEB_PUSH");
     public static int EXECUTION_COUNT = 0;
     private final Counter retryCounter = Metrics.counter("kafka.actual.retry.count");
@@ -72,18 +75,25 @@ public class NotificationDlqRetryScheduler {
                     NotificationEvents event = objectMapper
                             .readValue(entity.getPayload(), NotificationEvents.class);
                     webPushService.sendPush(event.getReceiverId(), event);
-                    entity.resolveSuccess("WEB_PUSH");
+                    entity.resolveSuccess();
                     log.info("WebPush 재처리 성공 - id={}", entity.getId());
                 } else {
                     NotificationEvents event = objectMapper.readValue(entity.getPayload(), NotificationEvents.class);
                     event.setForceSend(true);
                     KafkaMDCUtil.initMDC(event);
                     String retryTopic = getRetryTopicByCount(entity.getRetryCount());
-                    kafkaTemplate.send(retryTopic, event.partitionKey(), event);
+                    // 브로커 응답까지 기다린다. 기다리지 않으면 전송이 실패해도 성공으로 기록된다.
+                    kafkaTemplate.send(retryTopic, event.partitionKey(), event).get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
                     retryCounter.increment(); // dlq가 정상 작동이 되었을때 카운트
                     log.info("재시도 메시지 전송: retryCount={}, topic={}", entity.getRetryCount(), retryTopic);
-                    // resolved를 true로 변환
-                    entity.resolveSuccess(event.getNotificationType().name());
+                    if (FINAL_TOPIC.equals(retryTopic)) {
+                        // 최종 단계는 재전송하지 않고 포기 처리만 한다. 여기서 resolved=true로 저장하면
+                        // retry.final 컨슈머가 먼저 남긴 dead=true를 덮어쓸 수 있어 스케줄러가 직접 dead로 둔다.
+                        entity.markAsDead();
+                    } else {
+                        // 재발행까지 성공. 메인 컨슈머에서 다시 실패하면 DLQ 컨슈머가 이 행을 다시 연다(reopen).
+                        entity.resolveSuccess();
+                    }
                     log.info("DLQ 재처리 성공 - notification: id={}", entity.getId());
                 }
             } catch (Exception ex) {
@@ -103,7 +113,7 @@ public class NotificationDlqRetryScheduler {
             case 1 -> "notification-events.retry.10s";
             case 2 -> "notification-events.retry.30s";
             case 3 -> "notification-events.retry.60s";
-            default -> "notification-events.retry.final";
+            default -> FINAL_TOPIC;
         };
     }
 }

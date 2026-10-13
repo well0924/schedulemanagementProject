@@ -43,7 +43,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 // containerFactory를 지정하지 않은 DLQ·재시도 리스너가 운영과 같은 기본 팩토리 설정
 // (application-kafka.yml: StringDeserializer, ack-mode MANUAL)에서 실제로 동작하는지 검증한다.
@@ -117,18 +116,7 @@ class KafkaRetryConsumerWiringTest {
     void memberDlq_savesAndAcks() throws Exception {
         deliver("member-signup-events.DLQ", memberJson());
 
-        verify(failedMessageService).createFailMessage(any());
-        verify(ack).acknowledge();
-    }
-
-    @Test
-    @DisplayName("회원가입 DLQ: 이미 저장된 이벤트면 저장하지 않고 커밋만")
-    void memberDlq_duplicate_acksWithoutSave() throws Exception {
-        when(failedMessageService.isAlreadyRecorded(anyString())).thenReturn(true);
-
-        deliver("member-signup-events.DLQ", memberJson());
-
-        verify(failedMessageService, never()).createFailMessage(any());
+        verify(failedMessageService).recordDlqFailure(any());
         verify(ack).acknowledge();
     }
 
@@ -155,7 +143,7 @@ class KafkaRetryConsumerWiringTest {
     void notificationDlq_savesAndAcks() throws Exception {
         deliver("notification-events.DLQ", notificationJson());
 
-        verify(failedMessageService).createFailMessage(any());
+        verify(failedMessageService).recordDlqFailure(any());
         verify(ack).acknowledge();
     }
 

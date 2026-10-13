@@ -117,7 +117,7 @@ public class NotificationRetryTopicConsumer {
         try {
             NotificationEvents event = objectMapper.readValue(message, NotificationEvents.class);
             KafkaMDCUtil.initMDC(event);
-            failedMessageService.markAsDeadByEventId(event.getEventId());
+            failedMessageService.markAsDeadByEventId(event.getEventId(), "NOTIFICATION");
             String text = String.format(
                     "- EventId: %s%n- Topic: %s%n- Exception: %s",
                     event.getEventId(), event.getNotificationType(), event.getMessage());

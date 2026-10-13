@@ -33,11 +33,7 @@ public class DlqMemberSignRetryConsumer implements KafkaDlqConsumer {
             MemberSignUpKafkaEvent event = objectMapper.readValue(message, MemberSignUpKafkaEvent.class);
             log.warn(" DLQ 재처리 (member signup): {}", event);
             KafkaMDCUtil.initMDC(event);
-            // 멱등성 체크 (재전달 시 중복 저장 방지)
-            if (failedMessageService.isAlreadyRecorded(event.getEventId())) {
-                ack.acknowledge();
-                return;
-            }
+            // 첫 실패면 새로 저장, 재발행 후 다시 실패했으면 기존 행을 다시 연다 (중복 전달은 서비스에서 무시)
             saveToFail(event);
             // 실패 내역 저장성공시 카프카에 커밋
             ack.acknowledge();
@@ -66,7 +62,7 @@ public class DlqMemberSignRetryConsumer implements KafkaDlqConsumer {
                 .createdAt(LocalDateTime.now())
                 .nextRetryTime(LocalDateTime.now().plusSeconds(5)) // 저장되는 즉시 스케줄러가 낚아챌 수 있도록 '현재+5초' 예약
                 .build();
-        failedMessageService.createFailMessage(failMessageModel);
-        log.warn(" DLQ 메시지 저장 완료: {}", payload);
+        failedMessageService.recordDlqFailure(failMessageModel);
+        log.warn(" DLQ 메시지 기록 완료: {}", payload);
     }
 }

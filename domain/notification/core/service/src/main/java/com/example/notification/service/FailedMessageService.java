@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -27,11 +28,6 @@ public class FailedMessageService {
         return failMessageOutConnector.createFailMessage(failMessageModel);
     }
 
-    @Transactional(readOnly = true)
-    public boolean isAlreadyRecorded(String eventId) {
-        return failMessageOutConnector.isAlreadyRecorded(eventId);
-    }
-
     public FailMessageModel updateFailMessage(FailMessageModel model) {
         return failMessageOutConnector.updateFailMessage(model);
     }
@@ -47,8 +43,30 @@ public class FailedMessageService {
         return failMessageOutConnector.findReadyToRetry();
     }
 
-    public void markAsDeadByEventId(String eventId) {
-        failMessageOutConnector.findByEventId(eventId) // Optional 반환
+    // DLQ로 들어온 실패를 기록한다. 같은 이벤트·유형의 행이 이미 있으면 새로 만들지 않는다.
+    // - 기록 없음: 새로 저장 (첫 실패)
+    // - 재발행 후 다시 실패해 돌아옴(resolved=true): 같은 행을 다시 열어 retryCount를 올리고 다음 단계로 예약
+    // - 아직 재처리 대기 중(resolved=false)이거나 포기한 행(dead=true): DLQ 중복 전달이므로 무시
+    public void recordDlqFailure(FailMessageModel failure) {
+        Optional<FailMessageModel> existing = failMessageOutConnector
+                .findByEventIdAndMessageType(failure.getEventId(), failure.getMessageType());
+        if (existing.isEmpty()) {
+            failMessageOutConnector.createFailMessage(failure);
+            return;
+        }
+        FailMessageModel row = existing.get();
+        if (row.isDead() || !row.isResolved()) {
+            log.info("DLQ 중복 전달 무시 - eventId={}, dead={}, resolved={}", row.getEventId(), row.isDead(), row.isResolved());
+            return;
+        }
+        row.reopen(failure.getExceptionMessage());
+        failMessageOutConnector.updateFailMessage(row);
+        log.warn("재발행 후 다시 실패 - eventId={}, retryCount={}, nextRetryTime={}",
+                row.getEventId(), row.getRetryCount(), row.getNextRetryTime());
+    }
+
+    public void markAsDeadByEventId(String eventId, String messageType) {
+        failMessageOutConnector.findByEventIdAndMessageType(eventId, messageType)
                 .ifPresent(model -> {
                     model.markAsDead();
                     failMessageOutConnector.updateFailMessage(model);

@@ -76,14 +76,34 @@ AI 추천 엔진(OpenAI API)은 외부 의존성이 크고 모델 스펙이 수�
 
 ### 2. Outbox 패턴을 선택한 이유
 
+**문제: DB 저장과 Kafka 발행이 따로 일어나면**
+```mermaid
+sequenceDiagram
+    participant App
+    participant DB
+    participant Kafka
+    App->>DB: 일정 저장 (커밋 성공)
+    App-xKafka: 이벤트 발행 (실패)
+    Note over App,Kafka: 일정은 저장됐지만 알림은 유실
 ```
-[문제] DB 저장과 Kafka 발행은 하나의 트랜잭션으로 묶을 수 없다
-  ① 일정 저장 (성공) → ② Kafka 발행 (실패) → 알림 유실
 
-[Outbox] 이벤트를 같은 트랜잭션에 DB로 먼저 저장
-  ① 일정 저장 + Outbox 저장 (하나의 트랜잭션)
-  ② 발행기가 Outbox를 읽어 Kafka로 발행
-  → ②가 실패해도 Outbox 행이 남아 있어 다시 발행
+**해결: Outbox로 같은 트랜잭션에 저장**
+```mermaid
+sequenceDiagram
+    participant App
+    participant DB
+    participant Publisher as OutboxEventPublisher
+    participant Kafka
+    App->>DB: 일정 저장 + Outbox 저장 (하나의 트랜잭션)
+    loop 1초마다
+        Publisher->>DB: 미발행 Outbox 선점
+        Publisher->>Kafka: 발행
+        alt 성공
+            Publisher->>DB: sent=true
+        else 실패
+            Publisher->>DB: 선점 해제 → 다음 주기에 재발행
+        end
+    end
 ```
 
 - **발행기:** UPDATE 한 번으로 최대 200건을 선점(`claim_id`)한 뒤 발행합니다. 성공 건은 일괄 `sent=true`로, 실패 건은 선점을 해제해 다음 주기에 다시 발행합니다.

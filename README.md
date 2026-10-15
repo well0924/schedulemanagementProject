@@ -49,36 +49,17 @@ AI 추천 엔진(OpenAI API)은 외부 의존성이 크고 모델 스펙이 수�
 
 ### 이벤트 로직
 
-도메인 변경과 이벤트를 하나의 트랜잭션에 Outbox로 저장하고, 발행기가 Kafka로 전달합니다.  후속 처리(알림, 이메일, 챗봇 이력)는 컨슈머가 비동기로 맡습니다.
+도메인 변경과 이벤트를 하나의 트랜잭션에 Outbox로 저장하고, 발행기가 Kafka로 전달합니다. 후속 처리(알림, 이메일, 챗봇 이력)는 컨슈머가 비동기로 맡습니다.
 
-```
-[저장] 하나의 트랜잭션
-  일정 변경 / 회원가입 / 챗봇 응답 완료
-    → 도메인 데이터 저장
-    → Outbox 저장 (BEFORE_COMMIT)
-    → 리마인더 알림 저장 (BEFORE_COMMIT, 일정과 함께 커밋)
+<img alt="이벤트 처리 흐름" src="docs/image/event-flow.png" />
 
-[발행] OutboxEventPublisher, 1초 간격
-  → UPDATE 한 번으로 최대 200건 선점 (claim_id, 30초 지나면 다른 실행이 회수)
-  → 비동기 발행 (key = aggregate_id, acks=all, 멱등 프로듀서)
-  → 성공 건 일괄 sent=true / 실패 건 선점 해제 (5회 초과 시 DLQ)
+- **저장:** Outbox와 리마인더는 `BEFORE_COMMIT`에서 도메인 데이터와 함께 커밋됩니다.
+- **발행:** 1초마다 UPDATE 한 번으로 최대 200건을 선점해 발행합니다 (key = aggregate_id, acks=all).
+- **소비:** `(consumer, event_id)`로 중복을 막고, 업무 데이터와 처리 기록을 한 트랜잭션에 저장한 뒤 전달·오프셋 커밋을 합니다.
+- **실패:** 2초 간격 3번 재시도 → DLQ → 재처리 스케줄러가 간격을 늘려(5초 → 30초 → 1분 → 5분) 최대 4번 재발행 → 그래도 실패하면 dead 표시 + Slack 알림
 
-[소비] 토픽별 컨슈머 (수동 커밋)
-  notification-events  → 알림 컨슈머 → WebSocket(STOMP) / Web Push
-  member-signup-events → 가입 컨슈머 → 환영 이메일
-  chat-history         → 이력 저장 컨슈머 → MySQL + Redis 대화 맥락
-                       → 패턴 분석 컨슈머
+→ 단계별 다이어그램, 재시도 표, 코드 위치: [이벤트 흐름 상세](docs/event/event-flow.md)
 
-  처리 순서: Redis 필터(처리 완료 표시) → (consumer, event_id) 멱등성 확인
-            → [한 트랜잭션] 업무 저장 + processed_event 저장
-            → 트랜잭션 종료 후 전달(WebSocket·Web Push·메일) → 오프셋 커밋
-
-[실패] (알림·회원가입 이벤트. 챗봇 이벤트는 DLQ까지만)
-  즉시 재시도 3회(2초 간격) → DLQ → failed_message 기록
-  → 재처리 스케줄러(30초 주기)가 retry 토픽 → 원래 토픽으로 재발행
-  → 다시 실패하면 같은 기록의 횟수를 올려 간격을 늘림 (5초 → 30초 → 1분 → 5분, 최대 4번 재발행)
-  → 4번째 재발행도 실패하면 10분 뒤 dead 표시 + Slack 알림
-```
 ---
 ## 설계 과정 의사결정
 
@@ -268,7 +249,7 @@ G1GC 튜닝 + 모니터링 서버 분리로 서비스 서버와의 리소스 경
 
 **프로젝트 문서**
 - 성능 측정: [분산 환경 스트레스 테스트](docs/performance/distributed-stress-test.md), [Mixed-flow 부하 테스트](docs/performance/mixed-flow-load-test.md), [단일 인스턴스 시절 테스트](docs/performance)
-- 아키텍처: [전체 구성](docs/architecture/architecture-overview.md), [헥사고날 설계](docs/architecture/hexagonal-design.md), [CI/CD](docs/architecture/ci-cd-pipeline.md)
+- 아키텍처: [전체 구성](docs/architecture/architecture-overview.md), [이벤트 흐름](docs/event/event-flow.md), [헥사고날 설계](docs/architecture/hexagonal-design.md), [CI/CD](docs/architecture/ci-cd-pipeline.md)
 - 데이터 모델: [ERD와 설계 원칙](docs/database/erd.md)
 - 인증: [인증 구조](docs/auth/auth-overview.md), [JWT](docs/auth/jwt-authentication.md)
 - 모니터링: [모니터링](docs/monitoring/monitoring.md), [로깅](docs/monitoring/logging.md)

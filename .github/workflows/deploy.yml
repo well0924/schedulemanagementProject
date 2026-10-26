@@ -1,12 +1,15 @@
 name: Deploy to EC2 via SSH
 
+# 비용 문제로 EC2 서버를 내려서 자동 배포를 멈췄다. 지금은 수동 실행만 가능하다.
+# 다시 배포하려면 아래 workflow_run 블록의 주석을 풀면 된다.
 on:
-  workflow_run:
-    workflows: ["Schedule Project CI with Compose"]  # CI yml의 name값
-    types:
-      - completed
-    branches:
-      - main # main에 merge가 되었을때 cd가 작동
+  workflow_dispatch:
+#  workflow_run:
+#    workflows: ["Schedule Project CI with Compose"]  # CI yml의 name값
+#    types:
+#      - completed
+#    branches:
+#      - main # main에 merge가 되었을때 cd가 작동
 
 # 앱 서버 2대에 한 대씩 차례로 배포한다. 첫 번째 서버가 다시 응답할 때까지 기다린 뒤 두 번째로 넘어가,
 # 배포 중에도 한 대는 계속 요청을 받는다.
@@ -22,8 +25,8 @@ on:
 
 jobs:
   deploy:
-    # CI 성공 + main push일 때만 (PR CI 완료로는 배포하지 않음)
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+    # 수동 실행이거나, CI 성공 + main push일 때만 (PR CI 완료로는 배포하지 않음)
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 1   # 한 대씩

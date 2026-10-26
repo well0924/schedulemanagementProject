@@ -36,6 +36,8 @@ out/
 !domain/member/connector/out-bound/src/main/resources/application-oauth2.yml
 !domain/notification/connector/in-bound/src/main/resources/application-slack.yml
 !domain/notification/connector/out-bound/api-client/src/main/resources/application-push.yml
+# 내린 AWS 서버의 설정 보관본 - 비밀값은 전부 ${ENV}로만 읽는다
+!deploy/aws/**/*.yml
 *.env
 # STS 관련
 .apt_generated

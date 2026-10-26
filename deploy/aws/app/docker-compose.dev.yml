@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+  backend:
+    image: well4149/schedule-management:latest
+    container_name: schedule-backend
+    env_file: .env
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./log/schedule-backend:/var/log/schedule-backend
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=10.0.1.98:9092
+      - SPRING_DATA_REDIS_HOST=10.0.1.98
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - SPRING_MAIL_USERNAME=${MAIL_TEST_USERNAME}
+      - SPRING_MAIL_PASSWORD=${MAIL_TEST_PASSWORD}
+      - JAVA_TOOL_OPTIONS=-Xmx256m -Xms128m
+    restart: always
+    networks:
+      - backend-net
+
+  promtail:
+    image: grafana/promtail:2.9.2
+    container_name: promtail
+    volumes:
+      - ./promtail:/etc/promtail
+      - ./log/schedule-backend:/var/log/schedule-backend
+    command: -config.file=/etc/promtail/promtail-config.yml
+    restart: always
+    networks:
+      - backend-net
+      
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    restart: always
+    networks:
+      - backend-net
+networks:
+  backend-net:
+    external: true
+    name: shared-net

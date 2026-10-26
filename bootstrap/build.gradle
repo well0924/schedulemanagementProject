@@ -121,15 +121,15 @@ dependencies {
 	testImplementation project(':domain:notification:core:mapper')
     // Mockito
     testImplementation 'org.mockito:mockito-core:5.8.0'
-	testImplementation 'org.testcontainers:testcontainers:1.19.3'
+	testImplementation 'org.testcontainers:testcontainers:1.21.4'
 	// Testcontainers - Kafka
-	testImplementation 'org.testcontainers:kafka:1.19.3'
+	testImplementation 'org.testcontainers:kafka:1.21.4'
 	// Testcontainers - JUnit 연동
-	testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
+	testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
 	// Awaitility (비동기)
 	testImplementation 'org.awaitility:awaitility:4.2.0'
 	// DB 테스트컨테이너 MySQL
-	testImplementation 'org.testcontainers:mysql:1.19.3'
+	testImplementation 'org.testcontainers:mysql:1.21.4'
 	testImplementation 'com.github.tomakehurst:wiremock-jre8-standalone:2.35.0'
 	testImplementation 'io.projectreactor:reactor-test'
 	testImplementation 'io.jsonwebtoken:jjwt-api:0.11.5' // WebSocketAuthInterceptorTest에서 Claims 목 생성

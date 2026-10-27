@@ -136,4 +136,4 @@ Mixed-flow 부하 테스트 (로그인 + 생성 70% / 수정 30%, think-time 1~5
 - [Mixed-flow 부하 테스트](https://codingweb.tistory.com/356), [Kafka 장애 주입 테스트](https://codingweb.tistory.com/327), [챗봇 고도화 설계](https://codingweb.tistory.com/324)
 
 프로젝트 문서
-- [아키텍처](docs/architecture/architecture-overview.md), [이벤트 흐름](docs/event/event-flow.md), [CI/CD](docs/architecture/ci-cd-pipeline.md), [ERD](docs/database/erd.md), [인증](docs/auth/auth-overview.md), [모니터링](docs/monitoring/monitoring.md)
+- [아키텍처](docs/architecture/architecture-overview.md), [이벤트 흐름](docs/event/event-flow.md), [챗봇 흐름](docs/chatbot/chatbot-flow.md), [CI/CD](docs/architecture/ci-cd-pipeline.md), [ERD](docs/database/erd.md), [인증](docs/auth/auth-overview.md), [모니터링](docs/monitoring/monitoring.md)

@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1010" viewBox="0 0 1600 1010" font-family="'Noto Sans KR','Malgun Gothic',sans-serif">
+  <defs>
+    <marker id="a-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker>
+    <marker id="a-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#059669"/></marker>
+    <marker id="a-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker>
+    <marker id="a-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/></marker>
+    <marker id="a-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+  </defs>
+  <rect width="1600" height="1010" fill="#ffffff"/>
+
+  <text x="60" y="70" font-size="36" font-weight="700" fill="#111827">챗봇 요청·응답 흐름</text>
+  <text x="60" y="110" font-size="19" fill="#4b5563">요청은 REST, 답변은 WebSocket으로 토큰마다 전달. 이력 저장과 패턴 분석은 답변이 끝난 뒤 Kafka로 분리</text>
+
+  <!-- 브라우저 -->
+  <rect x="60" y="200" width="260" height="420" rx="16" fill="#f9fafb" stroke="#111827" stroke-width="2.5"/>
+  <text x="190" y="400" font-size="22" font-weight="700" fill="#111827" text-anchor="middle">Next.js 클라이언트</text>
+  <text x="190" y="432" font-size="16" fill="#4b5563" text-anchor="middle">토큰을 이어 붙여 표시</text>
+
+  <!-- 앱 서버 영역 -->
+  
+  <text x="440" y="200" font-size="15" fill="#6b7280">앱 서버 (2대 중 요청을 받은 한 대)</text>
+
+  <rect x="440" y="220" width="300" height="100" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="590" y="262" font-size="20" font-weight="700" fill="#1e3a8a" text-anchor="middle">ChatBotController</text>
+  <text x="590" y="292" font-size="15" fill="#2563eb" text-anchor="middle">회원 번호 = 로그인 정보</text>
+
+  <rect x="860" y="220" width="340" height="100" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="1030" y="262" font-size="20" font-weight="700" fill="#1e3a8a" text-anchor="middle">ChatBotService</text>
+  <text x="1030" y="292" font-size="15" fill="#2563eb" text-anchor="middle">맥락 조회 5가지 · 프롬프트 생성</text>
+
+  <rect x="440" y="470" width="300" height="100" rx="12" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2.5"/>
+  <text x="590" y="512" font-size="20" font-weight="700" fill="#4c1d95" text-anchor="middle">STOMP 브로커</text>
+  <text x="590" y="542" font-size="15" fill="#7c3aed" text-anchor="middle">서버 메모리 · 세션별 순서 보장</text>
+
+  <!-- OpenAI -->
+  <rect x="1340" y="220" width="220" height="100" rx="12" fill="#ecfdf5" stroke="#059669" stroke-width="2.5"/>
+  <text x="1450" y="262" font-size="20" font-weight="700" fill="#065f46" text-anchor="middle">OpenAI API</text>
+  <text x="1450" y="292" font-size="15" fill="#059669" text-anchor="middle">gpt-4o 스트리밍</text>
+  <text x="1450" y="345" font-size="14" fill="#059669" text-anchor="middle">서킷브레이커</text>
+  <text x="1450" y="366" font-size="14" fill="#059669" text-anchor="middle">첫 청크 10초 · 청크 간 15초</text>
+
+  <!-- ① 요청 / 202 -->
+  <line x1="320" y1="250" x2="436" y2="250" stroke="#2563eb" stroke-width="2.5" marker-end="url(#a-blue)"/>
+  <text x="378" y="238" font-size="15" font-weight="700" fill="#2563eb" text-anchor="middle">① POST</text>
+  <line x1="440" y1="300" x2="324" y2="300" stroke="#6b7280" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a-gray)"/>
+  <text x="378" y="325" font-size="14" fill="#6b7280" text-anchor="middle">202 Accepted</text>
+  <text x="378" y="350" font-size="13" fill="#6b7280" text-anchor="middle">/api/v1/chat/send</text>
+
+  <!-- ② controller → service -->
+  <line x1="740" y1="270" x2="856" y2="270" stroke="#2563eb" stroke-width="2.5" marker-end="url(#a-blue)"/>
+  <text x="798" y="258" font-size="15" font-weight="700" fill="#2563eb" text-anchor="middle">② 스트림 시작</text>
+
+  <!-- ③ service ↔ OpenAI -->
+  <line x1="1200" y1="252" x2="1336" y2="252" stroke="#059669" stroke-width="2.5" marker-end="url(#a-green)"/>
+  <text x="1268" y="240" font-size="15" font-weight="700" fill="#059669" text-anchor="middle">③ 요청</text>
+  <line x1="1340" y1="292" x2="1204" y2="292" stroke="#059669" stroke-width="2.5" marker-end="url(#a-green)"/>
+  <text x="1268" y="318" font-size="15" font-weight="700" fill="#059669" text-anchor="middle">토큰 (SSE)</text>
+
+  <!-- ④ service → STOMP -->
+  <path d="M880,320 L880,520 L744,520" fill="none" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#a-purple)"/>
+  <text x="890" y="430" font-size="15" font-weight="700" fill="#7c3aed">④ 토큰마다 전송</text>
+  <text x="890" y="452" font-size="14" fill="#7c3aed">/topic/chat/{회원}</text>
+
+  <!-- ⑤ STOMP → 브라우저 -->
+  <line x1="440" y1="520" x2="324" y2="520" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#a-purple)"/>
+  <text x="378" y="508" font-size="15" font-weight="700" fill="#7c3aed" text-anchor="middle">⑤ 토큰</text>
+  <text x="378" y="545" font-size="13" fill="#7c3aed" text-anchor="middle">끝나면 done=true</text>
+
+  <!-- 비동기 영역 -->
+  <rect x="380" y="680" width="1180" height="250" rx="14" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="8 6"/>
+  <text x="600" y="708" font-size="15" fill="#6b7280">답변이 끝난 뒤 (사용자 응답과 분리)</text>
+
+  <rect x="440" y="745" width="250" height="100" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
+  <text x="565" y="787" font-size="20" font-weight="700" fill="#7c2d12" text-anchor="middle">Outbox</text>
+  <text x="565" y="817" font-size="15" fill="#c2410c" text-anchor="middle">MySQL · 전체 답변 1건</text>
+
+  <rect x="770" y="745" width="230" height="100" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
+  <text x="885" y="787" font-size="20" font-weight="700" fill="#7c2d12" text-anchor="middle">Kafka</text>
+  <text x="885" y="817" font-size="15" fill="#c2410c" text-anchor="middle">chat-history</text>
+
+  <rect x="1080" y="725" width="450" height="80" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
+  <text x="1305" y="758" font-size="18" font-weight="700" fill="#7c2d12" text-anchor="middle">chat-history-save</text>
+  <text x="1305" y="785" font-size="14" fill="#c2410c" text-anchor="middle">MySQL 이력 저장 + Redis 대화 맥락 갱신</text>
+
+  <rect x="1080" y="830" width="450" height="80" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
+  <text x="1305" y="863" font-size="18" font-weight="700" fill="#7c2d12" text-anchor="middle">pattern-analysis</text>
+  <text x="1305" y="890" font-size="14" fill="#c2410c" text-anchor="middle">대화 시간대 · 관심 카테고리 횟수 누적 (Redis)</text>
+
+  <!-- ⑥ service → Outbox -->
+  <path d="M1100,320 L1100,650 L565,650 L565,741" fill="none" stroke="#c2410c" stroke-width="2.5" marker-end="url(#a-orange)"/>
+  <text x="790" y="640" font-size="15" font-weight="700" fill="#c2410c" text-anchor="middle">⑥ 스트림이 끝나면 전체 답변 저장 (중간 실패 시 저장 안 함)</text>
+
+  <!-- ⑦ Outbox → Kafka -->
+  <line x1="690" y1="795" x2="766" y2="795" stroke="#c2410c" stroke-width="2.5" marker-end="url(#a-orange)"/>
+  <text x="728" y="783" font-size="15" font-weight="700" fill="#c2410c" text-anchor="middle">⑦ 발행</text>
+
+  <!-- ⑧ Kafka → consumers -->
+  <path d="M1000,780 L1076,765" fill="none" stroke="#c2410c" stroke-width="2.5" marker-end="url(#a-orange)"/>
+  <path d="M1000,810 L1076,870" fill="none" stroke="#c2410c" stroke-width="2.5" marker-end="url(#a-orange)"/>
+  <text x="1040" y="735" font-size="14" font-weight="700" fill="#c2410c" text-anchor="middle">⑧ 그룹별</text>
+
+  <!-- 다음 대화 맥락 -->
+  <path d="M1200,725 L1200,324" fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a-gray)"/>
+  <text x="1210" y="520" font-size="14" fill="#6b7280">다음 대화의</text>
+  <text x="1210" y="540" font-size="14" fill="#6b7280">맥락으로 사용</text>
+
+  <line x1="60" y1="955" x2="1540" y2="955" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="60" y="988" font-size="16" fill="#374151">브로커가 서버마다 메모리에 따로 있어, 요청을 받은 서버와 WebSocket이 연결된 서버가 같아야 답변이 전달됩니다 (운영에서는 nginx ip_hash).</text>
+</svg>

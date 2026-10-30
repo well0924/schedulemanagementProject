@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" font-family="'Noto Sans KR','Malgun Gothic',sans-serif">
+  <defs>
+    <pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="10" stroke="#fca5a5" stroke-width="4"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="980" fill="#ffffff"/>
+
+  <text x="60" y="70" font-size="36" font-weight="700" fill="#111827">챗봇 대화 이력 누락: 5초 타임아웃의 위치</text>
+  <text x="60" y="110" font-size="19" fill="#4b5563">같은 5초라도 어디에 거느냐에 따라 재는 구간이 다릅니다. 답변 스트리밍이 7초 걸린 경우의 예시입니다.</text>
+
+  <!-- ===== 수정 전 ===== -->
+  <rect x="60" y="150" width="1480" height="350" rx="14" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+  <text x="90" y="192" font-size="24" font-weight="700" fill="#991b1b">수정 전</text>
+  <text x="200" y="192" font-size="17" fill="#991b1b">타임아웃이 체인 끝에 있어 스트림 시작부터 시간을 잼</text>
+
+  <!-- 축 -->
+  <line x1="300" y1="430" x2="1390" y2="430" stroke="#9ca3af" stroke-width="1.5"/>
+  <g font-size="14" fill="#6b7280" text-anchor="middle">
+    <line x1="300" y1="425" x2="300" y2="435" stroke="#9ca3af"/><text x="300" y="455">0초</text>
+    <line x1="750" y1="425" x2="750" y2="435" stroke="#9ca3af"/><text x="750" y="455">5초</text>
+    <line x1="930" y1="425" x2="930" y2="435" stroke="#9ca3af"/><text x="930" y="455">7초</text>
+    <line x1="1380" y1="425" x2="1380" y2="435" stroke="#9ca3af"/><text x="1380" y="455">12초</text>
+  </g>
+
+  <!-- 사용자 전달 -->
+  <text x="90" y="262" font-size="18" font-weight="700" fill="#374151">사용자 전달</text>
+  <rect x="300" y="238" width="630" height="38" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="615" y="263" font-size="16" fill="#5b21b6" text-anchor="middle">토큰 전달 (정상, 사용자는 답변을 다 받음)</text>
+
+  <!-- 이력 저장 -->
+  <text x="90" y="348" font-size="18" font-weight="700" fill="#374151">이력 저장</text>
+  <rect x="300" y="324" width="450" height="38" rx="8" fill="#ffedd5" stroke="#c2410c" stroke-width="2"/>
+  <text x="525" y="349" font-size="16" fill="#9a3412" text-anchor="middle">답변 모으기 (collect)</text>
+  <rect x="750" y="324" width="180" height="38" rx="8" fill="url(#hatch)" stroke="#dc2626" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="840" y="349" font-size="15" fill="#991b1b" text-anchor="middle">끊김</text>
+  <!-- 타이머 -->
+  <path d="M300,312 L300,302 L750,302 L750,312" fill="none" stroke="#dc2626" stroke-width="2"/>
+  <text x="525" y="294" font-size="15" font-weight="700" fill="#dc2626" text-anchor="middle">5초 타이머</text>
+  <!-- X 표시 -->
+  <circle cx="750" cy="343" r="16" fill="#dc2626"/>
+  <path d="M742,335 L758,351 M758,335 L742,351" stroke="#ffffff" stroke-width="3"/>
+  <text x="960" y="340" font-size="16" font-weight="700" fill="#991b1b">TimeoutException</text>
+  <text x="960" y="364" font-size="15" fill="#991b1b">저장 단계에 가기 전에 끝나고 로그만 남김</text>
+  <text x="960" y="386" font-size="14" fill="#991b1b">"[대화 이력 저장 생략]"</text>
+
+  <text x="90" y="486" font-size="16" fill="#374151" font-family="Consolas,monospace">collect(답변 모으기).flatMap(저장).timeout(5초)</text>
+
+  <!-- ===== 수정 후 ===== -->
+  <rect x="60" y="530" width="1480" height="350" rx="14" fill="#f0fdf4" stroke="#059669" stroke-width="2"/>
+  <text x="90" y="572" font-size="24" font-weight="700" fill="#065f46">수정 후</text>
+  <text x="200" y="572" font-size="17" fill="#065f46">답변이 다 모인 뒤 저장 단계만 시간을 잼</text>
+
+  <line x1="300" y1="810" x2="1390" y2="810" stroke="#9ca3af" stroke-width="1.5"/>
+  <g font-size="14" fill="#6b7280" text-anchor="middle">
+    <line x1="300" y1="805" x2="300" y2="815" stroke="#9ca3af"/><text x="300" y="835">0초</text>
+    <line x1="750" y1="805" x2="750" y2="815" stroke="#9ca3af"/><text x="750" y="835">5초</text>
+    <line x1="930" y1="805" x2="930" y2="815" stroke="#9ca3af"/><text x="930" y="835">7초</text>
+    <line x1="1380" y1="805" x2="1380" y2="815" stroke="#9ca3af"/><text x="1380" y="835">12초</text>
+  </g>
+
+  <text x="90" y="642" font-size="18" font-weight="700" fill="#374151">사용자 전달</text>
+  <rect x="300" y="618" width="630" height="38" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="615" y="643" font-size="16" fill="#5b21b6" text-anchor="middle">토큰 전달 (정상)</text>
+
+  <text x="90" y="728" font-size="18" font-weight="700" fill="#374151">이력 저장</text>
+  <rect x="300" y="704" width="630" height="38" rx="8" fill="#ffedd5" stroke="#c2410c" stroke-width="2"/>
+  <text x="615" y="729" font-size="16" fill="#9a3412" text-anchor="middle">답변 모으기 (collect)</text>
+  <rect x="930" y="704" width="70" height="38" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="1012" y="729" font-size="16" font-weight="700" fill="#1e40af">Outbox 저장</text>
+  <!-- 타이머 -->
+  <path d="M930,692 L930,682 L1380,682 L1380,692" fill="none" stroke="#059669" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="1155" y="674" font-size="15" font-weight="700" fill="#059669" text-anchor="middle">5초 타이머 (저장에만)</text>
+  <!-- 체크 -->
+  <circle cx="1140" cy="723" r="16" fill="#059669"/>
+  <path d="M1132,723 L1138,730 L1149,716" fill="none" stroke="#ffffff" stroke-width="3"/>
+  <text x="1166" y="729" font-size="16" font-weight="700" fill="#065f46">저장됨</text>
+
+  <text x="90" y="866" font-size="16" fill="#374151" font-family="Consolas,monospace">collect(답변 모으기).flatMap(저장.timeout(5초))</text>
+
+  <line x1="60" y1="912" x2="1540" y2="912" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="60" y="946" font-size="16" fill="#374151">답변 생성의 지연은 이 타임아웃이 아니라 OpenAI 첫 응답 10초, 응답 사이 15초 타임아웃이 따로 판단합니다. (PR #75)</text>
+</svg>

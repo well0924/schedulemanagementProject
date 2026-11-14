@@ -1,4 +1,7 @@
 ### CI/CD 파이프라인
+
+> 2026-10에 비용 때문에 서버를 내리면서 자동 배포를 멈췄습니다. 지금 `deploy.yml`은 수동 실행(`workflow_dispatch`)만 가능하고, 아래 흐름은 서버를 운영하던 때 기준입니다.
+
 ![CI/CD 파이프라인](../image/ci-cd-pipeline.png)
 
 **구성 요약**

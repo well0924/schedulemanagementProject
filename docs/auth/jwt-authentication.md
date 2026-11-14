@@ -19,7 +19,6 @@
 <img width="3480" height="1612" alt="Image" src="https://github.com/user-attachments/assets/9bffd326-d46c-4743-a1ef-261a90f396e3" />
 
 - 헤더에 accessToken을 넣고 로그아웃을 요청
-- TokenProvider에서 토큰 유효성을 검사
 - TokenProvider에서 Access Token의 유효성(만료 포함)을 검증
 - RedisService에서 로그아웃한 토큰을 black_list로 저장
 - 기존에 저장되어 있는 refreshToken을 삭제

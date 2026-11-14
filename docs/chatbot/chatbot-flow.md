@@ -15,7 +15,7 @@
 | 회원 번호 | 요청 본문이 아니라 로그인 정보(`SecurityUtil.currentUserId()`)에서 가져옴. 본문 값이 다르면 무시하고 경고 로그 | 〃 |
 | 응답 | 스트림 구독을 `ChatBotMessageSender`에 넘기고 바로 `202 Accepted` | 〃 |
 
-답변은 HTTP 응답이 아니라 WebSocket으로 갑니다. 긴 스트리밍을 HTTP 요청 하나에 묶지 않으려고 요청과 응답 채널을 나눴습니다.
+답변은 HTTP 응답이 아니라 WebSocket으로 갑니다. 대화형이라 채팅처럼 주고받는 구조를 생각해 WebSocket을 골랐지만, 실제로는 질문을 HTTP로 보내고 서버가 보내기만 하는 구조가 됐습니다. 챗봇만 보면 SSE가 더 단순했다는 판단과 그래도 WebSocket을 유지하는 이유는 [설계 과정 의사결정](../architecture/design-decisions.md) 5번에 있습니다.
 
 ## 2. 맥락 조회
 
